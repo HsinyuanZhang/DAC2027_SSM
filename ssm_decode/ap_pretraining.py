@@ -87,6 +87,22 @@ def validate_rotation(model, windows, selections, context, batch, label_stats, d
             "latent_offdiag_absmax": float((cov - torch.diag(cov.diagonal())).abs().max())}
 
 
+def _load_rotation(args):
+    """Return (plan, records) for one rotation of the requested task."""
+    if args.task == "dandi688sm":
+        from .dandi688_data import dandi688_plan, load_dandi688_recording
+        plan = {"task": args.task, "target_session": args.target_session,
+                "source_sessions": [s for s in args.dandi688_sources.split(",") if s],
+                "protocol": "spint_2015_dev_target"}
+        records = [load_dandi688_recording(s) for s in plan["source_sessions"]]
+        return plan, records
+    plans = rotation_plans(args.task, root=Path(args.data_root))
+    plan = next(p for p in plans if p["target_session"] == args.target_session)
+    records = [cached_recording(args.task, "held_in", s, root=Path(args.data_root),
+                                cache_root=Path(args.cache_root)) for s in plan["source_sessions"]]
+    return plan, records
+
+
 def run(args):
     if args.steps < 1 or args.val_interval < 1 or args.context < 2 or args.k < 1:
         raise ValueError("invalid training budget")
@@ -100,11 +116,9 @@ def run(args):
     here = Path(__file__).parent
     for name in MODULES:
         (snapshot / name).write_bytes((here / name).read_bytes())
-    plans = rotation_plans(args.task, root=Path(args.data_root))
-    plan = next(p for p in plans if p["target_session"] == args.target_session)
+    plans = None
+    plan, records = _load_rotation(args)
     source_ids = plan["source_sessions"]
-    records = [cached_recording(args.task, "held_in", s, root=Path(args.data_root),
-                                cache_root=Path(args.cache_root)) for s in source_ids]
     source_hashes = {r.session: sha256_file(r.path) for r in records}
     splits = [d._trial_split(r) for r in records]
     if any(not train or not valid for train, valid in splits):
@@ -211,7 +225,8 @@ def run(args):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--task", required=True, choices=["m1", "m2"])
+    parser.add_argument("--task", required=True, choices=["m1", "m2", "dandi688sm"])
+    parser.add_argument("--dandi688-sources", default="sub-M_ses-CO-20150511,sub-M_ses-CO-20150512,sub-M_ses-CO-20150610,sub-M_ses-CO-20150611,sub-M_ses-CO-20150612,sub-M_ses-CO-20150615")
     parser.add_argument("--target-session", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--data-root", default=str(DEFAULT_ROOT))
