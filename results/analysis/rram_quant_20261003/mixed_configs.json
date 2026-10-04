@@ -1,0 +1,8 @@
+{
+  "all_8b": {"default": 8},
+  "all_4b": {"default": 4},
+  "all_tern": {"default": "tern"},
+  "in_zx_4b_rest_tern": {"in_zx": 4, "default": "tern"},
+  "in_zx_8b_rest_tern": {"in_zx": 8, "default": "tern"},
+  "ffn_tern_rest_8b": {"ffn": "tern", "default": 8}
+}
