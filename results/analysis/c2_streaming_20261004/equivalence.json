@@ -1,0 +1,70 @@
+{
+  "carry": {
+    "fp32_angle_carry": {
+      "oneshot_vs_module_default": 0.007379710674285889,
+      "c128": {
+        "chunked_vs_oneshot_after_first_boundary": 0.004626229405403137,
+        "chunked_vs_module_default": 0.0072852373123168945
+      },
+      "c256": {
+        "chunked_vs_oneshot_after_first_boundary": 0.0043926239013671875,
+        "chunked_vs_module_default": 0.007475435733795166
+      },
+      "irregular": {
+        "chunked_vs_oneshot_after_first_boundary": 0.007562808692455292,
+        "chunked_vs_module_default": 0.007324934005737305
+      }
+    },
+    "bf16_angle_carry": {
+      "oneshot_vs_module_default": 0.0036681294441223145,
+      "c128": {
+        "chunked_vs_oneshot_after_first_boundary": 0.0077172815799713135,
+        "chunked_vs_module_default": 0.007713943719863892
+      },
+      "c256": {
+        "chunked_vs_oneshot_after_first_boundary": 0.00877600908279419,
+        "chunked_vs_module_default": 0.008620500564575195
+      },
+      "irregular": {
+        "chunked_vs_oneshot_after_first_boundary": 0.008740842342376709,
+        "chunked_vs_module_default": 0.009025633335113525
+      }
+    }
+  },
+  "angle": {
+    "chunked_vs_oneshot_final_angle": 2.86102294921875e-06,
+    "chunked_vs_fp32_reference": 5.8650970458984375e-05,
+    "oneshot_vs_fp32_reference": 5.7220458984375e-05
+  },
+  "step_gpu": {
+    "scaled_core_0.02": {
+      "step_vs_kernel_T256": 1.9609928131103516e-05,
+      "kernel_output_abs_max": 1.826053500175476,
+      "mixed_chunk192_plus_64_steps_vs_kernel": 2.0742416381835938e-05
+    },
+    "default_init": {
+      "step_vs_kernel_T256": 0.006620228290557861,
+      "kernel_output_abs_max": 2.0327088832855225,
+      "mixed_chunk192_plus_64_steps_vs_kernel": 0.007551372051239014
+    }
+  },
+  "step_cpu": {
+    "default_init_T128": 0.005057573318481445,
+    "scaled_core_0.02": {
+      "T1": 1.1920928955078125e-07,
+      "T7": 4.76837158203125e-07,
+      "T64": 2.9802322387695312e-06,
+      "T100": 2.9802322387695312e-06,
+      "T128": 3.0994415283203125e-06
+    }
+  },
+  "carry_backward": {
+    "parameter_grad_tensors": 38,
+    "all_parameter_grads_finite": true,
+    "carried_state_grads_returned": 8,
+    "state_grad_abs_max": 0.0037376768887043
+  },
+  "schema": "c2_streaming_equivalence_v1",
+  "device": "cuda",
+  "torch": "2.5.1.post303"
+}
