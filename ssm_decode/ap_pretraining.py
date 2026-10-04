@@ -159,7 +159,7 @@ def run(args):
         else:
             x, y, mask, sessions = sample_balanced_batch(train, eligible, args.context, args.batch_size)
         x = drift_augment(x, args.gain_sigma, args.offset_sigma, args.channel_dropout)
-        z = latent_batch(model, x, sessions)
+        z = model.latent(x, int(sessions[0])) if single_session else latent_batch(model, x, sessions)
         decode, head = model.base(z)[:, args.context // 2:], model.head(z)[:, args.context // 2:]
         truth = y[:, args.context // 2:]
         good = mask[:, args.context // 2:] & torch.isfinite(truth).all(-1)
