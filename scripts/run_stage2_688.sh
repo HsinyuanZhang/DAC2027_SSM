@@ -23,24 +23,27 @@ pretrain() {  # pretrain <dest> <steps> <extra...>
     $PY -m ssm_decode.${FAMILY}_pretraining \
     $( [ "$FAMILY" = ap ] && echo --task dandi688sm --target-session sub-M_ses-CO-20150616 ) \
     --dandi688-sources "$SOURCES" \
-    --output "$dest" --device cuda:0 --k 12 --width 128 --layers 2 --state-size 32 \
+    --output "$dest" --device cuda:0 --k 10 --width 128 --layers 2 --state-size 32 \
     --steps "$steps" "$@" > "$OUT/${FAMILY}.train.log" 2>&1 \
     || { echo "[s2] FAILED pretrain $FAMILY"; rm -rf "$dest"; return 1; }
 }
 
 STEPS=2000
-DIR=$OUT/${FAMILY}_pool
+BASE=$OUT/${FAMILY}_pool
 for attempt in 0 1 2; do
+  if [ "$attempt" -eq 0 ]; then DIR=$BASE; else DIR=${BASE}_x$((2 ** attempt)); fi
   [ -f "$DIR/manifest.json" ] || pretrain "$DIR" "$STEPS" || exit 1
   BEST=$($PY -c "import json; print(json.load(open('$DIR/manifest.json'))['best_step'])")
+  FINAL=$($PY -c "import json; print(json.load(open('$DIR/manifest.json'))['args']['steps'])")
   if [ "$BEST" -gt $((STEPS * 8 / 10)) ] && [ "$attempt" -lt 2 ]; then
-    echo "[s2] $FAMILY best_step=$BEST in last 20% of $STEPS; doubling"
+    echo "[s2] $FAMILY best_step=$BEST in last 20% of $STEPS; retraining at $((STEPS * 2)) in a fresh dir"
     STEPS=$((STEPS * 2)); continue
   fi
-  echo "[s2] $FAMILY converged (best_step=$BEST, budget=$STEPS)"
+  echo "[s2] $FAMILY converged (best_step=$BEST, trained steps=$FINAL)"
   break
 done
 CKPT=$DIR/best.pt
+MIN_SRC=$($PY -c "import json; print(round(json.load(open('$DIR/manifest.json'))['best_source_val_trunk_r2'] - 0.05, 4))")
 
 for T in $TARGETS; do
   DEST=$OUT/eval_${FAMILY}/$T
@@ -53,6 +56,7 @@ for T in $TARGETS; do
       $PY -m ssm_decode.$([ "$FAMILY" = ap ] && echo track_a_experiment || echo set_attention_eval) \
       --task dandi688sm --target-session "$T" --checkpoint "$CKPT" \
       --output "$DEST" --device cuda:0 \
+      --min-source-r2 "$MIN_SRC" \
       $( [ "$FAMILY" = ap ] && echo --oracle --pool-sources "$SOURCES" ) \
       $( [ "$FAMILY" = set ] && echo --prior-correct ) \
       > "$OUT/eval_${FAMILY}.${T}.log" 2>&1 \

@@ -103,10 +103,12 @@ def run(args):
                                  dropout=args.dropout, tau=args.tau).to(device)
     optimizer = torch.optim.AdamW(_groups(list(model.parameters()), args.lr, args.weight_decay))
     runtime = _runtime_identity()
+    # Validation descriptors come from TRAIN trials only, so validation
+    # labels never leak into the fold used for best-step selection (B2).
     val_desc_bins = []
-    for (_, va) in splits:
-        picks = sorted(rng.choice(len(va), size=min(args.episode_trials, len(va)), replace=False))
-        val_desc_bins.append(np.concatenate([np.arange(va[i][0], va[i][1]) for i in picks]))
+    for (tr, _) in splits:
+        picks = sorted(rng.choice(len(tr), size=min(args.episode_trials, len(tr)), replace=False))
+        val_desc_bins.append(np.concatenate([np.arange(tr[i][0], tr[i][1]) for i in picks]))
 
     def episode_desc(index, trial_indices, profile_dropout, noise):
         record = records[index]
@@ -119,19 +121,15 @@ def run(args):
         return desc + noise * rng.standard_normal(desc.shape), info
 
     def fold(desc_np, keep_units):
-        """Fold the table, then zero dropped units' columns.
-
-        Dropping must keep the table width equal to the input width: the
-        decode windows keep all columns and rely on zeroed contributions
-        from dropped units.
+        """Fold with the unit mask inside the softmax (review B1): attention
+        renormalizes over kept units and dropped columns are exactly zero,
+        keeping the table width equal to the input width.
         """
         desc = torch.from_numpy(desc_np.astype(np.float32)).to(device)
-        table = model.read_in.fold_table(desc)
+        keep_t = None
         if keep_units is not None:
-            drop_t = torch.from_numpy(~keep_units).to(device)
-            table = table.clone()
-            table[:, drop_t] = 0.0
-        return table
+            keep_t = torch.from_numpy(keep_units).to(device)
+        return model.read_in.fold_table(desc, keep_t)
 
     def validate():
         model.eval()
@@ -224,6 +222,8 @@ def run(args):
                             "best_source_val_trunk_r2": best_score,
                             "desc_stats": {"mean": desc_mean.tolist(),
                                            "std": desc_std.tolist()},
+                            "label_stats": {"mean": y_mean.tolist(),
+                                            "std": y_std.tolist()},
                             "code_hashes": hashes, "source_data_sha256": source_hashes,
                             "runtime_identity": runtime}, out / "best.pt")
     if best_step == 0:

@@ -62,7 +62,7 @@ def cached_recording(task: str, split: str, session: str, *, root: Path = DEFAUL
                              blob["eval_mask"],
                              tuple((int(a), int(b)) for a, b in blob["trial_bounds"]))
     record = _load_underlying(task, split, session, root=root)
-    tmp = path.with_suffix(".npz.tmp")
+    tmp = path.with_suffix(f".npz.tmp{os.getpid()}")
     with tmp.open("wb") as stream:
         np.savez(stream, neural=record.neural, behavior=record.behavior,
                  trial_change=np.asarray(record.trial_change), eval_mask=record.eval_mask,

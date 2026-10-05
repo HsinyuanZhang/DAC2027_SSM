@@ -95,7 +95,8 @@ def partition_windows(target, bounds, stats, device, policy):
 
 def _base_model(cfg, inputs, outputs, device):
     return build_mamba3_official(inputs, outputs, width=cfg['width'], layers=cfg['layers'],
-                                state_size=cfg['state_size'], dropout=cfg['dropout']).to(device)
+                                state_size=cfg['state_size'], dropout=cfg['dropout'],
+                                ffn_mult=cfg.get('ffn_mult', 2)).to(device)
 
 
 def load_saved_model(path, device='cpu'):

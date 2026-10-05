@@ -78,11 +78,17 @@ class SetAttentionReadIn(nn.Module):
         self.value_proj = nn.Linear(desc_dim, k)
         nn.init.zeros_(self.value_proj.bias)
 
-    def fold_table(self, desc: torch.Tensor) -> torch.Tensor:
+    def fold_table(self, desc: torch.Tensor, keep: torch.Tensor | None = None) -> torch.Tensor:
+        """Fold the K x N table.  ``keep`` (bool, [N]) drops units inside the
+        softmax, so attention renormalizes over the surviving units and the
+        dropped columns come out exactly zero (review B1).
+        """
         if desc.ndim != 2 or desc.shape[1] != self.queries.shape[1]:
             raise ValueError(f"desc must be [N, {self.queries.shape[1]}], got {tuple(desc.shape)}")
         keys = self.key_proj(desc)                                  # [N, d]
         logits = (keys @ self.queries.T) / self.tau                 # [N, K]
+        if keep is not None:
+            logits = logits.masked_fill(~keep[:, None], float("-inf"))
         alpha = logits.softmax(dim=0)                               # over units per slot
         values = self.value_proj(desc)                              # [N, K]
         return (alpha * values).T                                   # [K, N]

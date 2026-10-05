@@ -136,6 +136,10 @@ def evaluate_fit(args, fit_dir):
     metrics = fit_dir / "query_evaluation" / "metrics.json"
     if metrics.exists():
         return
+    # Review B7: a partial query_evaluation directory from an interrupted
+    # run otherwise breaks every resume.
+    if (fit_dir / "query_evaluation").exists():
+        subprocess.run(["rm", "-rf", str(fit_dir / "query_evaluation")], check=True)
     cmd = [PY, "-m", "ssm_decode.cross_session_iteration",
            "--evaluate-checkpoint", str(fit_dir / "best.pt"),
            "--output", str(fit_dir / "query_evaluation"),

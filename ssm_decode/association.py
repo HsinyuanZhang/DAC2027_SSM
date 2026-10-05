@@ -92,6 +92,15 @@ def am1_whitened_table(x_labeled: np.ndarray, x_all: np.ndarray, y_labeled: np.n
             "labeled_bins": int(len(y_labeled))}
 
 
+def ledermann_limit(n: int) -> int:
+    """Maximum factor count identifiable from N variables (Ledermann).
+
+    K must stay below (2N + 1 - sqrt(8N + 1)) / 2.  Above it the FA solution
+    is not unique (review A4): N=15 gives 10, N=17 gives 11.
+    """
+    return int((2 * n + 1 - (8 * n + 1) ** 0.5) / 2)
+
+
 def factor_analysis_em(x: np.ndarray, k: int, *, iters: int = 300,
                        tol: float = 1e-10, seed: int = 0) -> dict:
     """Fit ``x = mean + H phi + eps`` with diagonal noise ``psi`` by EM.
@@ -104,6 +113,9 @@ def factor_analysis_em(x: np.ndarray, k: int, *, iters: int = 300,
     m, n = x.shape
     if k < 1 or k > n:
         raise ValueError(f"k={k} must be in [1, {n}]")
+    if k > ledermann_limit(n):
+        raise ValueError(f"k={k} exceeds the Ledermann identifiability limit "
+                         f"{ledermann_limit(n)} for n={n} (review A4)")
     mean = x.mean(0)
     xc = x - mean
     s = (xc.T @ xc) / max(m - 1, 1)

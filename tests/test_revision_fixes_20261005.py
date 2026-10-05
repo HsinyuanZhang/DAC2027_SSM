@@ -111,9 +111,12 @@ def test_decode_r2_single_contiguous_pass():
     rng = np.random.default_rng(1)
     x_z = rng.standard_normal((50, 6))
     table = rng.standard_normal((4, 6))
-    record = _fake_record(x_z, np.stack([np.arange(50, dtype=float)] * 2, 1),
-                          np.ones(50, dtype=bool))
-    stats = (np.zeros(2), np.ones(2))
+    # Behavior on the same scale as the model output so the physical-unit
+    # check passes (cumsum output has large std; scale it down).
+    base = np.cumsum(rng.standard_normal((50, 2)), axis=0)
+    behavior = base * 0.02
+    record = _fake_record(x_z, behavior, np.ones(50, dtype=bool))
+    stats = (np.zeros(2), np.full(2, 0.02))
     decode_r2_record(model, x_z, table, np.arange(10, 40), record, stats,
                      device="cpu", latent_offset=np.zeros(4))
     # One recording, one forward: chunked resets would need several calls.
@@ -141,7 +144,9 @@ def test_ui_grad_freezes_base_and_trains_table():
 def test_checkpoint_target_mismatch_raises(tmp_path):
     from ssm_decode.track_a_experiment import run
     ckpt = tmp_path / "best.pt"
-    torch.save({"target_session": "sessionA", "source_sessions": ["s1"]}, ckpt)
+    torch.save({"target_session": "sessionA", "source_sessions": ["s1"],
+                "args": {"steps": 100}, "best_step": 50,
+                "best_source_val_trunk_r2": 0.5}, ckpt)
     args = SimpleNamespace(task="m2", target_session="sessionB", checkpoint=str(ckpt),
                            output=str(tmp_path / "out"), device="cpu",
                            data_root="unused", cache_root="unused",

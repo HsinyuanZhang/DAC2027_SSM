@@ -114,6 +114,10 @@ def decode_r2_record(model, x_z, table, bins, record, label_stats, *, device,
         pred = model.base(z).squeeze(0).cpu().numpy()
     pred = pred[bins] * label_stats[1] + label_stats[0]
     truth = record.behavior[bins].astype(np.float64)
+    # End-to-end check: prediction and truth must share scale (review A1 class).
+    ratio = float(np.std(pred) / max(np.std(truth), 1e-9))
+    if not 0.5 <= ratio <= 2.0:
+        raise ValueError(f"physical-unit check failed: pred/truth std ratio {ratio:.3f}")
     ss_res = float(((truth - pred) ** 2).sum())
     centered = truth - truth.mean(0, keepdims=True)
     ss_tot = float((centered ** 2).sum())
@@ -217,6 +221,14 @@ def _jsonable(value):
 def run(args):
     device = torch.device(args.device)
     blob = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
+    if getattr(args, "check_budget", True):
+        steps, best = int(blob.get("args", {}).get("steps", 0)), int(blob.get("best_step", 0))
+        if steps <= 0 or best <= 0 or best > 0.8 * steps:
+            raise ValueError(f"budget check failed: best_step {best} vs steps {steps}")
+    if getattr(args, "min_source_r2", None) is not None:
+        score = float(blob.get("best_source_val_trunk_r2", float("nan")))
+        if not np.isfinite(score) or score < args.min_source_r2:
+            raise ValueError(f"source-fit gate failed: {score} < {args.min_source_r2}")
     pool_sources = ([s for s in args.pool_sources.split(",") if s]
                     if getattr(args, "pool_sources", None) else None)
     if pool_sources is not None:
@@ -363,6 +375,8 @@ def main(argv=None):
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--budgets", default=",".join(str(b) for b in BUDGETS))
     parser.add_argument("--oracle", action="store_true")
+    parser.add_argument("--min-source-r2", type=float, default=None)
+    parser.add_argument("--check-budget", action=argparse.BooleanOptionalAction, default=True)
     for name, default in [("lags", 2), ("fa-iters", 300), ("ui-steps", 300), ("seed", 0)]:
         parser.add_argument("--" + name, type=int, default=default)
     for name, default in [("lam", 1.0), ("head-lam", 1.0), ("ui-lr", 3e-3)]:
