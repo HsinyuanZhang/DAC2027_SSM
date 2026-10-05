@@ -130,9 +130,8 @@ def run(args):
         else:
             plan = {**plan, "source_sessions": override,
                     "source_pool_override": "explicit --source-sessions"}
-        from .data import cached_recording as _cr
-        records = [_cr(args.task, "held_in", s, root=Path(args.data_root),
-                       cache_root=Path(args.cache_root)) for s in override]
+        records = [cached_recording(args.task, "held_in", s, root=Path(args.data_root),
+                                    cache_root=Path(args.cache_root)) for s in override]
     source_ids = plan["source_sessions"]
     source_hashes = {r.session: sha256_file(r.path) for r in records}
     splits = [d._trial_split(r) for r in records]

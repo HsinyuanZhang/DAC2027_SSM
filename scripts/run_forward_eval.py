@@ -30,6 +30,14 @@ sys.path.insert(0, str(ROOT))
 
 from ssm_decode.forward_eval import CAPACITIES, SUPPORT_TRIALS, aggregate, forward_plans  # noqa: E402
 
+
+def capacity_of(args):
+    """Named capacity or an explicit width,layers,state override."""
+    if args.custom_capacity:
+        width, layers, state = (int(x) for x in args.custom_capacity.split(","))
+        return {"width": width, "layers": layers, "state_size": state}
+    return CAPACITIES[args.capacity]
+
 PY = str(Path(sys.executable).resolve())
 
 
@@ -52,7 +60,7 @@ def run_quiet(cmd, env, log_path):
 def _capacity_of(args):
     if args.width:
         return {"width": args.width, "layers": args.layers,
-                "state_size": args.state_size, "ffn_mult": args.ffn_mult}
+                "state_size": args.state_size, "ffn_mult": args.ffn_mult if args.ffn_mult else 2}
     if args.capacity not in CAPACITIES:
         raise SystemExit(f"unknown capacity {args.capacity!r}; pass --width/--layers/--state-size")
     return CAPACITIES[args.capacity]
@@ -76,7 +84,7 @@ def pretrain_pool(args, pool_key, sources, pool_dir):
                    "--width", str(capacity["width"]),
                    "--layers", str(capacity["layers"]),
                    "--state-size", str(capacity["state_size"]),
-                   "--ffn-mult", str(capacity.get("ffn_mult", 2)),
+                   "--ffn-mult", str(capacity.get("ffn_mult") or 2),
                    "--steps", str(steps)]
             print(f"[pool] {pool_key}: pretrain {len(sources)} sources, steps {steps}", flush=True)
             if not run_quiet(cmd, child_env(args.gpu, f"pool_{pool_key}"), log):
@@ -152,6 +160,8 @@ def main():
     parser.add_argument("--gpu", type=int, default=0)
     parser.add_argument("--root", required=True)
     parser.add_argument("--aggregate-only", action="store_true")
+    parser.add_argument("--pretrain-extra", nargs="*", default=None,
+                        help="extra flags passed to session_pretraining (recipe ablations)")
     for name in ("width", "layers", "state-size", "ffn-mult"):
         parser.add_argument("--" + name, type=int, default=None)
     args = parser.parse_args()
