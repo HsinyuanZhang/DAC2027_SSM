@@ -130,7 +130,7 @@ def initial_states(decoder: OfficialMamba3Decoder, batch: int, device=None) -> D
 
 
 def core_forward_with_states(core, u: torch.Tensor, states: Optional[CoreState] = None,
-                             fp32_angles: bool = True):
+                             fp32_angles: bool = False):
     """Run one Mamba3 SISO core on a chunk, carrying (angle, ssm, k, v).
 
     Returns ``(y, new_states)`` where ``y`` is the pre-out_proj fused output
@@ -168,7 +168,7 @@ def _block_forward_with_states(block: nn.Module, x: torch.Tensor, states: Option
 
 
 def forward_with_states(decoder: OfficialMamba3Decoder, x: torch.Tensor,
-                        states: Optional[DecoderStates] = None, fp32_angles: bool = True):
+                        states: Optional[DecoderStates] = None, fp32_angles: bool = False):
     """OfficialMamba3Decoder forward with state carry across calls.
 
     Mirrors ``decoder.forward`` block structure exactly (pre-LN residual +
@@ -179,7 +179,7 @@ def forward_with_states(decoder: OfficialMamba3Decoder, x: torch.Tensor,
     if x.ndim != 3 or x.shape[-1] != decoder.config.input_size:
         raise ValueError(f"x must be [batch, length, {decoder.config.input_size}]")
     if states is None:
-        states = initial_states(decoder, x.shape[0], device=x.device.type)
+        states = initial_states(decoder, x.shape[0], device=x.device)
     if len(states) != decoder.config.layers:
         raise ValueError("states must contain one tuple per block")
     h = decoder.in_proj(x)
@@ -191,11 +191,11 @@ def forward_with_states(decoder: OfficialMamba3Decoder, x: torch.Tensor,
 
 
 def stream_recording(decoder: OfficialMamba3Decoder, x: torch.Tensor,
-                     chunk_lens: Sequence[int], fp32_angles: bool = True) -> torch.Tensor:
+                     chunk_lens: Sequence[int], fp32_angles: bool = False) -> torch.Tensor:
     """Run one recording as consecutive carried chunks of the given lengths."""
     if sum(chunk_lens) != x.shape[1]:
         raise ValueError("chunk_lens must sum to the sequence length")
-    states = initial_states(decoder, x.shape[0], device=x.device.type)
+    states = initial_states(decoder, x.shape[0], device=x.device)
     outputs = []
     position = 0
     for length in chunk_lens:
@@ -285,7 +285,7 @@ def decoder_step(decoder: OfficialMamba3Decoder, u: torch.Tensor, states: Decode
 
 def streaming_reference(decoder: OfficialMamba3Decoder, x: torch.Tensor) -> torch.Tensor:
     """Pure-PyTorch streaming decode of a full recording, bin by bin."""
-    states = initial_states(decoder, x.shape[0], device=x.device.type)
+    states = initial_states(decoder, x.shape[0], device=x.device)
     outputs = []
     for position in range(x.shape[1]):
         y, states = decoder_step(decoder, x[:, position], states)

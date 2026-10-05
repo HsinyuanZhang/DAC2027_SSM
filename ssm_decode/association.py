@@ -16,8 +16,80 @@ __all__ = [
     "factor_analysis_em", "posterior_readin", "procrustes_frame",
     "behavior_features", "labeled_sufficient_stats", "supervised_profiles",
     "fit_shared_profile_map", "shrinkage_profiles", "am1_table",
-    "profile_prior", "latent_covariance",
+    "profile_prior", "latent_covariance", "fa_readin", "am1_whitened_table",
 ]
+
+
+def fa_readin(x: np.ndarray, k: int, *, iters: int = 300, seed: int = 0,
+              restarts: int = 3) -> tuple[dict, float]:
+    """FA posterior read-in with restarts; best log-likelihood wins.
+
+    The EM warm start is deterministic (PCA plus seeded jitter).  Multiple
+    restarts guard against local optima.  Returns ``(fa, readin, spread)``
+    where ``spread`` is the log-likelihood range over restarts.
+    """
+    x = np.asarray(x, dtype=np.float64)
+    restarts = max(1, int(restarts))
+    results = [factor_analysis_em(x, k, iters=iters, seed=seed + 1000 * i)
+               for i in range(restarts)]
+    likelihoods = [r["loglik"] for r in results]
+    best = results[int(np.argmax(likelihoods))]
+    spread = float(max(likelihoods) - min(likelihoods)) if restarts > 1 else 0.0
+    return best, posterior_readin(best["H"], best["psi"]), spread
+
+
+def am1_whitened_table(x_labeled: np.ndarray, x_all: np.ndarray, y_labeled: np.ndarray,
+                       b_src: np.ndarray, source_stats: tuple[np.ndarray, np.ndarray],
+                       *, k: int, head_lam: float = 1.0,
+                       em_iters: int = 300, seed: int = 0, restarts: int = 3,
+                       null_pull: float = 0.1) -> dict:
+    """A-M1 with explicit whitening on both latent sides (revision items 5, 6).
+
+    Differences to ``am1_table``:
+
+    1. The target FA latent is z-scored per dimension with unlabeled
+       statistics, and the source latent statistics ``(m_s, s_s)`` are passed
+       in.  The frame then maps whitened latents to whitened latents, where an
+       orthogonal map is the correct model.
+    2. The Procrustes solution completes the label-null subspace canonically:
+       the SVD input gets ``null_pull`` relative identity bias, so the null
+       block of ``T`` is pulled toward identity instead of an arbitrary SVD
+       completion.  Same-seed and cross-seed results become stable.
+    3. The deployment transform carries an explicit latent offset, so the
+       frame fit on centered latents no longer drops the mean (item 6).
+
+    Returns the table ``W`` (K x N), the latent offset ``c`` (K), the frame,
+    and diagnostics.  Deployment computes ``z = W x + c``.
+    """
+    x_all = np.asarray(x_all, dtype=np.float64)
+    x_labeled = np.asarray(x_labeled, dtype=np.float64)
+    y_labeled = np.asarray(y_labeled, dtype=np.float64)
+    b_src = np.asarray(b_src, dtype=np.float64)
+    m_s = np.asarray(source_stats[0], dtype=np.float64)
+    s_s = np.asarray(source_stats[1], dtype=np.float64)
+    if x_labeled.shape[0] != y_labeled.shape[0]:
+        raise ValueError("labeled rows must align with labels")
+    fa, beta, spread = fa_readin(x_all, k, iters=em_iters, seed=seed, restarts=restarts)
+    z_all = (x_all - fa["mean"]) @ beta.T
+    m_t = z_all.mean(0)
+    s_t = np.maximum(z_all.std(0), 1e-6)
+    zeta_l = ((x_labeled - fa["mean"]) @ beta.T - m_t) / s_t
+    y_c = y_labeled - y_labeled.mean(0)
+    gram = zeta_l.T @ zeta_l + head_lam * np.eye(k)
+    m_fit = np.linalg.solve(gram, zeta_l.T @ y_c).T                       # [D, K]
+    b_eff = b_src * s_s[None, :]                                         # whitened-space head
+    cross = b_eff.T @ m_fit
+    biased = cross + null_pull * np.linalg.norm(cross, "fro") * np.eye(k)
+    u, _, vt = np.linalg.svd(biased)
+    t_frame = u @ vt
+    # z(x) = diag(s_s) T diag(1/s_t) (beta (x - mu) - m_t) + m_s
+    p_mat = s_s[:, None] * t_frame * (1.0 / s_t)[None, :]
+    table = p_mat @ beta
+    latent_offset = m_s - p_mat @ (beta @ fa["mean"] + m_t)
+    return {"table": table, "latent_offset": latent_offset, "T": t_frame,
+            "M": m_fit, "beta": beta, "fa": fa, "restart_spread": spread,
+            "target_latent_mean": m_t, "target_latent_std": s_t,
+            "labeled_bins": int(len(y_labeled))}
 
 
 def factor_analysis_em(x: np.ndarray, k: int, *, iters: int = 300,

@@ -6,6 +6,7 @@ GPU=$1; shift
 ROOT=/home/xinyuan/Work_host/SSM
 PY=/home/xinyuan/miniconda3/envs/spint/bin/python
 OUT=$ROOT/results/ap_pretraining_m2_20261004
+mkdir -p "$OUT"
 for target in "$@"; do
   dest="$OUT/$target"
   if [ -f "$dest/manifest.json" ]; then echo "[queue] skip done $target"; continue; fi
@@ -16,6 +17,6 @@ for target in "$@"; do
     $PY -m ssm_decode.ap_pretraining --task m2 --target-session "$target" \
     --output "$dest" --device cuda:0 --k 16 --width 128 --layers 2 --state-size 32 \
     --steps 2000 --val-interval 100 > "$OUT/${target}.train.log" 2>&1 \
-    || echo "[queue] FAILED $target (see $OUT/${target}.train.log)"
+    || { echo "[queue] FAILED $target (see $OUT/${target}.train.log)"; rm -rf "$dest"; }
 done
 echo "[queue] GPU$GPU all done $(date '+%T')"

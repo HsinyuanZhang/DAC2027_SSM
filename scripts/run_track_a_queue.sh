@@ -17,6 +17,7 @@ for ckpt in "$PRE"/*/best.pt; do
     TRITON_CACHE_DIR=/tmp/triton_ta_$GPU \
     $PY -m ssm_decode.track_a_experiment --task m2 --target-session "$target" \
     --checkpoint "$ckpt" --output "$OUT/$target" --device cuda:0 --oracle \
-    > "$OUT/${target}.eval.log" 2>&1 || echo "[tracka] FAILED $target (see $OUT/${target}.eval.log)"
+    > "$OUT/${target}.eval.log" 2>&1 \
+    || { echo "[tracka] FAILED $target (see $OUT/${target}.eval.log)"; rm -rf "$OUT/$target"; }
 done
 echo "[tracka] GPU$GPU all done $(date '+%T')"

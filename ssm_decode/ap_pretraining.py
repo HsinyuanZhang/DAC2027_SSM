@@ -44,11 +44,15 @@ def code_hashes() -> dict:
 def latent_batch(model: APBackbone, x: torch.Tensor, sessions: torch.Tensor) -> torch.Tensor:
     """Latents with each sample routed through its own session table.
 
-    Equal channel counts do not imply equal tables.  Batches that mix sessions
-    must apply the per-sample table even when every ``N_s`` matches.
+    Revision item 2: sessions may have different channel counts, so tables
+    cannot be stacked.  Samples are grouped by session and each group uses
+    its own table.  Equal channel counts do not imply equal tables either.
     """
-    stacked = torch.stack(list(model.tables))[sessions]                    # [B, K, N]
-    return torch.einsum("btn,bkn->btk", x, stacked)
+    z = x.new_zeros(x.shape[0], x.shape[1], model.k)
+    for session in sessions.unique().tolist():
+        rows = sessions == session
+        z[rows] = x[rows] @ model.tables[int(session)].T
+    return z
 
 
 def validate_rotation(model, windows, selections, context, batch, label_stats, device):

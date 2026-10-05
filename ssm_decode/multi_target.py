@@ -35,23 +35,34 @@ def cached_recording(task: str, split: str, session: str, *, root: Path = DEFAUL
                      cache_root: Path = DEFAULT_CACHE) -> Recording:
     """Load a recording through an SSD npz cache keyed by the NWB sha256.
 
-    The NWB stays on HDD.  A cache hit never touches it.  A cache entry whose
-    stored sha256 disagrees with the current NWB is rebuilt.
+    The NWB stays on HDD.  A cache hit never touches it.  Revision item 11:
+    the cache entry records the data root, a mismatch rebuilds, and writes
+    are atomic (temporary file plus ``os.replace``) so parallel queues can
+    never read a half-written entry.
     """
+    import os
+
     cache_dir = Path(cache_root) / task / split
     cache_dir.mkdir(parents=True, exist_ok=True)
     path = cache_dir / f"{session}.npz"
+    root_key = str(Path(root).resolve())
     if path.exists():
         blob = np.load(path, allow_pickle=False)
         nwb = Path(str(blob["path"]))
-        if nwb.exists() and sha256_file(nwb) == str(blob["sha256"]):
+        cached_root = str(blob["data_root"]) if "data_root" in blob.files else None
+        if (nwb.exists() and sha256_file(nwb) == str(blob["sha256"])
+                and cached_root == root_key):
             return Recording(task, split, session, nwb,
                              blob["neural"], blob["behavior"], blob["trial_change"],
                              blob["eval_mask"],
                              tuple((int(a), int(b)) for a, b in blob["trial_bounds"]))
     record = load_recording(task, split, session, root=root)
-    np.savez(path, neural=record.neural, behavior=record.behavior,
-             trial_change=np.asarray(record.trial_change), eval_mask=record.eval_mask,
-             trial_bounds=np.asarray(record.trial_bounds, dtype=np.int64),
-             path=str(record.path), sha256=sha256_file(record.path))
+    tmp = path.with_suffix(".npz.tmp")
+    with tmp.open("wb") as stream:
+        np.savez(stream, neural=record.neural, behavior=record.behavior,
+                 trial_change=np.asarray(record.trial_change), eval_mask=record.eval_mask,
+                 trial_bounds=np.asarray(record.trial_bounds, dtype=np.int64),
+                 path=str(record.path), sha256=sha256_file(record.path),
+                 data_root=root_key)
+    os.replace(tmp, path)
     return record

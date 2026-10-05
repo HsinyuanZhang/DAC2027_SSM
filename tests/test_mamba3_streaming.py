@@ -127,16 +127,32 @@ def test_gpu_chunked_carry_angle_continuity():
     torch.manual_seed(6)
     x = torch.randn(2, 2048, 8, device="cuda")
     with torch.no_grad():
-        _, oneshot_final = forward_with_states(decoder, x, initial_states(decoder, 2, device="cuda"))
+        # The 1e-5 angle gate belongs to the fp32-angle mode.  The default
+        # (bf16, matching the training forward) keeps a looser gate.
+        _, oneshot_final = forward_with_states(decoder, x, initial_states(decoder, 2, device="cuda"),
+                                               fp32_angles=True)
         states = initial_states(decoder, 2, device="cuda")
         position = 0
         for length in (200, 512, 331, 1005):
-            _, states = forward_with_states(decoder, x[:, position:position + length], states)
+            _, states = forward_with_states(decoder, x[:, position:position + length], states,
+                                            fp32_angles=True)
             position += length
     # (a) chunked final angle equals the one-shot final angle per block
     for index, (chunked, oneshot) in enumerate(zip(states, oneshot_final)):
         diff = float((chunked[0] - oneshot[0]).abs().max())
         assert diff < 1e-5, f"block {index} final angle diff {diff}"
+    # (a-bf16) the default carry (public-wrapper semantics) stays within the
+    # documented bf16 angle quantization of about 2^-8 relative.
+    with torch.no_grad():
+        _, oneshot_bf16 = forward_with_states(decoder, x, initial_states(decoder, 2, device="cuda"))
+        states_bf16 = initial_states(decoder, 2, device="cuda")
+        position = 0
+        for length in (200, 512, 331, 1005):
+            _, states_bf16 = forward_with_states(decoder, x[:, position:position + length], states_bf16)
+            position += length
+    for index, (chunked, oneshot) in enumerate(zip(states_bf16, oneshot_bf16)):
+        diff = float((chunked[0] - oneshot[0]).abs().max())
+        assert diff < 0.05, f"block {index} bf16 final angle diff {diff}"
     # (b) both match the exact fp32 cumsum reference mod 2*pi
     from ssm_decode.mamba3_streaming import _core_prepare
     block = decoder.blocks[0]

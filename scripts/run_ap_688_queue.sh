@@ -16,6 +16,6 @@ for target in sub-M_ses-CO-20150616 sub-M_ses-CO-20150617; do
     $PY -m ssm_decode.ap_pretraining --task dandi688sm --target-session "$target" \
     --output "$dest" --device cuda:0 --k 12 --width 128 --layers 2 --state-size 32 \
     --steps 2000 --val-interval 100 > "$OUT/${target}.train.log" 2>&1 \
-    || echo "[q688] FAILED $target"
+    || { echo "[q688] FAILED $target"; rm -rf "$dest"; }
 done
 echo "[q688] GPU$GPU all done $(date '+%T')"

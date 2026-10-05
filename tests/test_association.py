@@ -145,3 +145,62 @@ def test_latent_covariance():
     z = np.random.default_rng(8).standard_normal((5000, 3)) * [1.0, 2.0, 0.5]
     cov = assoc.latent_covariance(z)
     assert np.allclose(np.diag(cov), [1.0, 4.0, 0.25], rtol=0.1)
+
+
+def _whitened_case(seed, k=6, d=2, n=20, m=20000):
+    rng = np.random.default_rng(seed)
+    h_true = rng.standard_normal((n, k))
+    psi_true = rng.uniform(0.2, 0.6, n)
+    phi = rng.standard_normal((m, k))
+    x = phi @ h_true.T + rng.standard_normal((m, n)) * np.sqrt(psi_true)
+    head_true = rng.standard_normal((d, k))
+    y = phi @ head_true.T
+    q0, _ = np.linalg.qr(rng.standard_normal((k, k)))
+    b_src = head_true @ q0
+    # Source latent stats under a hypothetical source table W_src = q0.T @ h_true.T pseudo...
+    # Use the true latent distribution as the source latent stats.
+    return x, y, b_src, phi.std(0), {"mean": np.zeros(k), "std": np.ones(k)}
+
+
+def test_am1_whitened_is_deterministic():
+    x, y, b_src, _, stats = _whitened_case(11)
+    out_a = assoc.am1_whitened_table(x[:400], x, y[:400], b_src,
+                                     (stats["mean"], stats["std"]), k=6, seed=5, restarts=2)
+    out_b = assoc.am1_whitened_table(x[:400], x, y[:400], b_src,
+                                     (stats["mean"], stats["std"]), k=6, seed=5, restarts=2)
+    assert np.array_equal(out_a["table"], out_b["table"])
+    assert np.array_equal(out_a["latent_offset"], out_b["latent_offset"])
+
+
+def test_am1_whitened_stable_across_seeds():
+    # D < K leaves a label-null subspace.  The identity-biased completion must
+    # make different FA seeds on the SAME data produce near-identical tables.
+    x, y, b_src, _, stats = _whitened_case(20)
+    tables = [assoc.am1_whitened_table(x[:400], x, y[:400], b_src,
+                                       (stats["mean"], stats["std"]), k=6, seed=seed,
+                                       restarts=1)["table"]
+              for seed in (0, 1, 2)]
+    spread = max(np.abs(tables[0] - t).max() for t in tables[1:])
+    scale = max(np.abs(t).max() for t in tables)
+    assert spread < 0.25 * scale, f"spread {spread:.3f} vs scale {scale:.3f}"
+
+
+def test_am1_whitened_offset_identity():
+    # z = W x + c must equal diag(s_s) T zeta_t(x) + m_s exactly.
+    rng = np.random.default_rng(33)
+    x, y, b_src, _, _ = _whitened_case(33)
+    source_stats = (rng.standard_normal(6) * 0.1, rng.uniform(0.8, 1.2, 6))
+    out = assoc.am1_whitened_table(x[:400], x, y[:400], b_src, source_stats, k=6, seed=1)
+    probe = x[500:540]
+    m_t, s_t = out["target_latent_mean"], out["target_latent_std"]
+    zeta = ((probe - out["fa"]["mean"]) @ out["beta"].T - m_t) / s_t
+    expected = source_stats[1][:, None] * (out["T"] @ zeta.T) + source_stats[0][:, None]
+    deployed = out["table"] @ probe.T + out["latent_offset"][:, None]
+    assert np.allclose(expected, deployed, atol=1e-8)
+
+
+def test_fa_readin_reports_restart_spread():
+    x, _, _, _, _ = _whitened_case(44, m=5000)
+    fa, beta, spread = assoc.fa_readin(x, 4, iters=80, seed=0, restarts=3)
+    assert beta.shape == (4, x.shape[1])
+    assert np.isfinite(spread) and spread >= 0
