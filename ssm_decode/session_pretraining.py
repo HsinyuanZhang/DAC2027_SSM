@@ -15,6 +15,7 @@ from torch import nn
 from . import debug_experiment as d
 from .cross_session_iteration import _code_hashes, _runtime_identity, _groups
 from .data import DEFAULT_ROOT, load_recording, source_target_plan, sha256_file
+from .multi_target import DEFAULT_CACHE, cached_recording
 from .mamba3_official import build_mamba3_official
 from .session_frontend import SessionFrontendBank, drift_augment, fold_session_input
 
@@ -112,7 +113,20 @@ def run(args):
         (snapshot/name).write_bytes(Path(__file__).with_name(name).read_bytes())
     plan = source_target_plan(args.task, root=Path(args.data_root))
     source_ids = plan['source_held_in_sessions']
-    records = [load_recording(args.task, 'held_in', session, root=Path(args.data_root)) for session in source_ids]
+    if getattr(args, 'source_sessions', None):
+        # Forward-eval pools override the default plan (revision 4.1).  The
+        # override is recorded so receipts never misreport the protocol.
+        source_ids = [s for s in args.source_sessions.split(',') if s]
+        plan = {**plan, 'source_held_in_sessions': source_ids,
+                'source_pool_override': 'explicit --source-sessions'}
+    def _load(session):
+        try:
+            return cached_recording(args.task, 'held_in', session, root=Path(args.data_root),
+                                    cache_root=Path(getattr(args, 'cache_root', DEFAULT_CACHE)))
+        except FileNotFoundError:
+            # Toy roots in tests patch load_recording; honor that path.
+            return load_recording(args.task, 'held_in', session, root=Path(args.data_root))
+    records = [_load(session) for session in source_ids]
     source_hashes = {record.session: sha256_file(record.path) for record in records}
     splits = [d._trial_split(record) for record in records]
     if any(not train or not valid for train, valid in splits):
@@ -127,7 +141,7 @@ def run(args):
     eligible = d._eligible(train)
     selections = [d._validation_selection([window], args.context, args.max_val_endpoints)[0] for window in valid]
     inputs, outputs = records[0].neural.shape[1], records[0].behavior.shape[1]
-    base = build_mamba3_official(inputs, outputs, args.width, args.layers, args.state_size, args.dropout).to(device)
+    base = build_mamba3_official(inputs, outputs, args.width, args.layers, args.state_size, args.dropout, getattr(args, 'ffn_mult', 2)).to(device)
     model = SessionAwareDecoder(base, SessionFrontendBank(len(records), inputs, args.width, device=device))
     optimizer = torch.optim.AdamW(_groups(list(model.parameters()), args.lr, args.weight_decay))
     runtime = _runtime_identity()
@@ -166,7 +180,7 @@ def run(args):
     selected = torch.load(out/'session_bank_best.pt', map_location=device, weights_only=False)
     model.load_state_dict(selected['state_dict'])
     model.eval()
-    folded = build_mamba3_official(inputs, outputs, args.width, args.layers, args.state_size, args.dropout).to(device)
+    folded = build_mamba3_official(inputs, outputs, args.width, args.layers, args.state_size, args.dropout, getattr(args, 'ffn_mult', 2)).to(device)
     folded.load_state_dict(base.state_dict())
     folded.in_proj = fold_session_input(base.in_proj, model.bank)
     # Verify every source fold against the trained session-aware model.
@@ -219,6 +233,8 @@ def run(args):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--task', required=True, choices=['m1','m2'])
+    parser.add_argument('--source-sessions', default=None,
+                        help='comma-separated held-in session ids; overrides the default plan')
     parser.add_argument('--output', required=True)
     parser.add_argument('--data-root', default=str(DEFAULT_ROOT))
     parser.add_argument('--device', default='cuda:0')
@@ -226,6 +242,7 @@ def main(argv=None):
     for name, default in [('width',128),('layers',2),('state-size',32),('context',128),('batch-size',32),
                           ('eval-batch-size',256),('steps',2000),('val-interval',100),('max-val-endpoints',1024),('seed',0)]:
         parser.add_argument('--'+name, type=int, default=default)
+    parser.add_argument('--ffn-mult', type=int, default=2)
     for name, default in [('lr',1e-3),('weight-decay',1e-3),('dropout',.2),('gain-sigma',.3),('offset-sigma',.1),('channel-dropout',.05)]:
         parser.add_argument('--'+name, type=float, default=default)
     print(run(parser.parse_args(argv)))

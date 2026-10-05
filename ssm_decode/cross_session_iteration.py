@@ -12,6 +12,7 @@ import numpy as np
 import torch
 from . import debug_experiment as d
 from .data import DEFAULT_ROOT, load_recording, source_target_plan
+from .multi_target import DEFAULT_CACHE, cached_recording
 from .input_adaptation import configure_adaptation
 from .mamba3_official import build_mamba3_official
 from .session_normalization import fit_support_statistics, normalize_neural, strict_past_ema_normalize
@@ -151,7 +152,8 @@ def _unfreeze(model, optimizer, step, lr, decay):
 def _target(task, root, session=None):
     plan = source_target_plan(task, root=Path(root))
     selected = session or plan['cross_session_local_dev']['target_session']
-    return load_recording(task, 'held_in', selected, root=Path(root)), plan
+    return cached_recording(task, 'held_in', selected, root=Path(root),
+                          cache_root=Path(DEFAULT_CACHE)), plan
 
 
 def _cache_predictions(model, target, stats, args, device, ema_half_life=None):

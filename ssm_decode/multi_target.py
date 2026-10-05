@@ -15,6 +15,11 @@ from .data import DEFAULT_ROOT, Recording, _bounds, load_recording, sha256_file,
 DEFAULT_CACHE = Path(__file__).resolve().parents[1] / "results" / "data_cache"
 
 
+def _load_underlying(task, split, session, *, root):
+    """Indirection so tests can patch the underlying loader per module."""
+    return load_recording(task, split, session, root=root)
+
+
 def rotation_plans(task: str, *, root: Path = DEFAULT_ROOT) -> list[dict]:
     """One plan per held-in session as target; the rest are sources."""
     held_ids = [r["session"] for r in visible_sessions(task, root=root)["held_in"]]
@@ -56,7 +61,7 @@ def cached_recording(task: str, split: str, session: str, *, root: Path = DEFAUL
                              blob["neural"], blob["behavior"], blob["trial_change"],
                              blob["eval_mask"],
                              tuple((int(a), int(b)) for a, b in blob["trial_bounds"]))
-    record = load_recording(task, split, session, root=root)
+    record = _load_underlying(task, split, session, root=root)
     tmp = path.with_suffix(".npz.tmp")
     with tmp.open("wb") as stream:
         np.savez(stream, neural=record.neural, behavior=record.behavior,

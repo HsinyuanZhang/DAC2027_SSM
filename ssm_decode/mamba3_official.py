@@ -35,7 +35,7 @@ def _import_mamba3():
 
 @dataclass(frozen=True)
 class OfficialMamba3Config:
-    input_size:int; output_size:int; width:int=64; layers:int=1; state_size:int=128; dropout:float=0.
+    input_size:int; output_size:int; width:int=64; layers:int=1; state_size:int=128; dropout:float=0.; ffn_mult:int=2
 
 class OfficialMamba3Decoder(nn.Module):
     def __init__(self,cfg:OfficialMamba3Config):
@@ -51,13 +51,13 @@ class OfficialMamba3Decoder(nn.Module):
 class _PreNormMamba3Block(nn.Module):
     """Wrapper architecture only; the official Mamba3 core is unmodified."""
     def __init__(self,Mamba3,cfg):
-        super().__init__();self.norm1=nn.LayerNorm(cfg.width);self.ssm=Mamba3(d_model=cfg.width,d_state=cfg.state_size,headdim=64,chunk_size=64,dropout=cfg.dropout,is_mimo=False);self.norm2=nn.LayerNorm(cfg.width);self.ffn=nn.Sequential(nn.Linear(cfg.width,2*cfg.width),nn.SiLU(),nn.Linear(2*cfg.width,cfg.width));self.dropout=nn.Dropout(cfg.dropout)
+        super().__init__();self.norm1=nn.LayerNorm(cfg.width);self.ssm=Mamba3(d_model=cfg.width,d_state=cfg.state_size,headdim=64,chunk_size=64,dropout=cfg.dropout,is_mimo=False);self.norm2=nn.LayerNorm(cfg.width);hidden=cfg.ffn_mult*cfg.width;self.ffn=nn.Sequential(nn.Linear(cfg.width,hidden),nn.SiLU(),nn.Linear(hidden,cfg.width));self.dropout=nn.Dropout(cfg.dropout)
     def forward(self,x):
         x=x+self.dropout(self.ssm(self.norm1(x)))
         return x+self.dropout(self.ffn(self.norm2(x)))
 
-def build_mamba3_official(input_size,output_size,width=64,layers=1,state_size=128,dropout=0.):
-    return OfficialMamba3Decoder(OfficialMamba3Config(input_size,output_size,width,layers,state_size,dropout))
+def build_mamba3_official(input_size,output_size,width=64,layers=1,state_size=128,dropout=0.,ffn_mult=2):
+    return OfficialMamba3Decoder(OfficialMamba3Config(input_size,output_size,width,layers,state_size,dropout,ffn_mult))
 
 def compatibility_attempt(device='cuda:0'):
     result={'schema':'official_mamba3_siso_compatibility_v1','official_path':str(OFFICIAL),'expected_commit':COMMIT,'device':device,'torch':torch.__version__,'cuda_available':torch.cuda.is_available()}

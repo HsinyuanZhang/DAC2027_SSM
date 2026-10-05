@@ -94,7 +94,7 @@ def validate_rotation(model, windows, selections, context, batch, label_stats, d
 def _load_rotation(args):
     """Return (plan, records) for one rotation of the requested task."""
     if args.task == "dandi688sm":
-        from .dandi688_data import dandi688_plan, load_dandi688_recording
+        from .dandi688_data import load_dandi688_recording
         plan = {"task": args.task, "target_session": args.target_session,
                 "source_sessions": [s for s in args.dandi688_sources.split(",") if s],
                 "protocol": "spint_2015_dev_target"}
@@ -120,8 +120,19 @@ def run(args):
     here = Path(__file__).parent
     for name in MODULES:
         (snapshot / name).write_bytes((here / name).read_bytes())
-    plans = None
     plan, records = _load_rotation(args)
+    if getattr(args, "source_sessions", None):
+        # Forward-eval pools override the rotation complement (revision 4.1).
+        override = [s for s in args.source_sessions.split(",") if s]
+        if set(override) == set(plan["source_sessions"]):
+            plan = {**plan, "source_sessions": override,
+                    "source_pool_override": "explicit --source-sessions (reordered)"}
+        else:
+            plan = {**plan, "source_sessions": override,
+                    "source_pool_override": "explicit --source-sessions"}
+        from .data import cached_recording as _cr
+        records = [_cr(args.task, "held_in", s, root=Path(args.data_root),
+                       cache_root=Path(args.cache_root)) for s in override]
     source_ids = plan["source_sessions"]
     source_hashes = {r.session: sha256_file(r.path) for r in records}
     splits = [d._trial_split(r) for r in records]
@@ -231,6 +242,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--task", required=True, choices=["m1", "m2", "dandi688sm"])
     parser.add_argument("--dandi688-sources", default="sub-M_ses-CO-20150511,sub-M_ses-CO-20150512,sub-M_ses-CO-20150610,sub-M_ses-CO-20150611,sub-M_ses-CO-20150612,sub-M_ses-CO-20150615")
+    parser.add_argument("--source-sessions", default=None,
+                        help="comma-separated held-in ids; overrides the rotation source set")
     parser.add_argument("--target-session", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--data-root", default=str(DEFAULT_ROOT))
