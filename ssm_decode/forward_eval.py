@@ -81,7 +81,7 @@ def load_metrics(root: Path) -> list[dict]:
         parts = path.parts
         target = parts[-5]
         method = parts[-4]
-        match = re.match(r"seed(\d+)", parts[-2])
+        match = re.match(r"seed(\d+)", parts[-3])
         if not match:
             continue
         seed = int(match.group(1))
@@ -99,10 +99,15 @@ def aggregate(root: Path, *, reference: str = "none") -> dict:
         raise ValueError(f"no query metrics under {root}")
     def r2(row):
         metrics = row["metrics"]
-        for key in ("target_r2", "r2", "query_r2"):
-            if key in metrics:
-                return float(metrics[key])
-        raise KeyError(f"no R2 key in {list(metrics)}")
+        # Primary cohort: direct decode, all-valid query bins.
+        try:
+            return float(metrics["final"]["zero"]["all_valid"]["r2_variance_weighted"])
+        except (KeyError, TypeError):
+            pass
+        try:
+            return float(metrics["final"]["zero"]["r2_variance_weighted"])
+        except (KeyError, TypeError):
+            raise KeyError(f"no R2 key in metrics structure {list(metrics)}") from None
     targets = sorted({r["target"] for r in rows})
     methods = sorted({r["method"] for r in rows})
     summary = {"targets": targets, "reference": reference, "methods": {}}

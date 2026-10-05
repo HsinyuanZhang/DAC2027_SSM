@@ -198,7 +198,15 @@ def _jsonable(value):
 def run(args):
     device = torch.device(args.device)
     blob = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
-    if blob.get("target_session") != args.target_session:
+    pool_sources = ([s for s in args.pool_sources.split(",") if s]
+                    if getattr(args, "pool_sources", None) else None)
+    if pool_sources is not None:
+        # Shared-pool checkpoint: the source set must match the target's pool.
+        if set(blob.get("source_sessions", [])) != set(pool_sources):
+            raise ValueError(
+                f"checkpoint sources {sorted(blob.get('source_sessions', []))} != pool "
+                f"{sorted(pool_sources)} (revision item 10, pool form)")
+    elif blob.get("target_session") != args.target_session:
         raise ValueError(
             f"checkpoint target {blob.get('target_session')!r} != --target-session "
             f"{args.target_session!r} (revision item 10)")
@@ -315,6 +323,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--task", required=True, choices=["m1", "m2"])
     parser.add_argument("--target-session", required=True)
+    parser.add_argument("--pool-sources", default=None,
+                        help="comma list; validates the checkpoint source pool instead of the target id")
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--data-root", default=str(DEFAULT_ROOT))

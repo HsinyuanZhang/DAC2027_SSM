@@ -28,7 +28,7 @@ pretrain() {
 }
 
 evaluate() {
-  local k=$1 key=$2 target=$3
+  local k=$1 key=$2 target=$3 sources=$4
   local ckpt="$OUT/k${k}/${key}/best.pt"
   local dest="$OUT/eval/k${k}/${key}/${target}"
   if [ -f "$dest/summary.json" ]; then echo "[ksweep] skip eval k=$k $target"; return 0; fi
@@ -38,6 +38,7 @@ evaluate() {
     PYTHONPATH="$ROOT/.tools/mamba_deps:$ROOT" \
     TRITON_CACHE_DIR=/tmp/triton_ksweep_eval_${GPU} \
     $PY -m ssm_decode.track_a_experiment --task m2 --target-session "$target" \
+    --pool-sources "$sources" \
     --checkpoint "$ckpt" --output "$dest" --device cuda:0 --oracle \
     > "$OUT/eval_k${k}_${key}_${target}.log" 2>&1 \
     || { echo "[ksweep] FAILED eval k=$k $target"; rm -rf "$dest"; return 1; }
@@ -58,7 +59,7 @@ while IFS= read -r line; do
     pretrain "$k" "$key" "$sources" "$nominal_target" || continue
     IFS=',' read -ra tarr <<< "$targets"
     for t in "${tarr[@]}"; do
-      evaluate "$k" "$key" "$t"
+      evaluate "$k" "$key" "$t" "$sources"
     done
   done
 done <<< "$POOLS"
