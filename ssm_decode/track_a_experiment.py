@@ -98,7 +98,7 @@ def labeled_bins(record, trials, budget):
 
 
 def decode_r2_record(model, x_z, table, bins, record, label_stats, *, device,
-                     latent_offset=None):
+                     latent_offset=None, return_ratio=False):
     """One contiguous causal pass over the whole recording (revision item 8).
 
     Chunking would reset the recurrent state, so the sequence goes through
@@ -114,14 +114,18 @@ def decode_r2_record(model, x_z, table, bins, record, label_stats, *, device,
         pred = model.base(z).squeeze(0).cpu().numpy()
     pred = pred[bins] * label_stats[1] + label_stats[0]
     truth = record.behavior[bins].astype(np.float64)
-    # End-to-end check: prediction and truth must share scale (review A1 class).
+    # End-to-end check (review A1 class): catch order-of-magnitude unit
+    # errors.  Amplitude shrinkage of a weak table is legitimate model
+    # quality, not a unit error, so the band is wide and the ratio is
+    # recorded per row.
     ratio = float(np.std(pred) / max(np.std(truth), 1e-9))
-    if not 0.5 <= ratio <= 2.0:
+    if not 0.1 <= ratio <= 10.0:
         raise ValueError(f"physical-unit check failed: pred/truth std ratio {ratio:.3f}")
     ss_res = float(((truth - pred) ** 2).sum())
     centered = truth - truth.mean(0, keepdims=True)
     ss_tot = float((centered ** 2).sum())
-    return 1.0 - ss_res / max(ss_tot, 1e-12)
+    r2 = 1.0 - ss_res / max(ss_tot, 1e-12)
+    return (r2, ratio) if return_ratio else r2
 
 
 def ui_grad_table(model, x_z, y_norm, trial_windows, table_init, *, device,
@@ -327,6 +331,15 @@ def run(args):
                 lr=args.ui_lr, seed=args.seed,
                 valid_mask=record.eval_mask & finite_behavior)
             methods["ui_grad"] = {"table": ui_table, "final_loss": ui_loss}
+            # Prior-plus-gradient composition (review 4.2.3): start the same
+            # refinement from the corrected prior table instead of the raw FA.
+            pc = methods["prior_correct"]
+            ui_prior_table, ui_prior_loss = ui_grad_table(
+                model, x_z, (record.behavior.astype(np.float64) - label_stats[0]) / label_stats[1],
+                trials[:budget], pc["table"], device=device, steps=args.ui_steps,
+                lr=args.ui_lr, seed=args.seed,
+                valid_mask=record.eval_mask & finite_behavior)
+            methods["ui_prior"] = {"table": ui_prior_table, "final_loss": ui_prior_loss}
         if fixed_channel:
             methods["mean_table"] = {"table": np.mean(source_tables, axis=0)}
         if args.oracle and budget > 0:
@@ -341,10 +354,13 @@ def run(args):
                                        "note": "frame fit on query labels; diagnostic only"}
 
         for name, payload in methods.items():
-            r2 = decode_r2_record(model, x_z, payload["table"], q_bins, record, label_stats,
-                                  device=device, latent_offset=payload.get("latent_offset"))
+            r2, unit_ratio = decode_r2_record(model, x_z, payload["table"], q_bins, record,
+                                              label_stats, device=device,
+                                              latent_offset=payload.get("latent_offset"),
+                                              return_ratio=True)
             row = _jsonable({"task": args.task, "target_session": target_session, "method": name,
-                             "r2": r2, "fa_loglik": fa["loglik"], "fa_seconds": shared["fa_seconds"],
+                             "r2": r2, "unit_ratio": unit_ratio,
+                             "fa_loglik": fa["loglik"], "fa_seconds": shared["fa_seconds"],
                              **common, **{k2: v2 for k2, v2 in payload.items() if k2 != "table"}})
             rows.append(row)
             print(json.dumps(row), flush=True)

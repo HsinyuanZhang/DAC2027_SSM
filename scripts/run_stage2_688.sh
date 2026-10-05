@@ -30,12 +30,12 @@ pretrain() {  # pretrain <dest> <steps> <extra...>
 
 STEPS=2000
 BASE=$OUT/${FAMILY}_pool
-for attempt in 0 1 2; do
+for attempt in 0 1 2 3; do
   if [ "$attempt" -eq 0 ]; then DIR=$BASE; else DIR=${BASE}_x$((2 ** attempt)); fi
   [ -f "$DIR/manifest.json" ] || pretrain "$DIR" "$STEPS" || exit 1
   BEST=$($PY -c "import json; print(json.load(open('$DIR/manifest.json'))['best_step'])")
   FINAL=$($PY -c "import json; print(json.load(open('$DIR/manifest.json'))['args']['steps'])")
-  if [ "$BEST" -gt $((STEPS * 8 / 10)) ] && [ "$attempt" -lt 2 ]; then
+  if [ "$BEST" -gt $((STEPS * 8 / 10)) ] && [ "$attempt" -lt 3 ]; then
     echo "[s2] $FAMILY best_step=$BEST in last 20% of $STEPS; retraining at $((STEPS * 2)) in a fresh dir"
     STEPS=$((STEPS * 2)); continue
   fi
