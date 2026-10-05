@@ -85,7 +85,7 @@ def pretrain_pool(args, pool_key, sources, pool_dir):
                    "--layers", str(capacity["layers"]),
                    "--state-size", str(capacity["state_size"]),
                    "--ffn-mult", str(capacity.get("ffn_mult") or 2),
-                   "--steps", str(steps)]
+                   "--steps", str(steps)] + list(args.pretrain_extra or [])
             print(f"[pool] {pool_key}: pretrain {len(sources)} sources, steps {steps}", flush=True)
             if not run_quiet(cmd, child_env(args.gpu, f"pool_{pool_key}"), log):
                 raise RuntimeError(f"pool pretraining failed: {pool_key} (see {log})")
@@ -160,8 +160,8 @@ def main():
     parser.add_argument("--gpu", type=int, default=0)
     parser.add_argument("--root", required=True)
     parser.add_argument("--aggregate-only", action="store_true")
-    parser.add_argument("--pretrain-extra", nargs="*", default=None,
-                        help="extra flags passed to session_pretraining (recipe ablations)")
+    parser.add_argument("--pretrain-extra", action="append", default=None,
+                        help="repeatable; each entry is one flag or value passed to session_pretraining")
     for name in ("width", "layers", "state-size", "ffn-mult"):
         parser.add_argument("--" + name, type=int, default=None)
     args = parser.parse_args()

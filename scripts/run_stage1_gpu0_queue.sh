@@ -20,5 +20,6 @@ run() {  # run <name> <extra flags...>
 }
 
 run small_ref --pretrain-extra --ffn-mult 2
-run small_noaugment --pretrain-extra --ffn-mult 2 --gain-sigma 0 --offset-sigma 0 --channel-dropout 0
+run small_noaugment --pretrain-extra=--gain-sigma --pretrain-extra=0 \
+  --pretrain-extra=--offset-sigma --pretrain-extra=0 --pretrain-extra=--channel-dropout --pretrain-extra=0
 echo "[ablate] GPU0 queue done $(date '+%T')"

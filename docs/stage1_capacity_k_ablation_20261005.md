@@ -41,10 +41,18 @@ Decision: K = 32 for the AP backbone from here on.
 
 ## 3. Recipe Ablation (revision 4.4.2, arg-only item)
 
-M2 small capacity on the forward protocol, full recipe versus no drift augmentation (gain 0, offset 0, channel dropout 0).
+M2 small capacity on the forward protocol, full recipe versus no drift augmentation (gain 0, offset 0, channel dropout 0).  Multi-target means:
 
-(pending)
+| config | lora | none |
+|---|---:|---:|
+| small full recipe | 0.3430 | 0.3066 |
+| small no augmentation | 0.2423 | 0.2141 |
+| **augmentation contribution** | **+0.101** | **+0.093** |
+
+Drift augmentation is the largest single recipe item measured so far: it adds about 0.1 multi-target R2 on M2 at both adaptation levels.  The gap is largest on the two earliest targets (0.10 to 0.18).  Remaining recipe items (per-session statistics, session bank, window policy, regularization) need code-level toggles and are deferred to the next round.
 
 ## 4. C10 Variant Results
 
-(pending)
+Capacity references on the same protocol: small lora 0.3430, wide lora 0.3720 (state 201.8 KB, over budget).
+
+(pending; wide_n16 on GPU 1, deep_n16 on GPU 0, wide_n8 chained)
