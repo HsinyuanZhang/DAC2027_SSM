@@ -61,7 +61,7 @@ Capacity references on the same protocol: small lora 0.3430, wide lora 0.3720 (s
 | wide 256x4 N32 | 201.8 | 0.3720 | 0.3236 | over budget |
 | **wide_n16 256x4 N16** | **103.9** | **0.3767** | 0.3141 | in budget, beats wide |
 | deep_n16 128x6 N16 | 77.9 | 0.3721 | **0.3291** | in budget, matches wide |
-| w192_n16 192x4 N16 | 108.9 | pending | pending | capacity fill-in, running |
+| w192_n16 192x4 N16 | 108.9 | 0.3653 | 0.3107 | in budget, capacity fill-in |
 
 Readings:
 
@@ -69,3 +69,12 @@ Readings:
 2. Reducing N from 32 to 16 costs nothing on M2 at both capacities.  The M2 capacity need lives in the stateless width and layer count, not in per-head state.
 3. Kernel constraint discovered: ``d_state = 8`` violates the fused Triton kernel (``tl.dot`` requires ``K >= 16``).  The planned wide_n8 variant is not implementable on this kernel; 16 is the state-size floor.  The w192_n16 fill-in replaces it on the capacity curve.
 
+
+## 5. Stage 1' Outcome
+
+1. Exit condition met.  wide_n16 (103.9 KB state) reaches 0.3767 multi-target lora R2, above the over-budget wide model at 0.3720.  deep_n16 matches wide with 39 percent of its state.  The default M2 candidate from here on is wide_n16; deep_n16 is the low-state alternative.
+2. State size N=16 is both sufficient and the kernel floor.  N=32 to 16 costs nothing on M2; N=8 is not implementable on the fused kernel.
+3. AP backbone bottleneck: K=32 from here on.  The bottleneck is not the Track A bottleneck on M2; the prior table is.
+4. Largest measured recipe item: drift augmentation, +0.10.  Code-level recipe toggles (per-session statistics, session bank, window policy) are the next ablation round.
+
+All numbers: multi-target mean over five forward targets, query-only, physical-unit R2, LR selected on prefix validation, three seeds for trained methods.
