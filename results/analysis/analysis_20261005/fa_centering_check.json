@@ -1,0 +1,38 @@
+{
+  "2020-10-28-Run1/b8": {
+    "mean_table": 0.2888198627613523,
+    "am1_uncentered(as_repo)": 0.042948927809729476,
+    "am1_centered": 0.006649932277881909,
+    "am1_latent_offset_over_std": 0.20324560377969408,
+    "oracle_frame_uncentered(as_repo)": 0.052204480267313724,
+    "oracle_frame_centered": 0.032810447160791956,
+    "oracle_frame_latent_offset_over_std": 0.20324560377969408
+  },
+  "2020-10-28-Run1/b33": {
+    "mean_table": 0.34232948193196033,
+    "am1_uncentered(as_repo)": 0.07262989945330478,
+    "am1_centered": 0.07093632614408685,
+    "am1_latent_offset_over_std": 0.1023054121481829,
+    "oracle_frame_uncentered(as_repo)": 0.13836871832181774,
+    "oracle_frame_centered": 0.1293511914190938,
+    "oracle_frame_latent_offset_over_std": 0.1023054121481829
+  },
+  "2020-10-19-Run1/b8": {
+    "mean_table": 0.2947596936966539,
+    "am1_uncentered(as_repo)": -0.02563629224195929,
+    "am1_centered": -0.024854319448588624,
+    "am1_latent_offset_over_std": 0.15886039722711284,
+    "oracle_frame_uncentered(as_repo)": -0.017168190147791362,
+    "oracle_frame_centered": -0.010395719380165147,
+    "oracle_frame_latent_offset_over_std": 0.15886039722711284
+  },
+  "2020-10-19-Run1/b33": {
+    "mean_table": 0.2889199870901291,
+    "am1_uncentered(as_repo)": -0.014165884021596131,
+    "am1_centered": 0.0034965790998594537,
+    "am1_latent_offset_over_std": 0.1116509437943507,
+    "oracle_frame_uncentered(as_repo)": 0.0848375616539282,
+    "oracle_frame_centered": 0.1069943841870632,
+    "oracle_frame_latent_offset_over_std": 0.1116509437943507
+  }
+}
