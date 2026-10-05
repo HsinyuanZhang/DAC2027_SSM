@@ -289,3 +289,43 @@ def am1_table(x_labeled: np.ndarray, x_all: np.ndarray, y_labeled: np.ndarray,
     table = t_frame @ beta
     return {"table": table, "T": t_frame, "M": m_fit, "beta": beta,
             "fa": fa, "head_ridge": m_fit, "labeled_bins": int(len(y_labeled)), "d": d}
+
+
+def fit_channel_correction(b_src: np.ndarray, prior_table: np.ndarray,
+                           x_labeled: np.ndarray, y_labeled: np.ndarray,
+                           *, lam: float = 1.0) -> np.ndarray:
+    """Closed-form per-channel correction on a prior table (revision 4.2.1).
+
+    The deployed table is ``W = W0 diag(g)`` with the prior ``W0`` fixed.
+    Under the linear head ``B_src`` the label residual is linear in ``g``:
+
+        y_t - B_src W0 x_t  =  sum_i g_i' x_{t,i} (B_src W0)_{:, i}
+
+    with ``g' = g - 1``.  One ridge solve over the labeled bins gives ``g``.
+    Only N parameters are fit, so a handful of trials suffices.
+    """
+    b_src = np.asarray(b_src, dtype=np.float64)
+    prior_table = np.asarray(prior_table, dtype=np.float64)
+    x_labeled = np.asarray(x_labeled, dtype=np.float64)
+    y_labeled = np.asarray(y_labeled, dtype=np.float64)
+    path = b_src @ prior_table                                              # [D, N]
+    base = x_labeled @ path.T                                               # [L, D]
+    residual = y_labeled - base
+    rows, n = x_labeled.shape
+    d = y_labeled.shape[1]
+    design = np.empty((rows * d, n))
+    for i in range(n):
+        design[:, i] = np.outer(x_labeled[:, i], path[:, i]).reshape(-1)
+    target = residual.reshape(-1)
+    gram = design.T @ design + lam * np.eye(n)
+    g_delta = np.linalg.solve(gram, design.T @ target)
+    return 1.0 + g_delta
+
+
+def prior_correction_table(b_src: np.ndarray, prior_table: np.ndarray,
+                           x_labeled: np.ndarray, y_labeled: np.ndarray,
+                           *, lam: float = 1.0) -> dict:
+    """Assemble ``W = W0 diag(g)`` for a prior table and labeled bins."""
+    gains = fit_channel_correction(b_src, prior_table, x_labeled, y_labeled, lam=lam)
+    return {"table": prior_table * gains[None, :], "channel_gains": gains,
+            "gain_deviation_max": float(np.abs(gains - 1.0).max())}

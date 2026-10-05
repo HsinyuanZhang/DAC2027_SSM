@@ -59,7 +59,14 @@ MIN_TRIAL_BINS = 50
 
 
 def usable_trials(record, *, min_bins=MIN_TRIAL_BINS):
-    return [(a, b) for a, b in record.trial_bounds if b - a >= min_bins]
+    """Trials long enough to use AND carrying at least one eval-valid bin.
+
+    Revision note: on 000688 many trials are failed (result != "R") and have
+    no eval-valid bins.  A labeled budget counted over such trials would
+    deliver zero labels, so the budget unit is a trial that can label.
+    """
+    return [(a, b) for a, b in record.trial_bounds
+            if b - a >= min_bins and bool(record.eval_mask[a:b].any())]
 
 
 def support_stats(record, budget, trials):
@@ -171,6 +178,18 @@ def _source_latent_stats(model, records, tables):
     return z.mean(0), np.maximum(z.std(0), 1e-6)
 
 
+def _prior_correct(b_src, prior_w0, record, l_bins, x_mean, x_std, label_stats):
+    """Prior table plus closed-form channel-gain correction (revision 4.2.1).
+
+    The correction ridge uses head-path residuals in normalized label units,
+    matching the whitened frame's label convention.
+    """
+    x_l = ((record.neural[l_bins].astype(np.float64) - x_mean) / x_std)
+    y_l = (record.behavior[l_bins].astype(np.float64) - label_stats[0]) / label_stats[1]
+    out = assoc.prior_correction_table(b_src, prior_w0, x_l, y_l, lam=1.0)
+    return {"table": out["table"], "gain_deviation_max": out["gain_deviation_max"]}
+
+
 def _source_profiles(records, lags):
     """A-M0 basis profiles for each source session, full-session z-scores."""
     profiles = []
@@ -212,17 +231,25 @@ def run(args):
             f"{args.target_session!r} (revision item 10)")
     model, blob = load_frozen_ap_backbone(args.checkpoint, device=device)
     k = model.k
-    target_session = blob["target_session"]
+    # The evaluation always scores --target-session.  The checkpoint's own
+    # target is provenance only; shared-pool checkpoints carry the pool's
+    # first target and must never redirect the data load.
+    target_session = args.target_session
     source_ids = blob["source_sessions"]
     label_stats = tuple(np.asarray(s, dtype=np.float64) for s in blob["source_statistics"][0][2:4])
     out = Path(args.output)
     out.mkdir(parents=True, exist_ok=True)
-    record = cached_recording(args.task, "held_in", target_session,
-                              root=Path(args.data_root), cache_root=Path(args.cache_root))
+    if args.task == "dandi688sm":
+        from .dandi688_data import load_dandi688_recording
+        record = load_dandi688_recording(target_session)
+        records_src = [load_dandi688_recording(s) for s in source_ids]
+    else:
+        record = cached_recording(args.task, "held_in", target_session,
+                                  root=Path(args.data_root), cache_root=Path(args.cache_root))
+        records_src = [cached_recording(args.task, "held_in", s, root=Path(args.data_root),
+                                        cache_root=Path(args.cache_root)) for s in source_ids]
     trials = usable_trials(record)
     budgets = [int(b) for b in args.budgets.split(",")] if args.budgets else list(BUDGETS)
-    records_src = [cached_recording(args.task, "held_in", s, root=Path(args.data_root),
-                                    cache_root=Path(args.cache_root)) for s in source_ids]
     source_tables = [t.detach().cpu().numpy().astype(np.float64) for t in model.tables]
     # Shared-map fit for A-M0/A-M2 and latent stats for the whitened frame.
     source_profiles = _source_profiles(records_src, args.lags)
@@ -278,6 +305,10 @@ def run(args):
             methods["am0"] = {"table": (h0 @ g_fit["g"]).T, "g_residual": g_fit["residual"]}
             h2 = assoc.shrinkage_profiles(phi_l, x_l, prior, lam=args.lam)["H"]
             methods["am2"] = {"table": (h2 @ g_fit["g"]).T}
+            # Revision 4.2.1: prior table plus closed-form channel correction.
+            prior_w0 = (h0 @ g_fit["g"]).T
+            methods["prior_correct"] = _prior_correct(b_src, prior_w0, record, l_bins,
+                                                      mean, std, label_stats)
             ui_table, ui_loss = ui_grad_table(
                 model, x_z, (record.behavior.astype(np.float64) - label_stats[0]) / label_stats[1],
                 trials[:budget], beta, device=device, steps=args.ui_steps,
@@ -321,7 +352,7 @@ def run(args):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--task", required=True, choices=["m1", "m2"])
+    parser.add_argument("--task", required=True, choices=["m1", "m2", "dandi688sm"])
     parser.add_argument("--target-session", required=True)
     parser.add_argument("--pool-sources", default=None,
                         help="comma list; validates the checkpoint source pool instead of the target id")

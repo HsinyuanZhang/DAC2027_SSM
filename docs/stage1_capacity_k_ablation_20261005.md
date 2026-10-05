@@ -26,9 +26,15 @@ Multi-target means:
 
 | K | mean_table b=0 | mean_table b=33 | am1 b=33 | ui_grad b=33 | oracle b=33 |
 |---:|---:|---:|---:|---:|---:|
-| 16 | 0.268 | 0.299 | 0.058 | 0.223 | 0.077 |
-| 32 | 0.282 | **0.312** | **0.086** | **0.237** | 0.132 |
-| 64 | 0.265 | 0.290 | 0.077 | 0.211 | 0.106 |
+| 16 | 0.276 | 0.286 | 0.040 | 0.212 | 0.076 |
+| 32 | 0.277 | **0.293** | **0.118** | **0.210** | 0.166 |
+| 64 | 0.262 | 0.274 | 0.084 | 0.189 | 0.113 |
+
+Correction 2026-10-06: the original table evaluated each pool's second
+target against the first target's data (a target-loading defect in the
+shared-pool path of ``track_a_experiment``).  The second-target runs were
+re-executed after the fix.  The K ranking is unchanged; absolute values
+moved by up to 0.02.
 
 Findings:
 
