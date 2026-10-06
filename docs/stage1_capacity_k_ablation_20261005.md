@@ -71,7 +71,13 @@ Capacity references on the same protocol: small lora 0.3430, wide lora 0.3720 (s
 
 Readings:
 
-1. The stage exit condition is met: two configurations inside the 128 KB budget match the over-budget wide model (wide_n16 is 0.005 above wide, within single-source-seed noise; review 2026-10-06 rewords 'beats' to 'ties').  deep_n16 matches wide with 39 percent of its state.
+1. The stage exit condition is met: configurations inside the 128 KB budget
+   come within about 0.01 of the over-budget wide model.  wide_n16 across
+   three source seeds: 0.3611 / 0.3629 / 0.3687 (mean 0.364, SD 0.004)
+   versus wide 0.372 -- a 0.008 gap at roughly two standard deviations, so
+   the honest wording is "slightly below wide, near parity", not "beats".
+   deep_n16 (0.372, single seed; its second seed failed a fold check in
+   pool 3 and was not rerun) needs a seed replicate before ranking.
 2. Reducing N from 32 to 16 costs nothing on M2 at both capacities.  The M2 capacity need lives in the stateless width and layer count, not in per-head state.
 3. Kernel constraint discovered: ``d_state = 8`` violates the fused Triton kernel (``tl.dot`` requires ``K >= 16``).  The planned wide_n8 variant is not implementable on this kernel; 16 is the state-size floor.  The w192_n16 fill-in replaces it on the capacity curve.
 
