@@ -175,9 +175,11 @@ class SetAttentionBackbone(nn.Module):
         state = blob["state_dict"]
         target = {k: v for k, v in state.items() if k.startswith(("base.", "head."))}
         missing, unexpected = self.load_state_dict(target, strict=False)
-        unexpected = [k for k in unexpected]
-        if any(k.startswith("base.") for k in missing):
-            raise ValueError(f"AP warm start missed trunk keys: {missing[:5]}")
+        if any(k.startswith(("base.", "head.")) for k in missing):
+            raise ValueError(f"AP warm start missed trunk/head keys: {missing[:5]}")
+        loaded = sum(1 for k in target if k.startswith("head."))
+        if loaded == 0:
+            raise ValueError("AP warm start loaded no head tensors (review B3)")
         return {"warm_started": sorted(target), "ap_best_source_val":
                 blob.get("best_source_val_trunk_r2")}
 

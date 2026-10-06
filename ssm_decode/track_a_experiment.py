@@ -52,6 +52,8 @@ import torch
 from . import association as assoc
 from .ap_backbone import load_frozen_ap_backbone
 from .data import DEFAULT_ROOT, sha256_file
+from .eval_checks import (check_budget_rule, check_physical_units, check_source_gate,
+                          flatten_checks)
 from .multi_target import DEFAULT_CACHE, cached_recording
 
 BUDGETS = (0, 2, 4, 8, 16, 33)
@@ -114,18 +116,13 @@ def decode_r2_record(model, x_z, table, bins, record, label_stats, *, device,
         pred = model.base(z).squeeze(0).cpu().numpy()
     pred = pred[bins] * label_stats[1] + label_stats[0]
     truth = record.behavior[bins].astype(np.float64)
-    # End-to-end check (review A1 class): catch order-of-magnitude unit
-    # errors.  Amplitude shrinkage of a weak table is legitimate model
-    # quality, not a unit error, so the band is wide and the ratio is
-    # recorded per row.
-    ratio = float(np.std(pred) / max(np.std(truth), 1e-9))
-    if not 0.1 <= ratio <= 10.0:
-        raise ValueError(f"physical-unit check failed: pred/truth std ratio {ratio:.3f}")
     ss_res = float(((truth - pred) ** 2).sum())
     centered = truth - truth.mean(0, keepdims=True)
     ss_tot = float((centered ** 2).sum())
     r2 = 1.0 - ss_res / max(ss_tot, 1e-12)
-    return (r2, ratio) if return_ratio else r2
+    if return_ratio:
+        return r2, check_physical_units(pred, truth)
+    return r2
 
 
 def ui_grad_table(model, x_z, y_norm, trial_windows, table_init, *, device,
@@ -225,26 +222,29 @@ def _jsonable(value):
 def run(args):
     device = torch.device(args.device)
     blob = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
+    # Checks record into every row; they never abort the evaluation
+    # (review A5 of iteration 3).
+    entry_checks = []
     if getattr(args, "check_budget", True):
-        steps, best = int(blob.get("args", {}).get("steps", 0)), int(blob.get("best_step", 0))
-        if steps <= 0 or best <= 0 or best > 0.8 * steps:
-            raise ValueError(f"budget check failed: best_step {best} vs steps {steps}")
-    if getattr(args, "min_source_r2", None) is not None:
-        score = float(blob.get("best_source_val_trunk_r2", float("nan")))
-        if not np.isfinite(score) or score < args.min_source_r2:
-            raise ValueError(f"source-fit gate failed: {score} < {args.min_source_r2}")
+        entry_checks.append(check_budget_rule(blob))
+    entry_checks.append(check_source_gate(blob, getattr(args, "min_source_r2", None)))
+    entry_flat = flatten_checks(entry_checks)
     pool_sources = ([s for s in args.pool_sources.split(",") if s]
                     if getattr(args, "pool_sources", None) else None)
     if pool_sources is not None:
-        # Shared-pool checkpoint: the source set must match the target's pool.
         if set(blob.get("source_sessions", [])) != set(pool_sources):
             raise ValueError(
                 f"checkpoint sources {sorted(blob.get('source_sessions', []))} != pool "
                 f"{sorted(pool_sources)} (revision item 10, pool form)")
-    elif blob.get("target_session") != args.target_session:
-        raise ValueError(
-            f"checkpoint target {blob.get('target_session')!r} != --target-session "
-            f"{args.target_session!r} (revision item 10)")
+        if args.target_session in pool_sources:
+            raise ValueError("target session is inside --pool-sources (review B4)")
+    else:
+        if args.target_session in blob.get("source_sessions", []):
+            raise ValueError("target session is inside the checkpoint source pool (review B4)")
+        if blob.get("target_session") != args.target_session:
+            raise ValueError(
+                f"checkpoint target {blob.get('target_session')!r} != --target-session "
+                f"{args.target_session!r} (revision item 10)")
     model, blob = load_frozen_ap_backbone(args.checkpoint, device=device)
     k = model.k
     # The evaluation always scores --target-session.  The checkpoint's own
@@ -354,17 +354,19 @@ def run(args):
                                        "note": "frame fit on query labels; diagnostic only"}
 
         for name, payload in methods.items():
-            r2, unit_ratio = decode_r2_record(model, x_z, payload["table"], q_bins, record,
+            r2, unit_check = decode_r2_record(model, x_z, payload["table"], q_bins, record,
                                               label_stats, device=device,
                                               latent_offset=payload.get("latent_offset"),
                                               return_ratio=True)
             row = _jsonable({"task": args.task, "target_session": target_session, "method": name,
-                             "r2": r2, "unit_ratio": unit_ratio,
+                             "r2": r2, **flatten_checks([unit_check]),
                              "fa_loglik": fa["loglik"], "fa_seconds": shared["fa_seconds"],
-                             **common, **{k2: v2 for k2, v2 in payload.items() if k2 != "table"}})
+                             **common, **entry_flat,
+                             **{k2: v2 for k2, v2 in payload.items() if k2 != "table"}})
             rows.append(row)
+            with (out / "results.jsonl").open("a") as stream:
+                stream.write(json.dumps(row) + "\n")
             print(json.dumps(row), flush=True)
-    (out / "results.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
     (out / "summary.json").write_text(json.dumps({
         "checkpoint": str(Path(args.checkpoint).resolve()),
         "checkpoint_sha256": sha256_file(Path(args.checkpoint)),

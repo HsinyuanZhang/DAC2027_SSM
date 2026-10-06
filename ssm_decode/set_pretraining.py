@@ -29,7 +29,7 @@ from .cross_session_iteration import _code_hashes, _groups, _runtime_identity
 from .dandi688_data import load_dandi688_recording
 from .session_frontend import drift_augment
 from .set_attention import (SetAttentionBackbone, normalize_descriptors,
-                            unit_descriptors)
+                            raw_unit_stats, unit_descriptors)
 
 MODULES = ("set_pretraining.py", "set_attention.py", "association.py",
            "session_pretraining.py", "session_frontend.py", "dandi688_data.py")
@@ -46,6 +46,9 @@ def code_hashes() -> dict:
 def run(args):
     if args.steps < 1 or args.val_interval < 1 or args.k < 1:
         raise ValueError("invalid training budget")
+    if args.distill_steps > 0 and not args.init_from_ap:
+        raise ValueError("--distill-steps > 0 requires --init-from-ap (review B2)")
+    freeze_trunk = bool(args.freeze_trunk) if args.freeze_trunk >= 0 else bool(args.init_from_ap)
     torch.set_num_threads(1)
     d._seed(args.seed)
     out = Path(args.output)
@@ -74,25 +77,30 @@ def run(args):
                                  with_profile=True)[0] for r in records]
     normed_ref, desc_stats = normalize_descriptors(raw_full)
     desc_mean, desc_std = desc_stats["mean"], desc_stats["std"]
-    profile_dim = raw_full[0].shape[1] - 8
-    stats_dim = 8
+    stats_dim = raw_unit_stats(records[0], np.arange(2)).shape[1]
+    profile_dim = raw_full[0].shape[1] - stats_dim
     device = torch.device(args.device)
     if device.type == "cuda":
         torch.cuda.set_device(device)
         torch.cuda.reset_peak_memory_stats(device)
 
+    def _input_stats(index):
+        if ap_train_stats is not None:
+            entry = ap_train_stats[index]
+            return np.asarray(entry[0], dtype=np.float64), np.asarray(entry[1], dtype=np.float64)
+        x = records[index].neural.astype(np.float64)
+        return x.mean(0), np.where(x.std(0) < 1e-6, 1.0, x.std(0))
+
     train_windows = []
-    for record in records:
-        x = record.neural.astype(np.float64)
-        x_mean, x_std = x.mean(0), np.where(x.std(0) < 1e-6, 1.0, x.std(0))
+    for index, record in enumerate(records):
+        x_mean, x_std = _input_stats(index)
         xz = ((record.neural - x_mean) / x_std).astype(np.float32)
         y = np.where(record.eval_mask[:, None], (record.behavior - y_mean) / y_std, np.nan)
         train_windows.append(tuple(torch.from_numpy(v).to(device) for v in (xz, y, record.eval_mask)))
     val_windows = []
-    for record, (_, va) in zip(records, splits):
-        x = record.neural.astype(np.float64)
-        mean, std = x.mean(0), np.where(x.std(0) < 1e-6, 1.0, x.std(0))
-        xz = ((record.neural - mean) / std).astype(np.float32)
+    for index, (record, (_, va)) in enumerate(zip(records, splits)):
+        x_mean, x_std = _input_stats(index)
+        xz = ((record.neural - x_mean) / x_std).astype(np.float32)
         y = np.full_like(record.behavior, np.nan)
         mask = np.zeros(len(xz), dtype=bool)
         for a, b in va:
@@ -110,13 +118,18 @@ def run(args):
         print(f"[set] AP warm start: {len(warm['warm_started'])} tensors, "
               f"AP source val {warm['ap_best_source_val']:.4f}", flush=True)
     ap_tables = None
+    ap_train_stats = None
     if args.distill_steps > 0:
         blob = torch.load(args.init_from_ap, map_location="cpu", weights_only=False)
         if blob["args"].get("k") != args.k:
             raise ValueError("AP backbone K must match the set backbone K for distillation")
+        if list(blob.get("source_sessions", [])) != source_ids:
+            raise ValueError("AP source session order differs from --dandi688-sources "
+                             "(review A4); table pairing would be silently wrong")
         state = blob["state_dict"]
         ap_tables = [state[f"tables.{i}"].detach().cpu().numpy().astype(np.float64)
                      for i in range(len(source_ids))]
+        ap_train_stats = blob.get("source_statistics")
 
     def raw_blocks(index, bins, with_profile=True):
         raw, _ = unit_descriptors(records[index], bins, lags=args.lags,
@@ -188,14 +201,13 @@ def run(args):
             picks = sorted(rng.choice(len(trials),
                                       size=min(args.episode_trials, len(trials)),
                                       replace=False))
-            keep = np.ones(records[index].neural.shape[1], dtype=bool)
-            drop = rng.random(len(keep)) < args.unit_dropout
-            if drop.all():
-                drop[int(rng.integers(len(keep)))] = False
-            keep[drop] = False
             desc_bins = np.concatenate([np.arange(trials[i][0], trials[i][1])
                                         for i in picks])
-            table = fold(index, desc_bins, keep,
+            # Review A4 (iteration 3): no unit dropout in distillation.  The
+            # full AP table has no well-defined dropped-unit form, and the
+            # renormalised fold regressing onto it biases values low by about
+            # the keep fraction.
+            table = fold(index, desc_bins, None,
                          profile_dropout=rng.random() < args.profile_dropout,
                          noise=args.desc_noise)
             loss = (table - target_table).square().mean()
@@ -210,7 +222,7 @@ def run(args):
             p.requires_grad_(state)
 
     episodic_frozen = None
-    if args.freeze_trunk:
+    if freeze_trunk:
         episodic_frozen = [p.requires_grad for p in model.parameters()]
         for p in model.base.parameters():
             p.requires_grad_(False)
@@ -269,15 +281,15 @@ def run(args):
                      profile_dropout=rng.random() < args.profile_dropout,
                      noise=args.desc_noise)
         other = [i for i in range(len(trials)) if i not in set(desc_pick)]
+        # Review A1 (iteration 3): sample endpoints across the whole trial,
+        # not only the last bin.  Short trials fall back to their end.
         picks = []
         span = args.context - 1
         for _ in range(args.batch_size):
             a, b = trials[other[int(rng.integers(len(other)))]]
-            hi = b - 1
-            lo = a + span
-            if hi < lo:
-                hi = lo = b - 1
-            picks.append((0, int(min(hi, x_all.shape[0] - 1))))
+            lo, hi = a + span, b - 1
+            end = int(rng.integers(lo, hi + 1)) if hi > lo else hi
+            picks.append((0, int(min(end, x_all.shape[0] - 1))))
         xb, yb, mb = d._right_aligned([window], picks, args.context)
         xb = xb * keep_t
         xb = drift_augment(xb, args.gain_sigma, args.offset_sigma, 0.0)
@@ -299,8 +311,10 @@ def run(args):
         optimizer.step()
         if step == 1 or step % args.val_interval == 0 or step == args.steps:
             maybe_validate(step, float(loss.detach()), gradient)
-    if best_step == 0:
+    if best_step < 0:
         raise FloatingPointError("no validation point was reached")
+    # best_step == 0 means the distillation-only checkpoint stayed best; that
+    # is a legal selection (review B1 of iteration 3).
     if episodic_frozen is not None:
         for p, state in zip(model.parameters(), episodic_frozen):
             p.requires_grad_(state)
@@ -337,13 +351,14 @@ def main(argv=None):
                           ("context", 128), ("batch-size", 32), ("steps", 2000),
                           ("val-interval", 100), ("max-val-endpoints", 1024),
                           ("episode-trials", 8), ("lags", 2), ("seed", 0),
-                          ("distill-steps", 500), ("freeze-trunk", 1)]:
+                          ("distill-steps", 500), ("freeze-trunk", -1),
+                          ("act-hidden", 16)]:
         parser.add_argument("--" + name, type=int, default=default)
     for name, default in [("lr", 1e-3), ("weight-decay", 1e-3), ("dropout", 0.2),
                           ("gain-sigma", 0.3), ("offset-sigma", 0.1),
                           ("lam-white", 0.1), ("lam-head", 0.5),
                           ("unit-dropout", 0.3), ("desc-noise", 0.05),
-                          ("profile-dropout", 0.3), ("tau", 0.5), ("act-hidden", 16)]:
+                          ("profile-dropout", 0.3), ("tau", 0.5)]:  # float group
         parser.add_argument("--" + name, type=float, default=default)
     print(run(parser.parse_args(argv)))
 

@@ -42,15 +42,17 @@ def _fake_record(t=4000, n=9, seed=3):
 
 
 def test_unit_descriptors_layout_and_label_free():
+    from ssm_decode.set_attention import raw_unit_stats
     record = _fake_record()
     bins = np.arange(1500)
     desc, info = unit_descriptors(record, bins, lags=2, with_profile=True)
-    assert desc.shape[1] == 2 * 3 + 2
-    assert info["k0"] == 6
+    stats_width = raw_unit_stats(record, bins).shape[1]
+    assert desc.shape[1] == 2 * 3 + stats_width
+    assert info["k0"] == 6 and info["stats"] == stats_width
     assert np.isfinite(desc).all()
     free, _ = unit_descriptors(record, bins, lags=2, with_profile=False)
     # Label-free descriptor keeps activity stats identical, profile zeroed.
-    np.testing.assert_allclose(desc[:, -2:], free[:, -2:])
+    np.testing.assert_allclose(desc[:, 6:], free[:, 6:])
     assert np.all(free[:, :6] == 0.0)
     # Too few finite behavior bins falls back to a zero profile instead of raising.
     broken = SimpleNamespace(neural=record.neural, behavior=np.full_like(record.behavior, np.nan),
