@@ -199,7 +199,8 @@ def run(args):
                 tables["e1_prior_correct"] = corrected["table"]
         profile_free, stats_free, _ = _desc(blob, record, np.arange(len(x_z)),
                                             with_profile=False)
-        tables["e1_rate"] = _fold(model, (profile_free, stats_free), device)
+        blocks_free = (profile_free, stats_free)
+        tables["e1_rate"] = _fold(model, blocks_free, device)
 
         for name, table in tables.items():
             r2, unit_check = _r2(_forward(model, x_z, table, device), record, q_bins,
@@ -214,6 +215,7 @@ def run(args):
 
         main_name = "e1_profile" if budget > 0 else "e1_rate"
         main_table = tables[main_name]
+        main_blocks = blocks if budget > 0 else blocks_free
         if budget > 0:
             perm = rng.permutation(blocks[0].shape[0])
             shuffled = _fold(model, blocks, device, perm=perm)
@@ -230,8 +232,8 @@ def run(args):
             keep_t = torch.from_numpy(keep_np).to(device)
             with torch.inference_mode():
                 table_drop = model.fold_from_raw(
-                    torch.from_numpy(blocks[0].astype(np.float32)).to(device),
-                    torch.from_numpy(blocks[1].astype(np.float32)).to(device), keep_t)
+                    torch.from_numpy(main_blocks[0].astype(np.float32)).to(device),
+                    torch.from_numpy(main_blocks[1].astype(np.float32)).to(device), keep_t)
             table_drop = table_drop.cpu().numpy().astype(np.float64)
             r2_drop = _r2(_forward(model, x_z, table_drop, device),
                           record, q_bins, y_mean, y_std)

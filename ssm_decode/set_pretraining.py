@@ -84,6 +84,8 @@ def run(args):
         torch.cuda.set_device(device)
         torch.cuda.reset_peak_memory_stats(device)
 
+    ap_train_stats = None
+
     def _input_stats(index):
         if ap_train_stats is not None:
             entry = ap_train_stats[index]
@@ -111,14 +113,15 @@ def run(args):
     model = SetAttentionBackbone(profile_dim, stats_dim, outputs, k=args.k,
                                  width=args.width, layers=args.layers,
                                  state_size=args.state_size, dropout=args.dropout,
-                                 tau=args.tau, act_hidden=args.act_hidden).to(device)
+                                 tau=args.tau, act_hidden=args.act_hidden,
+                                 read_in=args.read_in,
+                                 mlp_hidden=args.mlp_hidden).to(device)
     warm = None
     if args.init_from_ap:
         warm = model.load_ap_warm_start(args.init_from_ap)
         print(f"[set] AP warm start: {len(warm['warm_started'])} tensors, "
               f"AP source val {warm['ap_best_source_val']:.4f}", flush=True)
     ap_tables = None
-    ap_train_stats = None
     if args.distill_steps > 0:
         blob = torch.load(args.init_from_ap, map_location="cpu", weights_only=False)
         if blob["args"].get("k") != args.k:
@@ -360,6 +363,8 @@ def main(argv=None):
                           ("unit-dropout", 0.3), ("desc-noise", 0.05),
                           ("profile-dropout", 0.3), ("tau", 0.5)]:  # float group
         parser.add_argument("--" + name, type=float, default=default)
+    parser.add_argument("--read-in", default="attention", choices=["attention", "mlp"])
+    parser.add_argument("--mlp-hidden", type=int, default=128)
     print(run(parser.parse_args(argv)))
 
 

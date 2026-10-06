@@ -1,0 +1,17 @@
+{
+  "ap_source_val": 0.7147103945414225,
+  "reconstructed_mean_r2": 0.7072868446509043,
+  "regressor": "MLP no-softmax",
+  "hidden": 128,
+  "steps": 4000,
+  "final_train_mse": 0.004874087870121002,
+  "per_session": {
+    "O-20150511": 0.8304591178894043,
+    "O-20150512": 0.7526982426643372,
+    "O-20150610": 0.8844121098518372,
+    "O-20150611": 0.7616972327232361,
+    "O-20150612": 0.21719300746917725,
+    "O-20150615": 0.7972613573074341
+  },
+  "read": "near AP score => descriptors suffice, fold structure limits; capped equally => descriptors lack information"
+}

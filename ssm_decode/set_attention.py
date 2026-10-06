@@ -119,6 +119,35 @@ class SetAttentionReadIn(nn.Module):
         return (alpha * values).T                                   # [K, N]
 
 
+class MLPReadIn(nn.Module):
+    """E1b: unconstrained per-unit regressor read-in (diagnostic finding).
+
+    The descriptor-capacity diagnostic showed the standardized descriptor
+    carries enough information to reach the AP tables (0.707 vs 0.715);
+    the softmax-attention fold was the limiter.  This read-in maps each
+    unit's descriptor row to its K table entries with a small MLP.  It is
+    still session-static: the table is computed once at calibration and
+    written to the same SRAM form.
+    """
+
+    def __init__(self, desc_dim: int, k: int, hidden: int = 128):
+        super().__init__()
+        self.k = k
+        self.net = nn.Sequential(nn.Linear(desc_dim, hidden), nn.GELU(),
+                                 nn.Linear(hidden, hidden), nn.GELU(),
+                                 nn.Linear(hidden, k))
+        nn.init.zeros_(self.net[-1].weight)
+        nn.init.zeros_(self.net[-1].bias)
+
+    def fold_table(self, desc: torch.Tensor, keep: torch.Tensor | None = None) -> torch.Tensor:
+        if desc.ndim != 2:
+            raise ValueError(f"desc must be [N, d], got {tuple(desc.shape)}")
+        rows = self.net(desc)                                    # [N, K]
+        if keep is not None:
+            rows = rows.masked_fill(~keep[:, None], 0.0)
+        return rows.T                                            # [K, N]
+
+
 class SetAttentionBackbone(nn.Module):
     """E1 backbone: folded set read-in plus the shared Mamba-3 trunk.
 
@@ -131,6 +160,7 @@ class SetAttentionBackbone(nn.Module):
     def __init__(self, profile_dim: int, stats_dim: int, outputs: int, *, k: int = 16,
                  width: int = 128, layers: int = 2, state_size: int = 32,
                  dropout: float = 0.2, tau: float = 0.5, act_hidden: int = 16,
+                 read_in: str = "attention", mlp_hidden: int = 128,
                  base=None, head=None):
         super().__init__()
         self.k, self.outputs = int(k), int(outputs)
@@ -139,7 +169,10 @@ class SetAttentionBackbone(nn.Module):
             nn.Linear(int(stats_dim), act_hidden), nn.GELU(),
             nn.Linear(act_hidden, act_hidden))
         desc_dim = int(profile_dim) + act_hidden
-        self.read_in = SetAttentionReadIn(desc_dim, int(k), tau=tau)
+        if read_in == "mlp":
+            self.read_in = MLPReadIn(desc_dim, int(k), hidden=mlp_hidden)
+        else:
+            self.read_in = SetAttentionReadIn(desc_dim, int(k), tau=tau)
         if base is None:
             self.base = build_mamba3_official(int(k), int(outputs), width, layers,
                                               state_size, dropout)
@@ -201,7 +234,9 @@ def load_set_backbone(path, *, device="cpu"):
                                  k=args["k"], width=args["width"], layers=args["layers"],
                                  state_size=args["state_size"], dropout=0.0,
                                  tau=args.get("tau", 0.5),
-                                 act_hidden=args.get("act_hidden", 16))
+                                 act_hidden=args.get("act_hidden", 16),
+                                 read_in=args.get("read_in", "attention"),
+                                 mlp_hidden=args.get("mlp_hidden", 128))
     model.load_state_dict(blob["state_dict"])
     model.to(device).eval()
     return model, blob
