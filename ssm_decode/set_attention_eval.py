@@ -74,18 +74,24 @@ def _assert_budget_rule(blob):
 
 
 def _desc(blob, record, bins, with_profile):
-    desc, info = unit_descriptors(record, bins, lags=blob["args"]["lags"],
-                                  with_profile=with_profile)
+    """Standardized (profile, stats) blocks; profile zeroed when label-free."""
+    raw, info = unit_descriptors(record, bins, lags=blob["args"]["lags"],
+                                 with_profile=with_profile)
     stats = blob["desc_stats"]
-    normed = (desc - np.asarray(stats["mean"])) / np.asarray(stats["std"])
+    normed = (raw - np.asarray(stats["mean"])) / np.asarray(stats["std"])
+    profile_cols = blob["profile_dim"]
     if not with_profile:
-        normed[:, :desc.shape[1] - 2] = 0.0
-    return normed, info
+        normed[:, :profile_cols] = 0.0
+    return normed[:, :profile_cols], normed[:, profile_cols:], info
 
 
-def _fold(model, desc, device):
+def _fold(model, blocks, device, perm=None):
+    profile, stats = blocks
+    if perm is not None:
+        profile, stats = profile[perm], stats[perm]
     with torch.inference_mode():
-        table = model.read_in.fold_table(torch.from_numpy(desc.astype(np.float32)).to(device))
+        table = model.fold_from_raw(torch.from_numpy(profile.astype(np.float32)).to(device),
+                                    torch.from_numpy(stats.astype(np.float32)).to(device))
     return table.cpu().numpy().astype(np.float64)
 
 
@@ -106,11 +112,9 @@ def _segments(record, blob, model, x_z, device, seg_frac=0.1):
         hi = min(lo + seg_len, n)
         past = np.arange(0, lo)
         bins = past if len(past) > 100 else np.arange(lo, hi)
-        desc, _ = unit_descriptors(record, bins, lags=blob["args"]["lags"], with_profile=False)
-        stats = blob["desc_stats"]
-        normed = (desc - np.asarray(stats["mean"])) / np.asarray(stats["std"])
-        normed[:, :desc.shape[1] - 2] = 0.0
-        preds[lo:hi] = _forward(model, x_z[lo:hi], _fold(model, normed, device), device)
+        profile_seg, stats_seg, _ = _desc(blob, record, bins, with_profile=False)
+        preds[lo:hi] = _forward(model, x_z[lo:hi],
+                                _fold(model, (profile_seg, stats_seg), device), device)
     return preds
 
 
@@ -157,8 +161,8 @@ def run(args):
             xs = rec_s.neural.astype(np.float64)
             mu, sd = xs.mean(0), np.where(xs.std(0) < 1e-6, 1.0, xs.std(0))
             src_profiles.append(assoc.supervised_profiles(phi[good], ((xs - mu) / sd)[good])["H"])
-            desc_s, _ = _desc(blob, rec_s, np.arange(len(xs)), with_profile=True)
-            src_tables.append(_fold(model, desc_s, device))
+            profile_s, stats_s, _ = _desc(blob, rec_s, np.arange(len(xs)), with_profile=True)
+            src_tables.append(_fold(model, (profile_s, stats_s), device))
         g_fit = assoc.fit_shared_profile_map(src_profiles, src_tables, lam=1.0)
         del records_src
     rows = []
@@ -171,10 +175,11 @@ def run(args):
         common = {"budget": budget, "labeled_bins": int(len(l_bins)),
                   "query_bins": int(len(q_bins)), "method_family": "set_attention"}
         tables = {}
-        desc = None
+        blocks = None
         if budget > 0:
-            desc, _ = _desc(blob, record, l_bins, with_profile=True)
-            tables["e1_profile"] = _fold(model, desc, device)
+            profile, stats, _ = _desc(blob, record, l_bins, with_profile=True)
+            blocks = (profile, stats)
+            tables["e1_profile"] = _fold(model, blocks, device)
             if g_fit is not None:
                 phi_l = assoc.behavior_features(record.behavior,
                                                 lags=blob["args"]["lags"])[l_bins]
@@ -185,8 +190,9 @@ def run(args):
                     model.head.weight.detach().cpu().numpy().astype(np.float64),
                     prior_w0, x_z[l_bins], y_l, lam=1.0)
                 tables["e1_prior_correct"] = corrected["table"]
-        desc_free, _ = _desc(blob, record, np.arange(len(x_z)), with_profile=False)
-        tables["e1_rate"] = _fold(model, desc_free, device)
+        profile_free, stats_free, _ = _desc(blob, record, np.arange(len(x_z)),
+                                            with_profile=False)
+        tables["e1_rate"] = _fold(model, (profile_free, stats_free), device)
 
         for name, table in tables.items():
             r2 = _r2(_forward(model, x_z, table, device), record, q_bins, y_mean, y_std,
@@ -201,8 +207,8 @@ def run(args):
         main_name = "e1_profile" if budget > 0 else "e1_rate"
         main_table = tables[main_name]
         if budget > 0:
-            perm = rng.permutation(desc.shape[0])
-            shuffled = _fold(model, desc[perm], device)
+            perm = rng.permutation(blocks[0].shape[0])
+            shuffled = _fold(model, blocks, device, perm=perm)
             r2_shuf = _r2(_forward(model, x_z, shuffled, device), record, q_bins, y_mean, y_std)
             rows.append({"method": f"{main_name}_descshuffle", "r2": r2_shuf, **common,
                          "check": "descriptor-row shuffle; must fall below the main number"})

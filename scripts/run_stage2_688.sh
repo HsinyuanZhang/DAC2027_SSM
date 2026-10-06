@@ -24,7 +24,9 @@ pretrain() {  # pretrain <dest> <steps> <extra...>
     $( [ "$FAMILY" = ap ] && echo --task dandi688sm --target-session sub-M_ses-CO-20150616 ) \
     --dandi688-sources "$SOURCES" \
     --output "$dest" --device cuda:0 --k 10 --width 128 --layers 2 --state-size 32 \
-    --steps "$steps" "$@" > "$OUT/${FAMILY}.train.log" 2>&1 \
+    --steps "$steps" "$@" \
+    $( [ "$FAMILY" = set ] && echo --init-from-ap $ROOT/results/stage2_688_20261005/ap_pool_x8/best.pt --episode-trials 33 --distill-steps 8000 ) \
+    > "$OUT/${FAMILY}.train.log" 2>&1 \
     || { echo "[s2] FAILED pretrain $FAMILY"; rm -rf "$dest"; return 1; }
 }
 
