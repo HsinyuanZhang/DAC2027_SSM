@@ -151,7 +151,11 @@ def run(args):
     rng = np.random.default_rng(0)
     g_fit = None
     if args.prior_correct:
-        records_src = [load_dandi688_recording(s) for s in source_ids]
+        if args.task == "dandi688sm":
+            records_src = [load_dandi688_recording(s) for s in source_ids]
+        else:
+            from .multi_target import cached_recording
+            records_src = [cached_recording(args.task, "held_in", s) for s in source_ids]
         src_profiles, src_tables = [], []
         for rec_s in records_src:
             good = rec_s.eval_mask & np.isfinite(rec_s.behavior).all(1)

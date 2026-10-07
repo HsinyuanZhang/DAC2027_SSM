@@ -48,6 +48,10 @@ def run(args):
         raise ValueError("invalid training budget")
     if args.distill_steps > 0 and not args.init_from_ap:
         raise ValueError("--distill-steps > 0 requires --init-from-ap (review B2)")
+    if args.task == "m2" and not args.source_sessions:
+        raise ValueError("--task m2 requires --source-sessions")
+    if args.task == "dandi688sm" and not args.dandi688_sources:
+        raise ValueError("--task dandi688sm requires --dandi688-sources")
     freeze_trunk = bool(args.freeze_trunk) if args.freeze_trunk >= 0 else bool(args.init_from_ap)
     torch.set_num_threads(1)
     d._seed(args.seed)
@@ -59,8 +63,13 @@ def run(args):
     here = Path(__file__).parent
     for name in MODULES:
         (snapshot / name).write_bytes((here / name).read_bytes())
-    source_ids = [s for s in args.dandi688_sources.split(",") if s]
-    records = [load_dandi688_recording(s) for s in source_ids]
+    if args.task == "m2":
+        from .multi_target import cached_recording
+        source_ids = [s for s in args.source_sessions.split(",") if s]
+        records = [cached_recording("m2", "held_in", s) for s in source_ids]
+    else:
+        source_ids = [s for s in args.dandi688_sources.split(",") if s]
+        records = [load_dandi688_recording(s) for s in source_ids]
     source_hashes = {r.session: hashlib.sha256(r.path.read_bytes()).hexdigest() for r in records}
     splits = [d._trial_split(r) for r in records]
     if any(not tr or not va for tr, va in splits):
@@ -385,7 +394,10 @@ def run(args):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--dandi688-sources", required=True)
+    parser.add_argument("--dandi688-sources", default=None)
+    parser.add_argument("--task", default="dandi688sm", choices=["dandi688sm", "m2"])
+    parser.add_argument("--source-sessions", default=None,
+                        help="comma-separated m2 held-in sessions")
     parser.add_argument("--output", required=True)
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--init-from-ap", default=None,
