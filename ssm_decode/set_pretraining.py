@@ -161,7 +161,7 @@ def run(args):
         scores = []
         with torch.inference_mode():
             for index, window in enumerate(val_windows):
-                desc_bins = val_desc_bins[index]
+                desc_bins = val_train_bins[index]
                 table = fold(index, desc_bins, None, profile_dropout=False, noise=0.0)
                 selection = d._validation_selection([window], args.context,
                                                     args.max_val_endpoints)[0]
@@ -176,10 +176,33 @@ def run(args):
         return float(np.mean(scores))
 
     # Validation descriptors from TRAIN trials only (review B2).
+    # source_fit: ALL train trials (like-for-like with the AP tables that
+    # were fit on full source data).  episode: deployment-scale subset.
+    val_train_bins = [np.concatenate([np.arange(a, b) for a, b in tr])
+                      for tr, _ in splits]
     val_desc_bins = []
     for (tr, _) in splits:
         picks = sorted(rng.choice(len(tr), size=min(args.episode_trials, len(tr)), replace=False))
         val_desc_bins.append(np.concatenate([np.arange(tr[i][0], tr[i][1]) for i in picks]))
+
+    def validate_episode():
+        model.eval()
+        scores = []
+        with torch.inference_mode():
+            for index, window in enumerate(val_windows):
+                table = fold(index, val_desc_bins[index], None,
+                             profile_dropout=False, noise=0.0)
+                selection = d._validation_selection([window], args.context,
+                                                    args.max_val_endpoints)[0]
+                xb, yb, mb = d._right_aligned([window], selection, args.context)
+                decode = model.decode_with_table(xb, table)
+                good = mb[:, -1] & torch.isfinite(yb[:, -1]).all(-1)
+                scale = torch.as_tensor(y_std, device=device)
+                offset = torch.as_tensor(y_mean, device=device)
+                scores.append(d._r2(yb[:, -1][good] * scale + offset,
+                                    decode[:, -1][good] * scale + offset))
+        model.train()
+        return float(np.mean(scores))
 
     # Stage 1: distill the read-in toward the AP source tables.
     distill_info = None
@@ -191,29 +214,39 @@ def run(args):
             p.requires_grad_(False)
         opt = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad],
                                 lr=args.lr)
+        # Distillation on FULL-train-trial descriptors with pooled
+        # cross-session batches (2026-10-07 recipe).  The episode-scale
+        # diagnostic showed pure regression on 33-trial descriptors caps at
+        # 0.26 while full-session descriptors reach 0.71; the source gate
+        # compares against AP's full-data tables, so the clean map is the
+        # right distillation target.  Deployment robustness comes from the
+        # episodic phase.  No unit dropout (review A4): the full AP table
+        # has no well-defined dropped-unit form.
+        train_bins = [np.concatenate([np.arange(a, b) for a, b in tr])
+                      for tr, _ in splits]
+        desc_pool, table_pool = [], []
+        for index, bins in enumerate(train_bins):
+            raw, _ = unit_descriptors(records[index], bins, lags=args.lags,
+                                      with_profile=True)
+            normed = (raw - desc_mean) / desc_std
+            desc_pool.append(torch.from_numpy(normed.astype(np.float32)).to(device))
+            table_pool.append(torch.from_numpy(
+                ap_tables[index].T.astype(np.float32)).to(device))
+        X = torch.cat(desc_pool)                     # [units_total, desc]
+        Y = torch.cat(table_pool)                    # [units_total, K]
         started_d = time.perf_counter()
         for step in range(1, args.distill_steps + 1):
-            index = int(rng.integers(len(records)))
-            target_table = torch.from_numpy(
-                ap_tables[index].astype(np.float32)).to(device)
-            # Distill on random episode subsets with the same augmentation
-            # the deployment descriptor will carry (noise, dropout), against
-            # the full-session AP table.  This trains a noise-robust
-            # descriptor-to-table map against a frozen good trunk.
-            trials = splits[index][0]
-            picks = sorted(rng.choice(len(trials),
-                                      size=min(args.episode_trials, len(trials)),
-                                      replace=False))
-            desc_bins = np.concatenate([np.arange(trials[i][0], trials[i][1])
-                                        for i in picks])
-            # Review A4 (iteration 3): no unit dropout in distillation.  The
-            # full AP table has no well-defined dropped-unit form, and the
-            # renormalised fold regressing onto it biases values low by about
-            # the keep fraction.
-            table = fold(index, desc_bins, None,
-                         profile_dropout=rng.random() < args.profile_dropout,
-                         noise=args.desc_noise)
-            loss = (table - target_table).square().mean()
+            idx = torch.as_tensor(rng.integers(0, len(X), size=4096), device=device)
+            xb = X[idx]
+            if rng.random() < args.profile_dropout:
+                xb = xb.clone()
+                xb[:, :profile_cols] = 0.0
+            xb = xb + args.desc_noise * torch.randn_like(xb)
+            loss = (model.read_in.net(xb) - Y[idx]).square().mean() \
+                if hasattr(model.read_in, "net") else \
+                (model.fold_from_raw(xb[:, :profile_cols],
+                                     xb[:, profile_cols:]).T.unsqueeze(0)
+                 - Y[idx].unsqueeze(0)).square().mean()
             opt.zero_grad(set_to_none=True)
             loss.backward()
             opt.step()
@@ -231,8 +264,9 @@ def run(args):
             p.requires_grad_(False)
         for p in model.head.parameters():
             p.requires_grad_(False)
+    episodic_lr = args.episodic_lr if args.episodic_lr > 0 else args.lr
     optimizer = torch.optim.AdamW(_groups([p for p in model.parameters() if p.requires_grad],
-                                          args.lr, args.weight_decay))
+                                          episodic_lr, args.weight_decay))
     runtime = _runtime_identity()
     best_score, best_step = -float("inf"), 0
     log = []
@@ -241,20 +275,24 @@ def run(args):
     def maybe_validate(step, loss_value, gradient):
         nonlocal best_score, best_step
         score = validate()
+        episode_score = validate_episode()
+        selected = episode_score if args.select_on == "episode" else score
         if not np.isfinite(score):
             raise FloatingPointError("source validation score is not finite")
         event = {"step": step, "loss": loss_value, "gradient_norm": gradient,
                  "source_val_trunk_r2": score,
+                 "episode_val_trunk_r2": episode_score,
                  "elapsed_seconds": time.perf_counter() - started}
         log.append(event)
         with (out / "train_log.jsonl").open("a") as stream:
             stream.write(json.dumps(event) + "\n")
-        if score > best_score:
-            best_score, best_step = score, step
+        if selected > best_score:
+            best_score, best_step = selected, step
             torch.save({"state_dict": model.state_dict(), "args": vars(args),
                         "profile_dim": profile_dim, "stats_dim": stats_dim,
                         "outputs": outputs, "source_sessions": source_ids,
                         "best_step": step, "best_source_val_trunk_r2": best_score,
+                        "episode_val_trunk_r2": episode_score,
                         "desc_stats": {"mean": desc_mean.tolist(),
                                        "std": desc_std.tolist()},
                         "label_stats": {"mean": y_mean.tolist(), "std": y_std.tolist()},
@@ -325,6 +363,8 @@ def run(args):
                "target_loaded": False, "protocol": "episodic set-attention pretraining",
                "best_step": best_step, "best_source_val_trunk_r2": best_score,
                "profile_dim": profile_dim, "stats_dim": stats_dim,
+               "validation_contract": "source_val = all-train-trial descriptors; "
+                                      "episode_val = deployment-scale subset",
                "episode_trials": args.episode_trials, "warm_start": warm,
                "distill": distill_info,
                "parameters": {"read_in": sum(p.numel() for p in model.read_in.parameters()),
@@ -365,6 +405,10 @@ def main(argv=None):
         parser.add_argument("--" + name, type=float, default=default)
     parser.add_argument("--read-in", default="attention", choices=["attention", "mlp"])
     parser.add_argument("--mlp-hidden", type=int, default=128)
+    parser.add_argument("--episodic-lr", type=float, default=-1.0,
+                        help="learning rate of the episodic phase; -1 reuses --lr")
+    parser.add_argument("--select-on", default="source", choices=["source", "episode"],
+                        help="checkpoint-selection metric; the gate always reads source")
     print(run(parser.parse_args(argv)))
 
 

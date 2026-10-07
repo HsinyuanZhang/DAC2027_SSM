@@ -168,7 +168,9 @@ class SetAttentionBackbone(nn.Module):
         self.activity_encoder = nn.Sequential(
             nn.Linear(int(stats_dim), act_hidden), nn.GELU(),
             nn.Linear(act_hidden, act_hidden))
-        desc_dim = int(profile_dim) + act_hidden
+        self.raw_stats_input = read_in == "mlp"
+        desc_dim = (int(profile_dim) + int(stats_dim)) if self.raw_stats_input \
+            else int(profile_dim) + act_hidden
         if read_in == "mlp":
             self.read_in = MLPReadIn(desc_dim, int(k), hidden=mlp_hidden)
         else:
@@ -184,9 +186,16 @@ class SetAttentionBackbone(nn.Module):
             nn.init.zeros_(self.head.bias)
 
     def embed(self, profile: torch.Tensor, stats: torch.Tensor) -> torch.Tensor:
-        """Assemble the descriptor with the learned activity embedding."""
+        """Assemble the descriptor block.
+
+        MLP read-in consumes the raw standardized statistics directly (the
+        descriptor-capacity diagnostic used exactly this structure); the
+        attention read-in keeps the learned activity embedding.
+        """
         if profile.shape[1] != self.profile_dim or stats.shape[1] != self.stats_dim:
             raise ValueError("descriptor block widths do not match the backbone")
+        if self.raw_stats_input:
+            return torch.cat([profile, stats], dim=1)
         return torch.cat([profile, self.activity_encoder(stats)], dim=1)
 
     def fold_from_raw(self, profile: torch.Tensor, stats: torch.Tensor,

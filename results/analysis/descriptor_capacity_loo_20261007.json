@@ -1,0 +1,12 @@
+{
+  "loo_held_out_mean": 0.02877257267634074,
+  "per_session": {
+    "O-20150511": -0.5068328380584717,
+    "O-20150512": -0.4452139139175415,
+    "O-20150610": 0.255426824092865,
+    "O-20150611": 0.297038733959198,
+    "O-20150612": 0.0693812370300293,
+    "O-20150615": 0.5028353929519653
+  },
+  "read": "LOO-trained map reconstructing the held-out session's table; high score => the map generalises across sessions"
+}

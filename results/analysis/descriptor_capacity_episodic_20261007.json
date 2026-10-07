@@ -1,0 +1,7 @@
+{
+  "ap": 0.7147103945414225,
+  "train_full_eval_full": 0.7136306961377462,
+  "train_full_eval_episode": 0.10530418157577515,
+  "train_episode_eval_full": 0.30472265680631,
+  "train_episode_eval_episode": 0.2582041124502818
+}

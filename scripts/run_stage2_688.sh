@@ -34,13 +34,13 @@ pretrain() {  # pretrain <dest> <steps> <extra...>
     --dandi688-sources "$SOURCES" \
     --output "$dest" --device cuda:0 --k 10 --width 128 --layers 2 --state-size 32 \
     --steps "$steps" "$@" \
-    $( [ "$FAMILY" = set ] && echo --init-from-ap "$AP_CKPT" --episode-trials 33 --distill-steps 8000 --read-in mlp ) \
+    $( [ "$FAMILY" = set ] && echo --init-from-ap "$AP_CKPT" --episode-trials 33 --distill-steps 8000 --read-in mlp --episodic-lr 0.0003 ) \
     > "$OUT/${FAMILY}.train.log" 2>&1 \
     || { echo "[s2] FAILED pretrain $FAMILY"; rm -rf "$dest"; return 1; }
 }
 
 STEPS=2000
-FP="k10"
+FP="k10mlp2"
 BASE=$OUT/${FAMILY}_pool_${FP}
 CONVERGED=0
 for attempt in 0 1 2 3; do
