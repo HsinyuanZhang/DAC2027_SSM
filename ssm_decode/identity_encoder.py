@@ -367,7 +367,8 @@ class IdentityCalibrator(nn.Module):
     """Dispatcher.  ``calibrate`` is the target-side entry (no grad)."""
 
     def __init__(self, variant, *, k, stat_dim=None, phi_in=None,
-                 output_mode="residual", f7=None, drop_groups=None, width=64):
+                 output_mode="residual", f7=None, drop_groups=None, width=64,
+                 f8_in=None):
         super().__init__()
         self.variant, self.k, self.output_mode = variant, k, output_mode
         self.drop_groups = drop_groups or []
@@ -381,15 +382,15 @@ class IdentityCalibrator(nn.Module):
         self.rho = None
         self.f7 = None
         self.f8 = None
-        if variant in ("f1", "f2", "f3", "f5"):
+        if variant in ("f1", "f2", "f3", "f5", "f7f3"):
             self.hand = HandEncoder(eff_dim, k, width)
-        elif variant == "f6":
+        if variant == "f6":
             self.phi = PhiNet(phi_in, width)
             self.rho = RhoNet(width, k)
-        elif variant in ("f7", "f7f3"):
+        if variant in ("f7", "f7f3"):
             self.f7 = f7
-        elif variant == "f8":
-            self.f8 = InContextAttention(phi_in, k)
+        if variant == "f8":
+            self.f8 = InContextAttention(f8_in or phi_in, k)
 
     def _numpy(self, t):
         return t.detach().cpu().numpy().astype(np.float64)
@@ -482,7 +483,12 @@ class IdentityCalibrator(nn.Module):
         if self.variant in ("f7", "f7f3"):
             if self.variant == "f7f3":
                 dT0, g0, o0 = self._apply_hand(ctx)
-                prior = ctx.prior_table + dT0
+                if torch.is_tensor(dT0):
+                    prior = torch.as_tensor(ctx.prior_table,
+                                            dtype=dT0.dtype,
+                                            device=dT0.device) + dT0
+                else:
+                    prior = np.asarray(ctx.prior_table) + dT0
                 sub = CalibContext(ctx.record, ctx.bins, ctx.budget, prior,
                                    ctx.decode_fn, ctx.x_norm, ctx.with_labels)
                 out = self.f7.calibrate(sub)

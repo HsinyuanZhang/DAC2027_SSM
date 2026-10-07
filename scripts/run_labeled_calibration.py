@@ -108,8 +108,10 @@ class M2BackboneAdapter:
         self.width, self.layers, self.state = (blob["args"]["width"],
                                                blob["args"]["layers"],
                                                blob["args"]["state_size"])
-        self.model = build_mamba3_official(1, 2, self.width, self.layers,
-                                           self.state, 0.0).to(device)
+        in_features = blob["state_dict"]["in_proj.weight"].shape[1]
+        self.model = build_mamba3_official(in_features, 2, self.width,
+                                           self.layers, self.state,
+                                           0.0).to(device)
         self.model.load_state_dict(blob["state_dict"])
         self.model.eval()
         self.k = self.width
@@ -200,6 +202,7 @@ def h_record(adapter, calibrator, ctx, table_bytes, extra_macs, fixed_macs):
 # ------------------------------------------------------------------ main ----
 
 _LOO_CACHE = {}
+_X_CACHE = {}
 
 
 def loo_prior(s, records, ap_tables):
@@ -234,6 +237,13 @@ def loo_prior(s, records, ap_tables):
     return prior
 
 
+def _trunk_forward(adapter, dataset, z):
+    if dataset == "d1":
+        return adapter.model.base(z.unsqueeze(0)).squeeze(0)
+    m = adapter.model
+    return m.out_proj(m.final_norm(m._blocks_forward(z.unsqueeze(0)))).squeeze(0)
+
+
 def cmd_train(args):
     device = torch.device(args.device)
     adapter = load_adapter(args.dataset, args.pool, device)
@@ -242,17 +252,18 @@ def cmd_train(args):
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     rng = np.random.default_rng(args.seed)
-    f7 = None
-    if args.variant in ("f7", "f7f3"):
-        d_dim = 2
-        f7 = F7Calibrator(d_dim, adapter.k, steps=args.f7_steps,
-                          gtype=args.f7_gtype, lag=args.f7_lag,
-                          shared=args.f7_shared).to(device)
+    d_dim = 2
+    f7 = F7Calibrator(d_dim, adapter.k, steps=args.f7_steps,
+                      gtype=args.f7_gtype, lag=args.f7_lag,
+                      shared=args.f7_shared) if args.variant in ("f7", "f7f3") else None
     drop = args.drop_groups.split(",") if args.drop_groups else []
     calib = IdentityCalibrator(args.variant, k=adapter.k,
                                phi_in=5 + 2 * 5 + LATENT_CORR_DIM,
                                output_mode="residual", f7=f7,
-                               drop_groups=drop).to(device)
+                               drop_groups=drop,
+                               f8_in=3 + LATENT_CORR_DIM).to(device)
+    if f7 is not None and calib.f7 is not None:
+        calib.f7 = calib.f7.to(device)
     params = [p for p in calib.parameters()]
     opt = torch.optim.AdamW(params, lr=args.lr, weight_decay=1e-4)
     x_norms = [session_xnorm(r) for r in records]
@@ -274,11 +285,17 @@ def cmd_train(args):
                 prior = loo_prior(s, records, ap_tables)
             else:
                 prior = adapter.model.in_proj.weight.detach().cpu().numpy().astype(np.float64)
-            decode = adapter.make_decode(x_norms[s])
+            if s not in _X_CACHE:
+                _X_CACHE[s] = torch.from_numpy(
+                    x_norms[s].astype(np.float32)).to(device)
+            x_tensor = _X_CACHE[s]
+            bin_index = torch.as_tensor(bins, dtype=torch.long, device=device)
+
+            def decode_labeled(T):
+                xx = x_tensor[bin_index]
+                return _trunk_forward(adapter, args.dataset, xx @ T.float().T)
             ctx = CalibContext(records[s], bins, budget, prior,
-                               lambda T, g, o: decode(T, g, o, min(bins), max(bins) + 1)
-                               if False else _decode_subset(decode, x_norms[s], bins, T, g, o, device),
-                               x_norms[s])
+                               decode_labeled, x_norms[s])
             if args.variant in ("f7", "f7f3"):
                 out = calib._calibrate_grad(ctx)
             else:
@@ -377,8 +394,17 @@ def quick_val(calib, adapter, records, splits, x_norms, ap_tables, args, device,
             prior = loo_prior(s, records, ap_tables) \
                 if ap_tables is not None else \
                 adapter.model.in_proj.weight.detach().cpu().numpy().astype(np.float64)
-            decode = adapter.make_decode(x_norms[s])
-            ctx = CalibContext(records[s], bins, budget, prior, decode, x_norms[s])
+            if s not in _X_CACHE:
+                _X_CACHE[s] = torch.from_numpy(
+                    x_norms[s].astype(np.float32)).to(device)
+            bin_index = torch.as_tensor(bins, dtype=torch.long,
+                                        device=_X_CACHE[s].device)
+
+            def decode_labeled(T, g=None, o=None):
+                xx = _X_CACHE[s][bin_index]
+                return _trunk_forward(adapter, args.dataset, xx @ T.float().T)
+            ctx = CalibContext(records[s], bins, budget, prior,
+                               decode_labeled, x_norms[s])
             out = calib._calibrate_grad(ctx)
             if out is None or out[0] is None:
                 continue
@@ -429,7 +455,8 @@ def cmd_evaluate(args):
     drop = targs.get("drop_groups") or []
     calib = IdentityCalibrator(targs["variant"], k=adapter.k,
                                phi_in=5 + 2 * 5 + LATENT_CORR_DIM,
-                               f7=f7, drop_groups=drop).to(device)
+                               f7=f7, drop_groups=drop,
+                               f8_in=3 + LATENT_CORR_DIM).to(device)
     calib.load_state_dict(blob["calibrator"])
     calib.eval()
     records = load_records(args.dataset, args.pool)
@@ -464,14 +491,19 @@ def cmd_evaluate(args):
             x_norm = ((record.neural.astype(np.float64) - mean) / std)
             l_bins = labeled_bins(record, trials, budget)
             q_bins = query_bins(record, trials, budget)
-            decode = adapter.make_decode(x_norm)
+            x_tensor = torch.from_numpy(x_norm.astype(np.float32)).to(device)
+            bin_index = torch.as_tensor(l_bins, dtype=torch.long, device=device)
+
+            def decode_labeled(T, g=None, o=None):
+                xx = x_tensor[bin_index]
+                return _trunk_forward(adapter, args.dataset, xx @ T.float().T)
             if args.dataset == "d1":
                 phi = assoc.behavior_features(record.behavior, lags=2)[l_bins]
                 h0 = assoc.supervised_profiles(phi, x_norm[l_bins], lam=1.0)["H"]
                 prior = (h0 @ g_fit["g"]).T
             else:
                 prior = adapter.model.in_proj.weight.detach().cpu().numpy().astype(np.float64)
-            ctx = CalibContext(record, l_bins, budget, prior, decode, x_norm)
+            ctx = CalibContext(record, l_bins, budget, prior, decode_labeled, x_norm)
             t0 = time.perf_counter()
             out = calib.calibrate(ctx)
             calib_seconds = time.perf_counter() - t0
