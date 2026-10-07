@@ -59,7 +59,8 @@ def test_f7_linear_trunk_equals_gradient_descent():
     x_norm = x  # already zero-mean-ish; identity normalization keeps q=1
     ctx = CalibContext(record, np.arange(L), 4, T,
                        lambda T_: (xt @ T_.float().T) @ At.T, x_norm)
-    out = f7.calibrate(ctx)
+    with torch.no_grad():
+        out = f7.calibrate(ctx)
     assert out is not None
     np.testing.assert_allclose(out[0], gd, atol=1e-5)
 
