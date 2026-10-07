@@ -32,9 +32,9 @@ D1 (000688 sub-M), mean R2 over targets × seeds, b=8 / b=33:
 | F2 hand stats (absolute) | 0.297 / 0.330 | 0.105 / 0.125 | 0.070 / 0.095 | — |
 | F3 hand stats (residual) | 0.195 / 0.223 | 0.054 / 0.126 | 0.131 / 0.127 | — |
 | F5 drop-one ablations (days) | 0.245-0.280 / 0.280+ | — | — | — |
-| F6 learned stats | pending rerun | — | — | — |
+| F6 learned stats | 0.190 / 0.204 | not transferred | not transferred | — |
 | F7 error-driven (S=1 lin L=2) | 0.321 / 0.297 | 0.092 / 0.158 | 0.004 / 0.080 | — |
-| F7F3 hybrid | 0.297 / 0.318 | 0.117 / 0.152 | 0.096 / 0.107 | — |
+| F7F3 hybrid | 0.316 / 0.301 | -0.074 / 0.105 | 0.020 / 0.086 | — |
 | F8 in-context attention | -0.026 flat | not run (days only per spec) | — | — |
 | **ui_prior (gradient ref)** | **0.536** | **0.500** | **0.397** | |
 
@@ -95,8 +95,10 @@ D2 (M2, three pools, three seeds for F7):
 
 ## 5. Follow-up ideas (not executed this round)
 
-- F6 rerun with the fixed input width (the queue run landed after the F8
-  width fix; days-layer numbers were recorded under the wrong tag).
+- F6 completed on days after the width fix (0.190 / 0.204 — below F2, so
+  learned statistics did not beat hand statistics at this budget); month
+  and year were not transferred because the days-layer selection ranked
+  F6 below F2 and F7.
 - F7 with MLP-G and S=3 was trained in the sweep but not transferred to
   month/year (Q4's second half); the sweep days-layer selection favored
   S=1 linear L=2, which is what Q5 transferred.
