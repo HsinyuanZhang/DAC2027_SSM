@@ -338,8 +338,26 @@ def _patch_backward_counter():
     torch.autograd.backward = counting
 
 
-def load_run(run_dir, world):
+def check_prior_mode(world, blob_args, *, strict=True, where=""):
+    """The World's prior mode must equal the checkpoint's: an identity-free model evaluated
+    with the aligned prior silently gains the electrode identity (and vice versa)."""
+    ck = (blob_args or {}).get("prior_mode", "aligned")
+    wd = getattr(world, "prior_mode", "aligned")
+    if ck != wd:
+        msg = (f"prior_mode mismatch{where}: checkpoint was trained with {ck!r} but the World "
+               f"supplies {wd!r} priors")
+        if strict:
+            raise AssertionError(msg)
+        print("WARNING:", msg, flush=True)
+    return ck == wd
+
+
+def load_run(run_dir, world, strict_prior_mode=True):
+    """Load a trained calibrator.  ``strict_prior_mode`` (default True) asserts that
+    ``world.prior_mode`` equals the checkpoint's ``prior_mode``; pass False only for a
+    deliberate train/test prior mismatch diagnostic."""
     blob = torch.load(Path(run_dir) / "best.pt", map_location=world.device, weights_only=False)
+    check_prior_mode(world, blob.get("args"), strict=strict_prior_mode, where=f" ({run_dir})")
     calib = build_calibrator(blob["args"], world)
     calib.load_state_dict(blob["calibrator"])
     calib.eval()

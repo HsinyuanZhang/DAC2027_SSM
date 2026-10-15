@@ -169,8 +169,10 @@ def test_quantized_stats_exact_when_wide_and_on_grid_when_narrow():
     steps_w = cq.acc_steps([exact], 31)
     wide = cq.quantized_stats(sd.bank, idx, steps_w, 31)
     for k in exact.d:
-        torch.testing.assert_close(wide.d[k], exact.d[k], atol=1e-5 * float(exact.d[k].abs().max()) + 1e-9,
-                                   rtol=1e-4)
+        a, b = wide.d[k], exact.d[k]
+        if k == "sphix":                                          # row 0 is shared with sx
+            a, b = a[1:], b[1:]
+        torch.testing.assert_close(a, b, atol=1e-5 * float(exact.d[k].abs().max()) + 1e-9, rtol=1e-4)
     steps8 = cq.acc_steps([exact], 8)
     narrow = cq.quantized_stats(sd.bank, idx, steps8, 8)
     for k, v in narrow.d.items():
@@ -178,6 +180,164 @@ def test_quantized_stats_exact_when_wide_and_on_grid_when_narrow():
         torch.testing.assert_close(grid, grid.round())
         assert float(v.abs().max()) <= steps8[k] * 127 + 1e-9
     assert (narrow.d["gram"] - exact.d["gram"]).abs().max() > 0 or steps8["gram"] <= 1
+
+
+# --------------------------------------------- per-add (per-bin) accumulator model ----
+
+
+def _naive_sat_acc(sd, idx, key, step, bits):
+    """Slow reference: python loop over bins, round each increment, saturating add."""
+    from ssm_decode.population_calib import segment_sums
+    ang = cq.ang_bins_of(sd)
+    q = cq.qmax(bits)
+    acc = None
+    for j in idx:
+        a, b = sd.trials[int(j)]
+        prev = None
+        for t in range(a + 1, b + 1):
+            cur = segment_sums(sd.x[a:t], sd.y_norm[a:t], ang[a:t], sd.valid[a:t])[key]
+            inc = cur if prev is None else cur - prev
+            prev = cur
+            r = torch.round(inc / step)
+            acc = r if acc is None else (acc + r).clamp(-q, q)
+    return acc * step
+
+
+def test_bin_increments_sum_to_segment_sums():
+    from ssm_decode.population_calib import segment_sums
+    sd, _ = _session(21)
+    ang = cq.ang_bins_of(sd)
+    for j in (0, 3, 6):                                     # trial 3 has an invalid gap
+        a, b = sd.trials[j]
+        ref = segment_sums(sd.x[a:b], sd.y_norm[a:b], ang[a:b], sd.valid[a:b])
+        tot = None
+        for t0 in range(0, b - a, 17):                      # chunking must not matter
+            inc = cq.bin_increments(sd.x[a:b], sd.y_norm[a:b], ang[a:b], sd.valid[a:b],
+                                    t0, min(t0 + 17, b - a))
+            part = {k: v.sum(0) for k, v in inc.items()}
+            tot = part if tot is None else {k: tot[k] + part[k] for k in tot}
+        assert set(tot) == set(ref)
+        for k in ref:
+            torch.testing.assert_close(tot[k], ref[k], atol=1e-9, rtol=1e-9, msg=k)
+
+
+def test_perbin_equals_exact_sum_when_step_one_and_no_saturation():
+    sd, _ = _session(22)
+    idx = np.array([0, 2, 3, 6, 8])
+    exact = PopStats.from_trials(sd.bank, idx)
+    int_keys = ("sx", "gram", "ac_xx", "ac_a", "ac_b", "sdir")
+    steps = {k: 1.0 for k in exact.d}
+    st, info = cq.perbin_stats(sd, idx, steps, 31, int_keys, return_info=True)
+    for k in int_keys:
+        torch.testing.assert_close(st.d[k], exact.d[k], atol=0, rtol=0, msg=k)
+    assert sum(info["sat_events"].values()) == 0
+    # a very fine step reproduces every data key to within half a step per bin
+    fine = {k: 2.0 ** -30 for k in exact.d}
+    st2 = cq.perbin_stats(sd, idx, fine, 60)
+    n_bins = float(exact.d["n"])
+    for k in cq.ALL_DATA_KEYS:
+        tol = 1e-5 if k.startswith("q_") else n_bins * 2.0 ** -30
+        torch.testing.assert_close(st2.d[k], exact.d[k], atol=tol + 1e-9, rtol=1e-6, msg=k)
+
+
+def test_perbin_matches_naive_loop_and_rounds_every_add():
+    sd, _ = _session(23)
+    idx = np.array([1, 2, 4])
+    exact = PopStats.from_trials(sd.bank, idx)
+    for key in ("sx", "gram", "ac_xx", "syx", "sdir"):
+        step = 4.0 if key in ("sx", "gram", "ac_xx", "sdir") else 0.5   # step > increments: lossy
+        st = cq.perbin_stats(sd, idx, {k: step for k in exact.d}, 31, (key,))
+        ref = _naive_sat_acc(sd, idx, key, step, 31)
+        torch.testing.assert_close(st.d[key], ref, atol=1e-9, rtol=0, msg=key)
+    # per-add rounding is NOT the same as rounding the per-trial sums (the old model)
+    step = {k: 4.0 for k in exact.d}
+    per_add = cq.perbin_stats(sd, idx, step, 31, ("sx",)).d["sx"]
+    two = cq.twolevel_stats(sd.bank, idx, step, 31, ("sx",)).d["sx"]
+    assert (per_add - exact.d["sx"]).abs().sum() > (two - exact.d["sx"]).abs().sum()
+
+
+def test_perbin_saturation_clamps_each_add_and_counts_events():
+    sd, _ = _session(24)
+    idx = np.array([0, 1, 2, 3])
+    exact = PopStats.from_trials(sd.bank, idx)
+    bits, step = 6, 1.0                                     # qmax = 31 << per-unit sums
+    steps = {k: step for k in exact.d}
+    st, info = cq.perbin_stats(sd, idx, steps, bits, ("sx", "gram"), return_info=True)
+    q = cq.qmax(bits) * step
+    assert float(st.d["sx"].abs().max()) <= q and float(st.d["gram"].abs().max()) <= q
+    assert float(exact.d["sx"].max()) > q                   # the test is non-vacuous
+    assert info["sat_events"]["sx"] > 0
+    torch.testing.assert_close(st.d["sx"], _naive_sat_acc(sd, idx, "sx", step, bits), atol=0, rtol=0)
+    assert float(st.d["sx"].max()) == q                     # stuck at the rail, no wrap-around
+
+
+def test_counters_are_never_quantised():
+    sd, _ = _session(25)
+    idx = np.array([0, 2, 3, 5])
+    exact = PopStats.from_trials(sd.bank, idx)
+    steps = cq.acc_steps([exact], 8)
+    for mode in ("perbin", "twolevel"):
+        for keys in (None, cq.ACC_GROUPS["norm"] + cq.ACC_GROUPS["ac"] + cq.ACC_GROUPS["cross"]
+                     + cq.ACC_GROUPS["dir"]):             # legacy groups list counters: ignored
+            st = (cq.perbin_stats(sd, idx, steps, 8, keys) if mode == "perbin"
+                  else cq.twolevel_stats(sd.bank, idx, steps, 8, keys))
+            for k in cq.COUNTER_KEYS:
+                torch.testing.assert_close(st.d[k], exact.d[k], atol=0, rtol=0, msg=k)
+            assert float(st.d["sphi"][0]) == float(exact.d["n"])
+            assert float(st.d["sphiphi"][0, 0]) == float(exact.d["n"])
+            assert float(st.d["n"]) > 1
+    # the descriptor of an 8-bit accumulator is finite (no n=0 clamp, no NaN correlation)
+    _, prior = _session(25)
+    st = cq.perbin_stats(sd, idx, steps, 8)
+    d, r, _, _ = describe(st, prior)
+    assert torch.isfinite(d).all() and torch.isfinite(r).all()
+    assert cq.counter_bits(33, 2741) == 17 and cq.counter_bits(33, 1250) == 16
+
+
+def test_derived_keys_equal_exact_sums_and_get_no_accumulator():
+    sd, _ = _session(28)
+    idx = np.array([0, 2, 3, 6])
+    exact = PopStats.from_trials(sd.bank, idx)
+    d = {k: v.clone() for k, v in exact.d.items()}
+    for k in ("sphi", "sphiphi"):
+        d[k] = torch.zeros_like(d[k])
+    d["sphix"] = exact.d["sphix"].clone()
+    d["sphix"][0] = 0
+    cq._set_derived(d)
+    for k in ("sphi", "sphiphi", "sphix"):
+        torch.testing.assert_close(d[k], exact.d[k], atol=1e-9, rtol=1e-9, msg=k)
+    assert "sphi" not in cq.ALL_DATA_KEYS and "sphiphi" not in cq.ALL_DATA_KEYS
+    steps = cq.acc_steps([exact], 8)
+    assert steps["sphix"] == cq.fixed_step(float(exact.d["sphix"][1:].abs().max()), 8)
+    st, info = cq.perbin_stats(sd, idx, steps, 8, return_info=True)
+    assert "sphi" not in info["sat_events"] and "sphiphi" not in info["sat_events"]
+    torch.testing.assert_close(st.d["sphix"][0], st.d["sx"])           # shared with the sx register
+
+
+def test_twolevel_equals_legacy_per_trial_rounding():
+    sd, _ = _session(26)
+    idx = np.array([0, 1, 4, 7])
+    exact = PopStats.from_trials(sd.bank, idx)
+    steps = cq.acc_steps([exact], 10)
+    keys = cq.ALL_DATA_KEYS
+    new = cq.twolevel_stats(sd.bank, idx, steps, 10, keys, alias_counters=False)
+    old = cq.quantized_stats(sd.bank, idx, steps, 10, keys)
+    for k in keys:
+        torch.testing.assert_close(new.d[k], old.d[k], atol=0, rtol=0, msg=k)
+    for k in cq.COUNTER_KEYS:
+        torch.testing.assert_close(new.d[k], exact.d[k], atol=0, rtol=0)
+
+
+def test_multi_config_shares_increments_without_changing_results():
+    sd, _ = _session(27)
+    idx = np.array([0, 3, 5])
+    exact = PopStats.from_trials(sd.bank, idx)
+    cfgs = {"a": (cq.acc_steps([exact], 12), 12, None), "b": (cq.acc_steps([exact], 16), 16, ("gram", "q_sx2"))}
+    multi = cq.perbin_stats_multi(sd, idx, cfgs)
+    for name, (steps, bits, keys) in cfgs.items():
+        single = cq.perbin_stats(sd, idx, steps, bits, keys)
+        for k in single.d:
+            torch.testing.assert_close(multi[name][0].d[k], single.d[k], atol=0, rtol=0, msg=(name, k))
 
 
 # ------------------------------------------------------------ exp2 LUT softmax ----
@@ -350,3 +510,83 @@ def test_qat_forward_equals_ptq_and_gradients_flow():
             assert p.grad is not None, name
     assert qat.gen[0].weight.grad.abs().sum() > 0              # STE passes gradients to FP latents
     assert set(qat.state_dict()) == set(model.state_dict())     # checkpoint layout unchanged
+
+
+# ------------------------------------------------------- review-fix: cost model ----
+
+
+def test_cost_model_review_terms():
+    base = calib_cost.full_report(26, 10, 2, "p4", 8, 220, acc_bits=16, desc_bits=16, table_bits=8)
+    new = calib_cost.full_report(26, 10, 2, "p4", 8, 220, acc_bits=16, desc_bits=16, table_bits=8,
+                                 cnt_bits=17, stage_bits=32, x_bits=8, y_bits=16)
+    legacy_keys = ("acc_bytes", "descriptor_bytes", "table_bytes_double", "total_mac_one_calibration")
+    # counters at 17 bit instead of 16 -> only acc_bytes differs, by 17 counter elements
+    assert calib_cost.counter_elements(26, 2) == 1 + 3 + 5 + 8
+    assert new["acc_bytes"] - base["acc_bytes"] == calib_cost.counter_elements(26, 2) * (17 - 16) / 8
+    assert new["total_mac_one_calibration"] == base["total_mac_one_calibration"]
+    assert base["staging_bytes"] == 0 and new["staging_bytes"] > 0
+    # staging copy: data keys without q_* plus counters
+    el = calib_cost.acc_elements(26, 2)
+    data = sum(v for k, v in el.items() if k not in cq.COUNTER_KEYS and not k.startswith("q_"))
+    assert new["staging_bytes"] == (data * 32 + calib_cost.counter_elements(26, 2) * 17) / 8
+    # scratch for q_*: sx, syx lag 0, sy lag 0 (+ n)
+    assert new["scratch_elements"] == 26 + 2 * 26 + 2 + 1
+    # delay lines: 5 x vectors (largest AC lag), 2 y vectors (negative cross lags)
+    assert new["delay_x_elements"] == 5 * 26 and new["delay_y_elements"] == 2 * 2
+    assert new["total_sram_bytes"] > base["acc_bytes"] + base["descriptor_bytes"]
+    # P4 second pass: N x H buffer or recompute phi (Fd H + 2 H^2 MACs per unit)
+    fd = calib_cost.desc_dim_general(10, 2)
+    assert new["phi_recompute_mac_per_unit"] == fd * 64 + 2 * 64 * 64
+    assert new["phi_recompute_extra_mac"] == 26 * new["phi_recompute_mac_per_unit"]
+    assert new["phi_buffer_bytes"] == 26 * 64 * 16 / 8
+    p0 = calib_cost.full_report(26, 10, 2, "p0", 8, 220)
+    assert p0["phi_buffer_bytes"] == 0 and p0["phi_recompute_extra_mac"] == 0
+    # per-group widths are accepted
+    g = calib_cost.sram_bytes(26, 10, 2, "p0", acc_bits={"norm": 20, "ac": 12, "cross": 12, "dir": 16, "quad": 12})
+    assert g["acc_bytes"] > calib_cost.sram_bytes(26, 10, 2, "p0", acc_bits=12)["acc_bytes"]
+    del legacy_keys
+
+
+def test_cost_model_derived_dir_removes_redundant_accumulators():
+    base = calib_cost.acc_per_bin(26, 2)
+    der = calib_cost.acc_per_bin(26, 2, derived_dir=True)
+    assert base["mac"] - der["mac"] == 9 + 26          # phi phi^T and the constant row of phi x^T
+    assert base["add"] - der["add"] == 3               # sphi
+    a = calib_cost.sram_bytes(26, 10, 2, "p0", acc_bits=16, cnt_bits=17)
+    b = calib_cost.sram_bytes(26, 10, 2, "p0", acc_bits=16, cnt_bits=17, derived_dir=True)
+    assert a["acc_elements"] - b["acc_elements"] == 3 + 9 + 26
+    # the cost model's counter set is the one the quantiser keeps exact
+    assert set(cq.COUNTER_KEYS) <= set(calib_cost.acc_elements(26, 2))
+
+
+@pytest.mark.parametrize("variant", ["p0", "p2", "p4"])
+def test_fixed_weight_share_excludes_activation_products(variant):
+    rep = calib_cost.forward_macs(variant, 26, 10, 2, m=8)
+    if variant == "p0":
+        assert rep["actact_macs"] == 0 and rep["fixed_weight_macs"] == rep["forward_macs"]
+    if variant == "p4":                       # beta @ z (m dctx per unit) + softmax-weighted pooling
+        assert rep["actact_macs"] == 26 * 8 * 32 * 2
+    assert rep["fixed_weight_macs"] + rep["actact_macs"] == rep["forward_macs"]
+    full = calib_cost.full_report(26, 10, 2, variant, 8, 220)
+    assert full["fixed_weight_fraction"] <= full["forward_share_incl_actact"] + 1e-12
+    assert full["fixed_weight_macs"] == rep["fixed_weight_macs"]
+
+
+def test_exp2_lut_output_range_matches_documentation():
+    lut = cq.Exp2LUT(256)
+    top = float(lut.exp(torch.zeros(1, dtype=torch.float64)))
+    assert 1.0 < top <= 2 ** (0.5 / 256) + 2 ** -16        # exp(0) -> 1.00135, not 1
+    assert "1.00135" in cq.Exp2LUT.__doc__
+
+
+def test_prior_mode_assertion_is_backward_compatible():
+    from types import SimpleNamespace
+    from scripts import run_population_calib as rpc
+    aligned, gm = SimpleNamespace(prior_mode="aligned"), SimpleNamespace(prior_mode="globalmean")
+    assert rpc.check_prior_mode(aligned, {"variant": "p0"})            # old checkpoint: no key == aligned
+    assert rpc.check_prior_mode(gm, {"prior_mode": "globalmean"})
+    with pytest.raises(AssertionError):
+        rpc.check_prior_mode(aligned, {"prior_mode": "globalmean"})    # identity-free model, aligned prior
+    with pytest.raises(AssertionError):
+        rpc.check_prior_mode(gm, {"variant": "p0"})                    # aligned model, identity-free prior
+    assert not rpc.check_prior_mode(aligned, {"prior_mode": "zero"}, strict=False)

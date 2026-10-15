@@ -17,6 +17,9 @@ ROOT = Path(__file__).resolve().parents[1]
 P1 = ROOT / "results/population_calib_20261015"
 P2 = ROOT / "results/population_calib_p2_20261015"
 ANA = ROOT / "results/analysis/population_calib_p2_20261015"
+FIXQ = P2 / "fix" / "quant"          # A'3 rows after the review fix (per-add accumulators)
+SAFE_DR2 = -0.002                    # "safe" = every (variant, kind, B, model group) cell mean dR2 >= this
+GROUPS = ("norm", "ac", "cross", "dir", "quad")
 STRATA = ("days", "month", "year")
 BUDGETS = (1, 2, 4, 8, 16, 33)
 MD: list[str] = []
@@ -251,21 +254,81 @@ def a2():
     MD.append(md_table(po.pivot_table(index=["a", "b", "stratum"], columns="B", values="diff").reset_index()))
 
 
+def a2_ext():
+    """Review item 6: ui_reg at B = 33 with the step grid extended to {600, 1000}."""
+    fx = P2 / "fix" / "uireg"
+    paths = sorted(fx.glob("eval_ext_*.jsonl"))
+    if not paths:
+        return
+    ex = read_jsonl(paths)
+    ex.to_csv(ANA / "a2_ext_rows.csv.gz", index=False)
+    sel = {st: json.loads((fx / f"selection_ext_{st}.json").read_text())
+           for st in ("days", "month") if (fx / f"selection_ext_{st}.json").exists()}
+    (ANA / "a2_ext_selection.json").write_text(json.dumps(sel, indent=1))
+    old = read_jsonl(sorted((P2 / "uireg").glob("eval_*.jsonl")))
+    old = old[(old.variant == "ui_reg") & (old.B == 33)]
+    keys = ["stratum", "target", "draw"]
+    m = ex[keys + ["r2", "steps", "lam", "lr"]].merge(old[keys + ["r2"]], on=keys, suffixes=("_ext", "_old"))
+    m["d"] = m.r2_ext - m.r2_old
+    tab = m.groupby("stratum").agg(old=("r2_old", "mean"), ext=("r2_ext", "mean"), d=("d", "mean"),
+                                   d_ci=("d", ci), steps=("steps", "first"), lam=("lam", "first"),
+                                   lr=("lr", "first"), n=("d", "count")).reset_index()
+    tab.to_csv(ANA / "a2_ext_paired.csv", index=False)
+    MD.append("### A'2 ext: ui_reg at B=33 with steps grid extended to {10..1000} (reduced lam/lr grid; source-selected)\n")
+    MD.append(md_table(tab))
+    for st, v in sel.items():
+        MD.append(f"selection_ext {st}: `{json.dumps(v)}`\n")
+
+
 # --------------------------------------------------------------------- A'3 ----
 
+def model_group(stratum):
+    """month and year share the SAME calibrator weights (identical checkpoints), so they are
+    one model, not two independent ones."""
+    return "days" if stratum == "days" else "month_year"
+
+
 def a3():
-    q = read_jsonl(sorted((P2 / "quant").glob("rows_*.jsonl")))
+    sys.path.insert(0, str(ROOT))
+    from scripts.run_pc2_quant import make_configs
+    valid = {v: set(make_configs(v)) for v in ("p0", "p4_m8")}
+    q = read_jsonl(sorted(FIXQ.glob("rows_[dmy]*.jsonl")))
     q = q.drop_duplicates(["stratum", "variant", "seed", "kind", "session", "B", "draw", "cfg"], keep="last")
+    q = q[[c in valid[v] for v, c in zip(q.variant, q.cfg)]].copy()
+    q["mgroup"] = q.stratum.map(model_group)
+    q["nan_row"] = ~q["finite"].astype(bool)
     q.to_csv(ANA / "a3_rows.csv.gz", index=False)
     order = list(dict.fromkeys(q.cfg))
-    g = q.groupby(["variant", "kind", "B", "cfg"]).agg(
-        r2=("r2", "mean"), r2_fp=("r2_fp", "mean"), d_r2=("d_r2", "mean"),
-        d_r2_ci=("d_r2", ci), rms_delta=("rms_delta", "mean"), rel_rms=("rel_rms", "mean"),
-        n=("r2", "count"), nonfinite=("finite", lambda s: int((~s).sum()))).reset_index()
+    agg = dict(r2=("r2", "mean"), r2_fp=("r2_fp", "mean"), d_r2=("d_r2", "mean"),
+               d_r2_ci=("d_r2", ci), rms_delta=("rms_delta", "mean"), rel_rms=("rel_rms", "mean"),
+               n=("r2", "size"), nonfinite=("nan_row", "sum"), sat_rows=("sat_events", lambda s: int((s > 0).sum())))
+    g = q.groupby(["variant", "kind", "B", "cfg"]).agg(**agg).reset_index()
     g.to_csv(ANA / "a3_cells.csv", index=False)
+    gm = q.groupby(["variant", "kind", "mgroup", "B", "cfg"]).agg(**agg).reset_index()
+    gm.to_csv(ANA / "a3_cells_by_modelgroup.csv", index=False)
     gs = q.groupby(["variant", "kind", "stratum", "B", "cfg"]).agg(
         d_r2=("d_r2", "mean"), rel_rms=("rel_rms", "mean")).reset_index()
     gs.to_csv(ANA / "a3_cells_by_stratum.csv", index=False)
+    # ---- minimal safe accumulator width (per group and for all data keys) -------------------
+    rows = []
+    for grp in ("all",) + GROUPS:
+        pref = "acc{b}" if grp == "all" else "acc{b}_" + grp
+        for b in sorted({int(c[3:].split("_")[0]) for c in q.cfg if c.startswith("acc") and
+                         (c == f"acc{c[3:].split('_')[0]}" if grp == "all" else c.endswith("_" + grp))}):
+            sub = gm[gm.cfg == pref.format(b=b)]
+            if not len(sub):
+                continue
+            w = sub.loc[sub.d_r2.idxmin()]
+            rows.append({"group": grp, "bits": b, "worst_dR2": w.d_r2, "worst_cell": f"{w.variant}/{w.kind}/{w.mgroup}/B{w.B}",
+                         "max_rel_rms": sub.rel_rms.max(), "nan_rows": int(sub.nonfinite.sum()),
+                         "sat_rows": int(sub.sat_rows.sum()), "n_cells": len(sub),
+                         "safe": bool(w.d_r2 >= SAFE_DR2 and sub.nonfinite.sum() == 0)})
+    sw = pd.DataFrame(rows)
+    sw.to_csv(ANA / "a3_safe_width.csv", index=False)
+    MD.append(f"### A'3 minimal safe accumulator width (per-add model, counters exact). safe = every (variant, kind, "
+              f"model group, B in 1/8/33) cell-mean dR2 >= {SAFE_DR2} and no non-finite row. sat_rows = rows with >= 1 saturating add "
+              f"(range headroom, independent of the width)\n")
+    MD.append(md_table(sw, 4))
     for variant in q.variant.unique():
         for kind in ("val", "target"):
             sub = g[(g.variant == variant) & (g.kind == kind)]
@@ -273,23 +336,71 @@ def a3():
                 continue
             t = pd.DataFrame({"cfg": order})
             for b in (1, 8, 33):
-                s = sub[sub.B == b].set_index("cfg")
-                t[f"dR2 B={b}"] = [f"{s.d_r2[c]:+.4f}±{s.d_r2_ci[c]:.4f}" if c in s.index else "-" for c in order]
-                t[f"relRMS B={b}"] = [f"{100 * s.rel_rms[c]:.2f}%" if c in s.index else "-" for c in order]
+                s_ = sub[sub.B == b].set_index("cfg")
+                t[f"dR2 B={b}"] = [f"{s_.d_r2[c]:+.4f}±{s_.d_r2_ci[c]:.4f}" if c in s_.index else "-" for c in order]
+                t[f"relRMS B={b}"] = [f"{100 * s_.rel_rms[c]:.2f}%" if c in s_.index else "-" for c in order]
+            t["NaN rows (B=1/8/33)"] = ["/".join(str(int(sub[(sub.B == b) & (sub.cfg == c)].nonfinite.sum()))
+                                                for b in (1, 8, 33)) for c in order]
             fp = sub[(sub.cfg == "fp")].set_index("B").r2
-            MD.append(f"### A'3 {variant}, {kind} sessions (FP R2: " +
+            MD.append(f"### A'3 {variant}, {kind} sessions, pooled over strata (FP R2: " +
                       ", ".join(f"B={b}: {fp[b]:.3f}" for b in fp.index) +
-                      "); dR2 = quantised - FP (mean±CI over rows); relRMS = RMS(pred_q - pred_FP)/std(pred_FP)\n")
+                      "); dR2 = quantised - FP (mean±CI over rows); relRMS = RMS(pred_q - pred_FP)/std(pred_FP). "
+                      "month and year share one calibrator: see a3_cells_by_modelgroup.csv\n")
             MD.append(md_table(t))
+    a3_summary(q)
+
+
+def _trip(sub, col="d_r2", nd=4):
+    """'x/y/z' for B = 1/8/33 from a cell table (rows: one per B)."""
+    sub = sub.set_index("B")
+    return "/".join(f"{sub[col][b]:+.{nd}f}" if b in sub.index and sub[col][b] == sub[col][b] else "nan"
+                    for b in (1, 8, 33))
+
+
+def a3_summary(q=None):
+    """Compact corrected-A'3 tables for the README (a3_readme_tables.md)."""
+    if q is None:
+        q = pd.read_csv(ANA / "a3_rows.csv.gz")
+    gm = pd.read_csv(ANA / "a3_cells_by_modelgroup.csv")
+    cfgs = [c for c in dict.fromkeys(q.cfg) if c != "fp"]
+    out = []
+
+    def table(names, title):
+        t = []
+        for c in names:
+            r = {"cfg": c}
+            for grp in ("days", "month_year"):
+                for v in ("p0", "p4_m8"):
+                    sub = gm[(gm.cfg == c) & (gm.mgroup == grp) & (gm.variant == v) & (gm.kind == "target")]
+                    r[f"{grp} {v[:2]} tgt dR2 B1/8/33"] = _trip(sub) if len(sub) else "-"
+            allc = gm[gm.cfg == c]
+            r["worst cell dR2"] = f"{allc.d_r2.min():+.4f}" if len(allc) else "-"
+            r["NaN rows"] = f"{int(allc.nonfinite.sum())}/{int(allc.n.sum())}"
+            r["sat rows"] = int(allc.sat_rows.sum())
+            t.append(r)
+        out.append(f"#### {title}\n")
+        out.append(md_table(pd.DataFrame(t)))
+
+    table([c for c in cfgs if c.startswith("acc") and c.count("_") == 0], "per-add, all data keys (counters exact)")
+    table([c for c in cfgs if c.startswith("acc") and c.endswith("_bs")], "per-add, B-adaptive exponent (final B known in advance)")
+    table([c for c in cfgs if c.endswith("_2lvl")], "two-level design (wide per-trial staging, rounded once per trial)")
+    for grp in GROUPS:
+        table([c for c in cfgs if c.startswith("acc") and c.endswith("_" + grp)], f"per-add, group {grp} only")
+    table([c for c in cfgs if not c.startswith("acc")], "non-accumulator configs (unchanged by the fix; recomputed)")
+    (ANA / "a3_readme_tables.md").write_text("\n".join(out))
+    MD.append("### A'3 corrected compact tables (by model group; month and year = one calibrator)\n")
+    MD.extend(out)
+    # old (superseded) vs new FP: numeric determinism
+    return out
 
 
 def a3_qat():
     paths = sorted((P2 / "quant").glob("rows_qat_*.jsonl"))
-    if not paths:
+    if not paths or not len(list(FIXQ.glob("rows_[dmy]*.jsonl"))):
         return
     qa = read_jsonl(paths).drop_duplicates(["stratum", "variant", "seed", "kind", "session", "B", "draw", "cfg"])
     qa["base"] = qa.variant.str.replace("_qat", "", regex=False)
-    main_rows = read_jsonl(sorted((P2 / "quant").glob("rows_[dmy]*.jsonl")))
+    main_rows = read_jsonl(sorted(FIXQ.glob("rows_[dmy]*.jsonl")))
     fp = main_rows[main_rows.cfg == "fp"].drop_duplicates(
         ["stratum", "variant", "seed", "kind", "session", "B", "draw"])
     fp = fp.rename(columns={"variant": "base", "r2": "r2_fp0"})[
@@ -300,17 +411,21 @@ def a3_qat():
         ptq, on=["stratum", "base", "seed", "kind", "session", "B", "draw"])
     t["d_qat_vs_fp0"] = t.r2 - t.r2_fp0
     t["d_ptq_vs_fp0"] = t.r2_ptq - t.r2_fp0
-    out = t.groupby(["base", "kind", "stratum", "B"]).agg(
-        fp=("r2_fp0", "mean"), ptq_tern=("r2_ptq", "mean"), qat_tern=("r2", "mean"),
-        d_ptq=("d_ptq_vs_fp0", "mean"), d_qat=("d_qat_vs_fp0", "mean"),
-        d_qat_ci=("d_qat_vs_fp0", ci), rel_rms_qat=("rel_rms", "mean")).reset_index()
+    t["mgroup"] = t.stratum.map(model_group)
+    # QAT early-stopped on the SAME source val session as the kind=val rows -> val rows are optimistic
+    t["val_is_selection_set"] = t.kind == "val"
+    spec = dict(fp=("r2_fp0", "mean"), ptq_tern=("r2_ptq", "mean"), qat_tern=("r2", "mean"),
+                d_ptq=("d_ptq_vs_fp0", "mean"), d_qat=("d_qat_vs_fp0", "mean"),
+                d_qat_ci=("d_qat_vs_fp0", ci), rel_rms_qat=("rel_rms", "mean"))
+    out = t.groupby(["base", "kind", "stratum", "B"]).agg(**spec).reset_index()
+    out["val_is_selection_set"] = out.kind == "val"
     out.to_csv(ANA / "a3_qat_ternary.csv", index=False)
-    tot = t.groupby(["base", "kind", "B"]).agg(
-        fp=("r2_fp0", "mean"), ptq_tern=("r2_ptq", "mean"), qat_tern=("r2", "mean"),
-        d_ptq=("d_ptq_vs_fp0", "mean"), d_qat=("d_qat_vs_fp0", "mean"), d_qat_ci=("d_qat_vs_fp0", ci),
-        rel_rms_qat=("rel_rms", "mean")).reset_index()
+    tot = t.groupby(["base", "kind", "mgroup", "B"]).agg(**spec).reset_index()
+    tot["val_is_selection_set"] = tot.kind == "val"
     tot.to_csv(ANA / "a3_qat_ternary_pooled.csv", index=False)
-    MD.append("### A'3 ternary: PTQ (no retraining) vs QAT fine-tune on SOURCE (pooled over strata/seeds)\n")
+    MD.append("### A'3 ternary: PTQ (no retraining) vs QAT fine-tune on SOURCE, by model group "
+              "(days; month_year = month and year, ONE calibrator, not independent). "
+              "kind=val rows are OPTIMISTIC for QAT: QAT early-stopped on that same val session.\n")
     MD.append(md_table(tot))
     MD.append("by stratum:\n")
     MD.append(md_table(out[out.B.isin([1, 8, 33])]))
@@ -319,7 +434,7 @@ def a3_qat():
 def main():
     ANA.mkdir(parents=True, exist_ok=True)
     todo = sys.argv[1:] or ["a1", "a2", "a3"]
-    for name, fn in (("a1", a1), ("a2", a2), ("a3", a3), ("a3", a3_qat)):
+    for name, fn in (("a1", a1), ("a2", a2), ("a2", a2_ext), ("a3", a3), ("a3", a3_qat)):
         if name in todo:
             try:
                 fn()
