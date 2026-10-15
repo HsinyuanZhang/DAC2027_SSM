@@ -1,0 +1,31 @@
+{
+ "cfg": {
+  "k": 8,
+  "width": 128,
+  "layers": 2,
+  "state_size": 32,
+  "dropout": 0.1,
+  "lr": 0.001,
+  "weight_decay": 0.01,
+  "batch": 16,
+  "max_steps": 15000,
+  "val_every": 100,
+  "patience": 15,
+  "lam_head": 0.5,
+  "lam_white": 0.1,
+  "gain_sigma": 0.3,
+  "offset_sigma": 0.1,
+  "channel_dropout": 0.05,
+  "table_init": "supervised",
+  "seed": 0,
+  "tau_ms": 160.0
+ },
+ "best_step": 10300,
+ "best_val_bal_acc": 0.8737068916670376,
+ "steps_run": 11800,
+ "stopped_early": true,
+ "budget_rule_ok": true,
+ "seconds": 449.36271536676213,
+ "n_params_trunk": 354072,
+ "n_params_tables": 4368
+}
