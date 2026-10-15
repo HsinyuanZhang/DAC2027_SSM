@@ -1,0 +1,1046 @@
+{
+ "hyser_N256_K16|p0|B1": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 16128,
+   "accumulate_macs": 20160000,
+   "sram_accumulators_bytes": 61568,
+   "evaluated": false
+  },
+  "accumulate_macs": 90560000,
+  "accumulate_macs_per_bin": 72448,
+  "finalize_macs": 1310720,
+  "calibrator_fixed_macs": 2375680,
+  "total_macs": 94246400,
+  "fixed_weight_fraction": 0.025207116664403097,
+  "calibrator_weights": 9280,
+  "sram_bytes": {
+   "gram_full": 262144,
+   "gram_upper_triangle": 131584,
+   "sx": 1024,
+   "ac": 9216,
+   "label_cross": 20480,
+   "per_trial_q_terms": 11264,
+   "stream_ctx": 10440,
+   "descriptors": 66560,
+   "table": 8192,
+   "norm_mean_std": 2048
+  },
+  "sram_total_bytes_full_gram": 391368,
+  "sram_total_bytes_tri_gram": 260808
+ },
+ "hyser_N256_K16|p0|B2": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 16128,
+   "accumulate_macs": 40320000,
+   "sram_accumulators_bytes": 61568,
+   "evaluated": false
+  },
+  "accumulate_macs": 181120000,
+  "accumulate_macs_per_bin": 72448,
+  "finalize_macs": 1310720,
+  "calibrator_fixed_macs": 2375680,
+  "total_macs": 184806400,
+  "fixed_weight_fraction": 0.01285496606178141,
+  "calibrator_weights": 9280,
+  "sram_bytes": {
+   "gram_full": 262144,
+   "gram_upper_triangle": 131584,
+   "sx": 1024,
+   "ac": 9216,
+   "label_cross": 20480,
+   "per_trial_q_terms": 11264,
+   "stream_ctx": 10440,
+   "descriptors": 66560,
+   "table": 8192,
+   "norm_mean_std": 2048
+  },
+  "sram_total_bytes_full_gram": 391368,
+  "sram_total_bytes_tri_gram": 260808
+ },
+ "hyser_N256_K16|p0|B5": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 16128,
+   "accumulate_macs": 100800000,
+   "sram_accumulators_bytes": 61568,
+   "evaluated": false
+  },
+  "accumulate_macs": 452800000,
+  "accumulate_macs_per_bin": 72448,
+  "finalize_macs": 1310720,
+  "calibrator_fixed_macs": 2375680,
+  "total_macs": 456486400,
+  "fixed_weight_fraction": 0.00520427333651123,
+  "calibrator_weights": 9280,
+  "sram_bytes": {
+   "gram_full": 262144,
+   "gram_upper_triangle": 131584,
+   "sx": 1024,
+   "ac": 9216,
+   "label_cross": 20480,
+   "per_trial_q_terms": 11264,
+   "stream_ctx": 10440,
+   "descriptors": 66560,
+   "table": 8192,
+   "norm_mean_std": 2048
+  },
+  "sram_total_bytes_full_gram": 391368,
+  "sram_total_bytes_tri_gram": 260808
+ },
+ "hyser_N256_K16|p0|B10": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 16128,
+   "accumulate_macs": 201600000,
+   "sram_accumulators_bytes": 61568,
+   "evaluated": false
+  },
+  "accumulate_macs": 905600000,
+  "accumulate_macs_per_bin": 72448,
+  "finalize_macs": 1310720,
+  "calibrator_fixed_macs": 2375680,
+  "total_macs": 909286400,
+  "fixed_weight_fraction": 0.0026126861679664406,
+  "calibrator_weights": 9280,
+  "sram_bytes": {
+   "gram_full": 262144,
+   "gram_upper_triangle": 131584,
+   "sx": 1024,
+   "ac": 9216,
+   "label_cross": 20480,
+   "per_trial_q_terms": 11264,
+   "stream_ctx": 10440,
+   "descriptors": 66560,
+   "table": 8192,
+   "norm_mean_std": 2048
+  },
+  "sram_total_bytes_full_gram": 391368,
+  "sram_total_bytes_tri_gram": 260808
+ },
+ "hyser_N256_K16|p1|B1": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 16128,
+   "accumulate_macs": 20160000,
+   "sram_accumulators_bytes": 61568,
+   "evaluated": false
+  },
+  "accumulate_macs": 90560000,
+  "accumulate_macs_per_bin": 72448,
+  "finalize_macs": 1310720,
+  "calibrator_fixed_macs": 2400256,
+  "total_macs": 94270976,
+  "fixed_weight_fraction": 0.025461240583740215,
+  "calibrator_weights": 9441,
+  "sram_bytes": {
+   "gram_full": 262144,
+   "gram_upper_triangle": 131584,
+   "sx": 1024,
+   "ac": 9216,
+   "label_cross": 20480,
+   "per_trial_q_terms": 11264,
+   "stream_ctx": 10440,
+   "descriptors": 66560,
+   "table": 8192,
+   "norm_mean_std": 2048
+  },
+  "sram_total_bytes_full_gram": 391368,
+  "sram_total_bytes_tri_gram": 260808
+ },
+ "hyser_N256_K16|p1|B2": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 16128,
+   "accumulate_macs": 40320000,
+   "sram_accumulators_bytes": 61568,
+   "evaluated": false
+  },
+  "accumulate_macs": 181120000,
+  "accumulate_macs_per_bin": 72448,
+  "finalize_macs": 1310720,
+  "calibrator_fixed_macs": 2400256,
+  "total_macs": 184830976,
+  "fixed_weight_fraction": 0.012986221530313187,
+  "calibrator_weights": 9441,
+  "sram_bytes": {
+   "gram_full": 262144,
+   "gram_upper_triangle": 131584,
+   "sx": 1024,
+   "ac": 9216,
+   "label_cross": 20480,
+   "per_trial_q_terms": 11264,
+   "stream_ctx": 10440,
+   "descriptors": 66560,
+   "table": 8192,
+   "norm_mean_std": 2048
+  },
+  "sram_total_bytes_full_gram": 391368,
+  "sram_total_bytes_tri_gram": 260808
+ },
+ "hyser_N256_K16|p1|B5": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 16128,
+   "accumulate_macs": 100800000,
+   "sram_accumulators_bytes": 61568,
+   "evaluated": false
+  },
+  "accumulate_macs": 452800000,
+  "accumulate_macs_per_bin": 72448,
+  "finalize_macs": 1310720,
+  "calibrator_fixed_macs": 2400256,
+  "total_macs": 456510976,
+  "fixed_weight_fraction": 0.0052578275795936175,
+  "calibrator_weights": 9441,
+  "sram_bytes": {
+   "gram_full": 262144,
+   "gram_upper_triangle": 131584,
+   "sx": 1024,
+   "ac": 9216,
+   "label_cross": 20480,
+   "per_trial_q_terms": 11264,
+   "stream_ctx": 10440,
+   "descriptors": 66560,
+   "table": 8192,
+   "norm_mean_std": 2048
+  },
+  "sram_total_bytes_full_gram": 391368,
+  "sram_total_bytes_tri_gram": 260808
+ },
+ "hyser_N256_K16|p1|B10": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 16128,
+   "accumulate_macs": 201600000,
+   "sram_accumulators_bytes": 61568,
+   "evaluated": false
+  },
+  "accumulate_macs": 905600000,
+  "accumulate_macs_per_bin": 72448,
+  "finalize_macs": 1310720,
+  "calibrator_fixed_macs": 2400256,
+  "total_macs": 909310976,
+  "fixed_weight_fraction": 0.002639642612210149,
+  "calibrator_weights": 9441,
+  "sram_bytes": {
+   "gram_full": 262144,
+   "gram_upper_triangle": 131584,
+   "sx": 1024,
+   "ac": 9216,
+   "label_cross": 20480,
+   "per_trial_q_terms": 11264,
+   "stream_ctx": 10440,
+   "descriptors": 66560,
+   "table": 8192,
+   "norm_mean_std": 2048
+  },
+  "sram_total_bytes_full_gram": 391368,
+  "sram_total_bytes_tri_gram": 260808
+ },
+ "hyser_N256_K16|p2|B1": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 16128,
+   "accumulate_macs": 20160000,
+   "sram_accumulators_bytes": 61568,
+   "evaluated": false
+  },
+  "accumulate_macs": 90560000,
+  "accumulate_macs_per_bin": 72448,
+  "finalize_macs": 1310720,
+  "calibrator_fixed_macs": 4513792,
+  "total_macs": 96384512,
+  "fixed_weight_fraction": 0.04683109253071697,
+  "calibrator_weights": 17697,
+  "sram_bytes": {
+   "gram_full": 262144,
+   "gram_upper_triangle": 131584,
+   "sx": 1024,
+   "ac": 9216,
+   "label_cross": 20480,
+   "per_trial_q_terms": 11264,
+   "stream_ctx": 10440,
+   "descriptors": 66560,
+   "table": 8192,
+   "norm_mean_std": 2048
+  },
+  "sram_total_bytes_full_gram": 391368,
+  "sram_total_bytes_tri_gram": 260808
+ },
+ "hyser_N256_K16|p2|B2": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 16128,
+   "accumulate_macs": 40320000,
+   "sram_accumulators_bytes": 61568,
+   "evaluated": false
+  },
+  "accumulate_macs": 181120000,
+  "accumulate_macs_per_bin": 72448,
+  "finalize_macs": 1310720,
+  "calibrator_fixed_macs": 4513792,
+  "total_macs": 186944512,
+  "fixed_weight_fraction": 0.024145089640288556,
+  "calibrator_weights": 17697,
+  "sram_bytes": {
+   "gram_full": 262144,
+   "gram_upper_triangle": 131584,
+   "sx": 1024,
+   "ac": 9216,
+   "label_cross": 20480,
+   "per_trial_q_terms": 11264,
+   "stream_ctx": 10440,
+   "descriptors": 66560,
+   "table": 8192,
+   "norm_mean_std": 2048
+  },
+  "sram_total_bytes_full_gram": 391368,
+  "sram_total_bytes_tri_gram": 260808
+ },
+ "hyser_N256_K16|p2|B5": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 16128,
+   "accumulate_macs": 100800000,
+   "sram_accumulators_bytes": 61568,
+   "evaluated": false
+  },
+  "accumulate_macs": 452800000,
+  "accumulate_macs_per_bin": 72448,
+  "finalize_macs": 1310720,
+  "calibrator_fixed_macs": 4513792,
+  "total_macs": 458624512,
+  "fixed_weight_fraction": 0.009842020829449256,
+  "calibrator_weights": 17697,
+  "sram_bytes": {
+   "gram_full": 262144,
+   "gram_upper_triangle": 131584,
+   "sx": 1024,
+   "ac": 9216,
+   "label_cross": 20480,
+   "per_trial_q_terms": 11264,
+   "stream_ctx": 10440,
+   "descriptors": 66560,
+   "table": 8192,
+   "norm_mean_std": 2048
+  },
+  "sram_total_bytes_full_gram": 391368,
+  "sram_total_bytes_tri_gram": 260808
+ },
+ "hyser_N256_K16|p2|B10": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 16128,
+   "accumulate_macs": 201600000,
+   "sram_accumulators_bytes": 61568,
+   "evaluated": false
+  },
+  "accumulate_macs": 905600000,
+  "accumulate_macs_per_bin": 72448,
+  "finalize_macs": 1310720,
+  "calibrator_fixed_macs": 4513792,
+  "total_macs": 911424512,
+  "fixed_weight_fraction": 0.004952458421482524,
+  "calibrator_weights": 17697,
+  "sram_bytes": {
+   "gram_full": 262144,
+   "gram_upper_triangle": 131584,
+   "sx": 1024,
+   "ac": 9216,
+   "label_cross": 20480,
+   "per_trial_q_terms": 11264,
+   "stream_ctx": 10440,
+   "descriptors": 66560,
+   "table": 8192,
+   "norm_mean_std": 2048
+  },
+  "sram_total_bytes_full_gram": 391368,
+  "sram_total_bytes_tri_gram": 260808
+ },
+ "hyser_N256_K16|p4|B1": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 16128,
+   "accumulate_macs": 20160000,
+   "sram_accumulators_bytes": 61568,
+   "evaluated": false
+  },
+  "accumulate_macs": 90560000,
+  "accumulate_macs_per_bin": 72448,
+  "finalize_macs": 1310720,
+  "calibrator_fixed_macs": 5906432,
+  "total_macs": 97777152,
+  "fixed_weight_fraction": 0.060407077514387,
+  "calibrator_weights": 22881,
+  "sram_bytes": {
+   "gram_full": 262144,
+   "gram_upper_triangle": 131584,
+   "sx": 1024,
+   "ac": 9216,
+   "label_cross": 20480,
+   "per_trial_q_terms": 11264,
+   "stream_ctx": 10440,
+   "descriptors": 66560,
+   "table": 8192,
+   "norm_mean_std": 2048
+  },
+  "sram_total_bytes_full_gram": 391368,
+  "sram_total_bytes_tri_gram": 260808
+ },
+ "hyser_N256_K16|p4|B2": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 16128,
+   "accumulate_macs": 40320000,
+   "sram_accumulators_bytes": 61568,
+   "evaluated": false
+  },
+  "accumulate_macs": 181120000,
+  "accumulate_macs_per_bin": 72448,
+  "finalize_macs": 1310720,
+  "calibrator_fixed_macs": 5906432,
+  "total_macs": 188337152,
+  "fixed_weight_fraction": 0.03136094996275615,
+  "calibrator_weights": 22881,
+  "sram_bytes": {
+   "gram_full": 262144,
+   "gram_upper_triangle": 131584,
+   "sx": 1024,
+   "ac": 9216,
+   "label_cross": 20480,
+   "per_trial_q_terms": 11264,
+   "stream_ctx": 10440,
+   "descriptors": 66560,
+   "table": 8192,
+   "norm_mean_std": 2048
+  },
+  "sram_total_bytes_full_gram": 391368,
+  "sram_total_bytes_tri_gram": 260808
+ },
+ "hyser_N256_K16|p4|B5": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 16128,
+   "accumulate_macs": 100800000,
+   "sram_accumulators_bytes": 61568,
+   "evaluated": false
+  },
+  "accumulate_macs": 452800000,
+  "accumulate_macs_per_bin": 72448,
+  "finalize_macs": 1310720,
+  "calibrator_fixed_macs": 5906432,
+  "total_macs": 460017152,
+  "fixed_weight_fraction": 0.01283959081595288,
+  "calibrator_weights": 22881,
+  "sram_bytes": {
+   "gram_full": 262144,
+   "gram_upper_triangle": 131584,
+   "sx": 1024,
+   "ac": 9216,
+   "label_cross": 20480,
+   "per_trial_q_terms": 11264,
+   "stream_ctx": 10440,
+   "descriptors": 66560,
+   "table": 8192,
+   "norm_mean_std": 2048
+  },
+  "sram_total_bytes_full_gram": 391368,
+  "sram_total_bytes_tri_gram": 260808
+ },
+ "hyser_N256_K16|p4|B10": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 16128,
+   "accumulate_macs": 201600000,
+   "sram_accumulators_bytes": 61568,
+   "evaluated": false
+  },
+  "accumulate_macs": 905600000,
+  "accumulate_macs_per_bin": 72448,
+  "finalize_macs": 1310720,
+  "calibrator_fixed_macs": 5906432,
+  "total_macs": 912817152,
+  "fixed_weight_fraction": 0.006470553261470705,
+  "calibrator_weights": 22881,
+  "sram_bytes": {
+   "gram_full": 262144,
+   "gram_upper_triangle": 131584,
+   "sx": 1024,
+   "ac": 9216,
+   "label_cross": 20480,
+   "per_trial_q_terms": 11264,
+   "stream_ctx": 10440,
+   "descriptors": 66560,
+   "table": 8192,
+   "norm_mean_std": 2048
+  },
+  "sram_total_bytes_full_gram": 391368,
+  "sram_total_bytes_tri_gram": 260808
+ },
+ "db6_N14_K8|p0|B1": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 490,
+   "accumulate_macs": 207760,
+   "sram_accumulators_bytes": 2640,
+   "evaluated": false
+  },
+  "accumulate_macs": 172144,
+  "accumulate_macs_per_bin": 406,
+  "finalize_macs": 3052,
+  "calibrator_fixed_macs": 100352,
+  "total_macs": 275548,
+  "fixed_weight_fraction": 0.3641906310334316,
+  "calibrator_weights": 7168,
+  "sram_bytes": {
+   "gram_full": 784,
+   "gram_upper_triangle": 420,
+   "sx": 56,
+   "ac": 504,
+   "label_cross": 448,
+   "per_trial_q_terms": 952,
+   "stream_ctx": 880,
+   "descriptors": 2240,
+   "table": 224,
+   "norm_mean_std": 112
+  },
+  "sram_total_bytes_full_gram": 6200,
+  "sram_total_bytes_tri_gram": 5836
+ },
+ "db6_N14_K8|p0|B2": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 490,
+   "accumulate_macs": 415520,
+   "sram_accumulators_bytes": 2640,
+   "evaluated": false
+  },
+  "accumulate_macs": 344288,
+  "accumulate_macs_per_bin": 406,
+  "finalize_macs": 3052,
+  "calibrator_fixed_macs": 100352,
+  "total_macs": 447692,
+  "fixed_weight_fraction": 0.22415410594783913,
+  "calibrator_weights": 7168,
+  "sram_bytes": {
+   "gram_full": 784,
+   "gram_upper_triangle": 420,
+   "sx": 56,
+   "ac": 504,
+   "label_cross": 448,
+   "per_trial_q_terms": 952,
+   "stream_ctx": 880,
+   "descriptors": 2240,
+   "table": 224,
+   "norm_mean_std": 112
+  },
+  "sram_total_bytes_full_gram": 6200,
+  "sram_total_bytes_tri_gram": 5836
+ },
+ "db6_N14_K8|p0|B4": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 490,
+   "accumulate_macs": 831040,
+   "sram_accumulators_bytes": 2640,
+   "evaluated": false
+  },
+  "accumulate_macs": 688576,
+  "accumulate_macs_per_bin": 406,
+  "finalize_macs": 3052,
+  "calibrator_fixed_macs": 100352,
+  "total_macs": 791980,
+  "fixed_weight_fraction": 0.12671027046137529,
+  "calibrator_weights": 7168,
+  "sram_bytes": {
+   "gram_full": 784,
+   "gram_upper_triangle": 420,
+   "sx": 56,
+   "ac": 504,
+   "label_cross": 448,
+   "per_trial_q_terms": 952,
+   "stream_ctx": 880,
+   "descriptors": 2240,
+   "table": 224,
+   "norm_mean_std": 112
+  },
+  "sram_total_bytes_full_gram": 6200,
+  "sram_total_bytes_tri_gram": 5836
+ },
+ "db6_N14_K8|p0|B8": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 490,
+   "accumulate_macs": 1662080,
+   "sram_accumulators_bytes": 2640,
+   "evaluated": false
+  },
+  "accumulate_macs": 1377152,
+  "accumulate_macs_per_bin": 406,
+  "finalize_macs": 3052,
+  "calibrator_fixed_macs": 100352,
+  "total_macs": 1480556,
+  "fixed_weight_fraction": 0.06777994212984852,
+  "calibrator_weights": 7168,
+  "sram_bytes": {
+   "gram_full": 784,
+   "gram_upper_triangle": 420,
+   "sx": 56,
+   "ac": 504,
+   "label_cross": 448,
+   "per_trial_q_terms": 952,
+   "stream_ctx": 880,
+   "descriptors": 2240,
+   "table": 224,
+   "norm_mean_std": 112
+  },
+  "sram_total_bytes_full_gram": 6200,
+  "sram_total_bytes_tri_gram": 5836
+ },
+ "db6_N14_K8|p0|B16": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 490,
+   "accumulate_macs": 3324160,
+   "sram_accumulators_bytes": 2640,
+   "evaluated": false
+  },
+  "accumulate_macs": 2754304,
+  "accumulate_macs_per_bin": 406,
+  "finalize_macs": 3052,
+  "calibrator_fixed_macs": 100352,
+  "total_macs": 2857708,
+  "fixed_weight_fraction": 0.03511625400495782,
+  "calibrator_weights": 7168,
+  "sram_bytes": {
+   "gram_full": 784,
+   "gram_upper_triangle": 420,
+   "sx": 56,
+   "ac": 504,
+   "label_cross": 448,
+   "per_trial_q_terms": 952,
+   "stream_ctx": 880,
+   "descriptors": 2240,
+   "table": 224,
+   "norm_mean_std": 112
+  },
+  "sram_total_bytes_full_gram": 6200,
+  "sram_total_bytes_tri_gram": 5836
+ },
+ "db6_N14_K8|p1|B1": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 490,
+   "accumulate_macs": 207760,
+   "sram_accumulators_bytes": 2640,
+   "evaluated": false
+  },
+  "accumulate_macs": 172144,
+  "accumulate_macs_per_bin": 406,
+  "finalize_macs": 3052,
+  "calibrator_fixed_macs": 101696,
+  "total_macs": 276892,
+  "fixed_weight_fraction": 0.3672767721710992,
+  "calibrator_weights": 7304,
+  "sram_bytes": {
+   "gram_full": 784,
+   "gram_upper_triangle": 420,
+   "sx": 56,
+   "ac": 504,
+   "label_cross": 448,
+   "per_trial_q_terms": 952,
+   "stream_ctx": 880,
+   "descriptors": 2240,
+   "table": 224,
+   "norm_mean_std": 112
+  },
+  "sram_total_bytes_full_gram": 6200,
+  "sram_total_bytes_tri_gram": 5836
+ },
+ "db6_N14_K8|p1|B2": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 490,
+   "accumulate_macs": 415520,
+   "sram_accumulators_bytes": 2640,
+   "evaluated": false
+  },
+  "accumulate_macs": 344288,
+  "accumulate_macs_per_bin": 406,
+  "finalize_macs": 3052,
+  "calibrator_fixed_macs": 101696,
+  "total_macs": 449036,
+  "fixed_weight_fraction": 0.22647627361726008,
+  "calibrator_weights": 7304,
+  "sram_bytes": {
+   "gram_full": 784,
+   "gram_upper_triangle": 420,
+   "sx": 56,
+   "ac": 504,
+   "label_cross": 448,
+   "per_trial_q_terms": 952,
+   "stream_ctx": 880,
+   "descriptors": 2240,
+   "table": 224,
+   "norm_mean_std": 112
+  },
+  "sram_total_bytes_full_gram": 6200,
+  "sram_total_bytes_tri_gram": 5836
+ },
+ "db6_N14_K8|p1|B4": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 490,
+   "accumulate_macs": 831040,
+   "sram_accumulators_bytes": 2640,
+   "evaluated": false
+  },
+  "accumulate_macs": 688576,
+  "accumulate_macs_per_bin": 406,
+  "finalize_macs": 3052,
+  "calibrator_fixed_macs": 101696,
+  "total_macs": 793324,
+  "fixed_weight_fraction": 0.12818974340874598,
+  "calibrator_weights": 7304,
+  "sram_bytes": {
+   "gram_full": 784,
+   "gram_upper_triangle": 420,
+   "sx": 56,
+   "ac": 504,
+   "label_cross": 448,
+   "per_trial_q_terms": 952,
+   "stream_ctx": 880,
+   "descriptors": 2240,
+   "table": 224,
+   "norm_mean_std": 112
+  },
+  "sram_total_bytes_full_gram": 6200,
+  "sram_total_bytes_tri_gram": 5836
+ },
+ "db6_N14_K8|p1|B8": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 490,
+   "accumulate_macs": 1662080,
+   "sram_accumulators_bytes": 2640,
+   "evaluated": false
+  },
+  "accumulate_macs": 1377152,
+  "accumulate_macs_per_bin": 406,
+  "finalize_macs": 3052,
+  "calibrator_fixed_macs": 101696,
+  "total_macs": 1481900,
+  "fixed_weight_fraction": 0.06862541332073689,
+  "calibrator_weights": 7304,
+  "sram_bytes": {
+   "gram_full": 784,
+   "gram_upper_triangle": 420,
+   "sx": 56,
+   "ac": 504,
+   "label_cross": 448,
+   "per_trial_q_terms": 952,
+   "stream_ctx": 880,
+   "descriptors": 2240,
+   "table": 224,
+   "norm_mean_std": 112
+  },
+  "sram_total_bytes_full_gram": 6200,
+  "sram_total_bytes_tri_gram": 5836
+ },
+ "db6_N14_K8|p1|B16": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 490,
+   "accumulate_macs": 3324160,
+   "sram_accumulators_bytes": 2640,
+   "evaluated": false
+  },
+  "accumulate_macs": 2754304,
+  "accumulate_macs_per_bin": 406,
+  "finalize_macs": 3052,
+  "calibrator_fixed_macs": 101696,
+  "total_macs": 2859052,
+  "fixed_weight_fraction": 0.0355698322380985,
+  "calibrator_weights": 7304,
+  "sram_bytes": {
+   "gram_full": 784,
+   "gram_upper_triangle": 420,
+   "sx": 56,
+   "ac": 504,
+   "label_cross": 448,
+   "per_trial_q_terms": 952,
+   "stream_ctx": 880,
+   "descriptors": 2240,
+   "table": 224,
+   "norm_mean_std": 112
+  },
+  "sram_total_bytes_full_gram": 6200,
+  "sram_total_bytes_tri_gram": 5836
+ },
+ "db6_N14_K8|p2|B1": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 490,
+   "accumulate_macs": 207760,
+   "sram_accumulators_bytes": 2640,
+   "evaluated": false
+  },
+  "accumulate_macs": 172144,
+  "accumulate_macs_per_bin": 406,
+  "finalize_macs": 3052,
+  "calibrator_fixed_macs": 194880,
+  "total_macs": 370076,
+  "fixed_weight_fraction": 0.5265945373382764,
+  "calibrator_weights": 13960,
+  "sram_bytes": {
+   "gram_full": 784,
+   "gram_upper_triangle": 420,
+   "sx": 56,
+   "ac": 504,
+   "label_cross": 448,
+   "per_trial_q_terms": 952,
+   "stream_ctx": 880,
+   "descriptors": 2240,
+   "table": 224,
+   "norm_mean_std": 112
+  },
+  "sram_total_bytes_full_gram": 6200,
+  "sram_total_bytes_tri_gram": 5836
+ },
+ "db6_N14_K8|p2|B2": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 490,
+   "accumulate_macs": 415520,
+   "sram_accumulators_bytes": 2640,
+   "evaluated": false
+  },
+  "accumulate_macs": 344288,
+  "accumulate_macs_per_bin": 406,
+  "finalize_macs": 3052,
+  "calibrator_fixed_macs": 194880,
+  "total_macs": 542220,
+  "fixed_weight_fraction": 0.35941130906274205,
+  "calibrator_weights": 13960,
+  "sram_bytes": {
+   "gram_full": 784,
+   "gram_upper_triangle": 420,
+   "sx": 56,
+   "ac": 504,
+   "label_cross": 448,
+   "per_trial_q_terms": 952,
+   "stream_ctx": 880,
+   "descriptors": 2240,
+   "table": 224,
+   "norm_mean_std": 112
+  },
+  "sram_total_bytes_full_gram": 6200,
+  "sram_total_bytes_tri_gram": 5836
+ },
+ "db6_N14_K8|p2|B4": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 490,
+   "accumulate_macs": 831040,
+   "sram_accumulators_bytes": 2640,
+   "evaluated": false
+  },
+  "accumulate_macs": 688576,
+  "accumulate_macs_per_bin": 406,
+  "finalize_macs": 3052,
+  "calibrator_fixed_macs": 194880,
+  "total_macs": 886508,
+  "fixed_weight_fraction": 0.2198288114715265,
+  "calibrator_weights": 13960,
+  "sram_bytes": {
+   "gram_full": 784,
+   "gram_upper_triangle": 420,
+   "sx": 56,
+   "ac": 504,
+   "label_cross": 448,
+   "per_trial_q_terms": 952,
+   "stream_ctx": 880,
+   "descriptors": 2240,
+   "table": 224,
+   "norm_mean_std": 112
+  },
+  "sram_total_bytes_full_gram": 6200,
+  "sram_total_bytes_tri_gram": 5836
+ },
+ "db6_N14_K8|p2|B8": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 490,
+   "accumulate_macs": 1662080,
+   "sram_accumulators_bytes": 2640,
+   "evaluated": false
+  },
+  "accumulate_macs": 1377152,
+  "accumulate_macs_per_bin": 406,
+  "finalize_macs": 3052,
+  "calibrator_fixed_macs": 194880,
+  "total_macs": 1575084,
+  "fixed_weight_fraction": 0.12372673457415605,
+  "calibrator_weights": 13960,
+  "sram_bytes": {
+   "gram_full": 784,
+   "gram_upper_triangle": 420,
+   "sx": 56,
+   "ac": 504,
+   "label_cross": 448,
+   "per_trial_q_terms": 952,
+   "stream_ctx": 880,
+   "descriptors": 2240,
+   "table": 224,
+   "norm_mean_std": 112
+  },
+  "sram_total_bytes_full_gram": 6200,
+  "sram_total_bytes_tri_gram": 5836
+ },
+ "db6_N14_K8|p2|B16": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 490,
+   "accumulate_macs": 3324160,
+   "sram_accumulators_bytes": 2640,
+   "evaluated": false
+  },
+  "accumulate_macs": 2754304,
+  "accumulate_macs_per_bin": 406,
+  "finalize_macs": 3052,
+  "calibrator_fixed_macs": 194880,
+  "total_macs": 2952236,
+  "fixed_weight_fraction": 0.06601098286180374,
+  "calibrator_weights": 13960,
+  "sram_bytes": {
+   "gram_full": 784,
+   "gram_upper_triangle": 420,
+   "sx": 56,
+   "ac": 504,
+   "label_cross": 448,
+   "per_trial_q_terms": 952,
+   "stream_ctx": 880,
+   "descriptors": 2240,
+   "table": 224,
+   "norm_mean_std": 112
+  },
+  "sram_total_bytes_full_gram": 6200,
+  "sram_total_bytes_tri_gram": 5836
+ },
+ "db6_N14_K8|p4|B1": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 490,
+   "accumulate_macs": 207760,
+   "sram_accumulators_bytes": 2640,
+   "evaluated": false
+  },
+  "accumulate_macs": 172144,
+  "accumulate_macs_per_bin": 406,
+  "finalize_macs": 3052,
+  "calibrator_fixed_macs": 271040,
+  "total_macs": 446236,
+  "fixed_weight_fraction": 0.6073916044424923,
+  "calibrator_weights": 19144,
+  "sram_bytes": {
+   "gram_full": 784,
+   "gram_upper_triangle": 420,
+   "sx": 56,
+   "ac": 504,
+   "label_cross": 448,
+   "per_trial_q_terms": 952,
+   "stream_ctx": 880,
+   "descriptors": 2240,
+   "table": 224,
+   "norm_mean_std": 112
+  },
+  "sram_total_bytes_full_gram": 6200,
+  "sram_total_bytes_tri_gram": 5836
+ },
+ "db6_N14_K8|p4|B2": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 490,
+   "accumulate_macs": 415520,
+   "sram_accumulators_bytes": 2640,
+   "evaluated": false
+  },
+  "accumulate_macs": 344288,
+  "accumulate_macs_per_bin": 406,
+  "finalize_macs": 3052,
+  "calibrator_fixed_macs": 271040,
+  "total_macs": 618380,
+  "fixed_weight_fraction": 0.43830654290242244,
+  "calibrator_weights": 19144,
+  "sram_bytes": {
+   "gram_full": 784,
+   "gram_upper_triangle": 420,
+   "sx": 56,
+   "ac": 504,
+   "label_cross": 448,
+   "per_trial_q_terms": 952,
+   "stream_ctx": 880,
+   "descriptors": 2240,
+   "table": 224,
+   "norm_mean_std": 112
+  },
+  "sram_total_bytes_full_gram": 6200,
+  "sram_total_bytes_tri_gram": 5836
+ },
+ "db6_N14_K8|p4|B4": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 490,
+   "accumulate_macs": 831040,
+   "sram_accumulators_bytes": 2640,
+   "evaluated": false
+  },
+  "accumulate_macs": 688576,
+  "accumulate_macs_per_bin": 406,
+  "finalize_macs": 3052,
+  "calibrator_fixed_macs": 271040,
+  "total_macs": 962668,
+  "fixed_weight_fraction": 0.28155085657776097,
+  "calibrator_weights": 19144,
+  "sram_bytes": {
+   "gram_full": 784,
+   "gram_upper_triangle": 420,
+   "sx": 56,
+   "ac": 504,
+   "label_cross": 448,
+   "per_trial_q_terms": 952,
+   "stream_ctx": 880,
+   "descriptors": 2240,
+   "table": 224,
+   "norm_mean_std": 112
+  },
+  "sram_total_bytes_full_gram": 6200,
+  "sram_total_bytes_tri_gram": 5836
+ },
+ "db6_N14_K8|p4|B8": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 490,
+   "accumulate_macs": 1662080,
+   "sram_accumulators_bytes": 2640,
+   "evaluated": false
+  },
+  "accumulate_macs": 1377152,
+  "accumulate_macs_per_bin": 406,
+  "finalize_macs": 3052,
+  "calibrator_fixed_macs": 271040,
+  "total_macs": 1651244,
+  "fixed_weight_fraction": 0.16414291285842675,
+  "calibrator_weights": 19144,
+  "sram_bytes": {
+   "gram_full": 784,
+   "gram_upper_triangle": 420,
+   "sx": 56,
+   "ac": 504,
+   "label_cross": 448,
+   "per_trial_q_terms": 952,
+   "stream_ctx": 880,
+   "descriptors": 2240,
+   "table": 224,
+   "norm_mean_std": 112
+  },
+  "sram_total_bytes_full_gram": 6200,
+  "sram_total_bytes_tri_gram": 5836
+ },
+ "db6_N14_K8|p4|B16": {
+  "gram_free_estimate": {
+   "accumulate_macs_per_bin": 490,
+   "accumulate_macs": 3324160,
+   "sram_accumulators_bytes": 2640,
+   "evaluated": false
+  },
+  "accumulate_macs": 2754304,
+  "accumulate_macs_per_bin": 406,
+  "finalize_macs": 3052,
+  "calibrator_fixed_macs": 271040,
+  "total_macs": 3028396,
+  "fixed_weight_fraction": 0.08949952384034321,
+  "calibrator_weights": 19144,
+  "sram_bytes": {
+   "gram_full": 784,
+   "gram_upper_triangle": 420,
+   "sx": 56,
+   "ac": 504,
+   "label_cross": 448,
+   "per_trial_q_terms": 952,
+   "stream_ctx": 880,
+   "descriptors": 2240,
+   "table": 224,
+   "norm_mean_std": 112
+  },
+  "sram_total_bytes_full_gram": 6200,
+  "sram_total_bytes_tri_gram": 5836
+ }
+}

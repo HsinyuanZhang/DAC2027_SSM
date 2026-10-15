@@ -1,0 +1,16 @@
+{
+ "hyser/seed0/rows.jsonl": {
+  "rows": 7680,
+  "h1_pass": 7680,
+  "h2_pass": 7680,
+  "h4_pass": 7680,
+  "h5_pass": 7680
+ },
+ "hyser/seed1/rows.jsonl": {
+  "rows": 7680,
+  "h1_pass": 7680,
+  "h2_pass": 7680,
+  "h4_pass": 7680,
+  "h5_pass": 7680
+ }
+}
