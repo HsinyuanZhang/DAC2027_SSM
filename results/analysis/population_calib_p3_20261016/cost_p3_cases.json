@@ -1,0 +1,38 @@
+[
+ {
+  "name": "000688 (N=26)",
+  "N": 26,
+  "K": 10,
+  "D": 2,
+  "H": 128,
+  "T": 252,
+  "bx": 3,
+  "by": 16,
+  "trunk": {
+   "linear_macs": 350720,
+   "scan_macs": 32768,
+   "total": 383488,
+   "state_elems": 16384,
+   "uncounted": "gating, RoPE, layer-norm, short conv"
+  },
+  "bin_ms": 20
+ },
+ {
+  "name": "HD-sEMG (N=256)",
+  "N": 256,
+  "K": 16,
+  "D": 5,
+  "H": 128,
+  "T": 1250,
+  "bx": 8,
+  "by": 16,
+  "trunk": {
+   "linear_macs": 351872,
+   "scan_macs": 32768,
+   "total": 384640,
+   "state_elems": 16384,
+   "uncounted": "gating, RoPE, layer-norm, short conv"
+  },
+  "bin_ms": 20
+ }
+]

@@ -1,0 +1,6 @@
+{
+ "n_rows": 15360,
+ "h2_all_zero_backprop": true,
+ "h4_all_disjoint": true,
+ "trunk_hash_unchanged_all": true
+}

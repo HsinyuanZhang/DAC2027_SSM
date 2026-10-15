@@ -1,0 +1,3038 @@
+[
+ {
+  "case": "000688 (N=26)",
+  "method": "p0_base",
+  "B": 1,
+  "macs": {
+   "accumulate": 277584,
+   "finalize": 15185,
+   "calibrator_mlp": 201344,
+   "total": 494113
+  },
+  "sram_bytes": {},
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1_full",
+  "B": 1,
+  "macs": {
+   "replay forward (trunk+read-in)": 96704496,
+   "readout accumulate [full]": 2178036,
+   "readout solve [full]": 424345
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 3496.5,
+   "readout stats [full]": 34572.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1_diag",
+  "B": 1,
+  "macs": {
+   "replay forward (trunk+read-in)": 96704496,
+   "readout accumulate [diag]": 97524,
+   "readout solve [diag]": 258
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 3496.5,
+   "readout stats [diag]": 1548.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1_lr16",
+  "B": 1,
+  "macs": {
+   "replay forward (trunk+read-in)": 96704496,
+   "readout accumulate [lr16]": 562464,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 3496.5,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1s_full",
+  "B": 1,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 96704496,
+   "extra P0 refreshes (b-1)": 0,
+   "readout accumulate [full]": 2178036,
+   "readout solve [full]": 424345
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "one-trial staging buffer (trial 0 normalisation)": 3496.5,
+   "readout stats [full]": 34572.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1s_lr16",
+  "B": 1,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 96704496,
+   "extra P0 refreshes (b-1)": 0,
+   "readout accumulate [lr16]": 562464,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "one-trial staging buffer (trial 0 normalisation)": 3496.5,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1s_lr16_nostaging(unevaluated)",
+  "B": 1,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 96704496,
+   "extra P0 refreshes (b-1)": 0,
+   "readout accumulate [lr16]": 562464,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r2_S5_L16",
+  "B": 1,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 483522480,
+   "feedback conv (L+1)*D*K per bin x S": 428400,
+   "outer product e x^T (K*N per bin) x S": 327600,
+   "precondition + update (K*N per step)": 3900
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 3496.5,
+   "residual delay line ((L+1) x D x 16 bit)": 68,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 340
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r2_S10_L32",
+  "B": 1,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 967044960,
+   "feedback conv (L+1)*D*K per bin x S": 1663200,
+   "outer product e x^T (K*N per bin) x S": 655200,
+   "precondition + update (K*N per step)": 7800
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 3496.5,
+   "residual delay line ((L+1) x D x 16 bit)": 132,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 660
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r3_lr16_S5_L16",
+  "B": 1,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 483522480,
+   "feedback conv (L+1)*D*K per bin x S": 428400,
+   "outer product e x^T (K*N per bin) x S": 327600,
+   "precondition + update (K*N per step)": 3900,
+   "replay forward for readout pass": 96704496,
+   "readout accumulate [lr16]": 562464,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 3496.5,
+   "residual delay line ((L+1) x D x 16 bit)": 68,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 340,
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r3_full_S5_L16",
+  "B": 1,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 483522480,
+   "feedback conv (L+1)*D*K per bin x S": 428400,
+   "outer product e x^T (K*N per bin) x S": 327600,
+   "precondition + update (K*N per step)": 3900,
+   "replay forward for readout pass": 96704496,
+   "readout accumulate [full]": 2178036,
+   "readout solve [full]": 424345
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 3496.5,
+   "residual delay line ((L+1) x D x 16 bit)": 68,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0,
+   "readout stats [full]": 34572.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 340
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "p0_base",
+  "B": 2,
+  "macs": {
+   "accumulate": 555168,
+   "finalize": 15185,
+   "calibrator_mlp": 201344,
+   "total": 771697
+  },
+  "sram_bytes": {},
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1_full",
+  "B": 2,
+  "macs": {
+   "replay forward (trunk+read-in)": 193408992,
+   "readout accumulate [full]": 4356072,
+   "readout solve [full]": 424345
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 6993.0,
+   "readout stats [full]": 34572.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1_diag",
+  "B": 2,
+  "macs": {
+   "replay forward (trunk+read-in)": 193408992,
+   "readout accumulate [diag]": 195048,
+   "readout solve [diag]": 258
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 6993.0,
+   "readout stats [diag]": 1548.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1_lr16",
+  "B": 2,
+  "macs": {
+   "replay forward (trunk+read-in)": 193408992,
+   "readout accumulate [lr16]": 1124928,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 6993.0,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1s_full",
+  "B": 2,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 193408992,
+   "extra P0 refreshes (b-1)": 216529,
+   "readout accumulate [full]": 4356072,
+   "readout solve [full]": 424345
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "one-trial staging buffer (trial 0 normalisation)": 3496.5,
+   "readout stats [full]": 34572.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1s_lr16",
+  "B": 2,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 193408992,
+   "extra P0 refreshes (b-1)": 216529,
+   "readout accumulate [lr16]": 1124928,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "one-trial staging buffer (trial 0 normalisation)": 3496.5,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1s_lr16_nostaging(unevaluated)",
+  "B": 2,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 193408992,
+   "extra P0 refreshes (b-1)": 216529,
+   "readout accumulate [lr16]": 1124928,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r2_S5_L16",
+  "B": 2,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 967044960,
+   "feedback conv (L+1)*D*K per bin x S": 856800,
+   "outer product e x^T (K*N per bin) x S": 655200,
+   "precondition + update (K*N per step)": 3900
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 6993.0,
+   "residual delay line ((L+1) x D x 16 bit)": 68,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 340
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r2_S10_L32",
+  "B": 2,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 1934089920,
+   "feedback conv (L+1)*D*K per bin x S": 3326400,
+   "outer product e x^T (K*N per bin) x S": 1310400,
+   "precondition + update (K*N per step)": 7800
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 6993.0,
+   "residual delay line ((L+1) x D x 16 bit)": 132,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 660
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r3_lr16_S5_L16",
+  "B": 2,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 967044960,
+   "feedback conv (L+1)*D*K per bin x S": 856800,
+   "outer product e x^T (K*N per bin) x S": 655200,
+   "precondition + update (K*N per step)": 3900,
+   "replay forward for readout pass": 193408992,
+   "readout accumulate [lr16]": 1124928,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 6993.0,
+   "residual delay line ((L+1) x D x 16 bit)": 68,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 340,
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r3_full_S5_L16",
+  "B": 2,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 967044960,
+   "feedback conv (L+1)*D*K per bin x S": 856800,
+   "outer product e x^T (K*N per bin) x S": 655200,
+   "precondition + update (K*N per step)": 3900,
+   "replay forward for readout pass": 193408992,
+   "readout accumulate [full]": 4356072,
+   "readout solve [full]": 424345
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 6993.0,
+   "residual delay line ((L+1) x D x 16 bit)": 68,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0,
+   "readout stats [full]": 34572.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 340
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "p0_base",
+  "B": 4,
+  "macs": {
+   "accumulate": 1110336,
+   "finalize": 15185,
+   "calibrator_mlp": 201344,
+   "total": 1326865
+  },
+  "sram_bytes": {},
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1_full",
+  "B": 4,
+  "macs": {
+   "replay forward (trunk+read-in)": 386817984,
+   "readout accumulate [full]": 8712144,
+   "readout solve [full]": 424345
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 13986.0,
+   "readout stats [full]": 34572.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1_diag",
+  "B": 4,
+  "macs": {
+   "replay forward (trunk+read-in)": 386817984,
+   "readout accumulate [diag]": 390096,
+   "readout solve [diag]": 258
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 13986.0,
+   "readout stats [diag]": 1548.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1_lr16",
+  "B": 4,
+  "macs": {
+   "replay forward (trunk+read-in)": 386817984,
+   "readout accumulate [lr16]": 2249856,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 13986.0,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1s_full",
+  "B": 4,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 386817984,
+   "extra P0 refreshes (b-1)": 649587,
+   "readout accumulate [full]": 8712144,
+   "readout solve [full]": 424345
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "one-trial staging buffer (trial 0 normalisation)": 3496.5,
+   "readout stats [full]": 34572.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1s_lr16",
+  "B": 4,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 386817984,
+   "extra P0 refreshes (b-1)": 649587,
+   "readout accumulate [lr16]": 2249856,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "one-trial staging buffer (trial 0 normalisation)": 3496.5,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1s_lr16_nostaging(unevaluated)",
+  "B": 4,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 386817984,
+   "extra P0 refreshes (b-1)": 649587,
+   "readout accumulate [lr16]": 2249856,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r2_S5_L16",
+  "B": 4,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 1934089920,
+   "feedback conv (L+1)*D*K per bin x S": 1713600,
+   "outer product e x^T (K*N per bin) x S": 1310400,
+   "precondition + update (K*N per step)": 3900
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 13986.0,
+   "residual delay line ((L+1) x D x 16 bit)": 68,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 340
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r2_S10_L32",
+  "B": 4,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 3868179840,
+   "feedback conv (L+1)*D*K per bin x S": 6652800,
+   "outer product e x^T (K*N per bin) x S": 2620800,
+   "precondition + update (K*N per step)": 7800
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 13986.0,
+   "residual delay line ((L+1) x D x 16 bit)": 132,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 660
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r3_lr16_S5_L16",
+  "B": 4,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 1934089920,
+   "feedback conv (L+1)*D*K per bin x S": 1713600,
+   "outer product e x^T (K*N per bin) x S": 1310400,
+   "precondition + update (K*N per step)": 3900,
+   "replay forward for readout pass": 386817984,
+   "readout accumulate [lr16]": 2249856,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 13986.0,
+   "residual delay line ((L+1) x D x 16 bit)": 68,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 340,
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r3_full_S5_L16",
+  "B": 4,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 1934089920,
+   "feedback conv (L+1)*D*K per bin x S": 1713600,
+   "outer product e x^T (K*N per bin) x S": 1310400,
+   "precondition + update (K*N per step)": 3900,
+   "replay forward for readout pass": 386817984,
+   "readout accumulate [full]": 8712144,
+   "readout solve [full]": 424345
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 13986.0,
+   "residual delay line ((L+1) x D x 16 bit)": 68,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0,
+   "readout stats [full]": 34572.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 340
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "p0_base",
+  "B": 8,
+  "macs": {
+   "accumulate": 2220672,
+   "finalize": 15185,
+   "calibrator_mlp": 201344,
+   "total": 2437201
+  },
+  "sram_bytes": {},
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1_full",
+  "B": 8,
+  "macs": {
+   "replay forward (trunk+read-in)": 773635968,
+   "readout accumulate [full]": 17424288,
+   "readout solve [full]": 424345
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 27972.0,
+   "readout stats [full]": 34572.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1_diag",
+  "B": 8,
+  "macs": {
+   "replay forward (trunk+read-in)": 773635968,
+   "readout accumulate [diag]": 780192,
+   "readout solve [diag]": 258
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 27972.0,
+   "readout stats [diag]": 1548.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1_lr16",
+  "B": 8,
+  "macs": {
+   "replay forward (trunk+read-in)": 773635968,
+   "readout accumulate [lr16]": 4499712,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 27972.0,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1s_full",
+  "B": 8,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 773635968,
+   "extra P0 refreshes (b-1)": 1515703,
+   "readout accumulate [full]": 17424288,
+   "readout solve [full]": 424345
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "one-trial staging buffer (trial 0 normalisation)": 3496.5,
+   "readout stats [full]": 34572.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1s_lr16",
+  "B": 8,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 773635968,
+   "extra P0 refreshes (b-1)": 1515703,
+   "readout accumulate [lr16]": 4499712,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "one-trial staging buffer (trial 0 normalisation)": 3496.5,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1s_lr16_nostaging(unevaluated)",
+  "B": 8,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 773635968,
+   "extra P0 refreshes (b-1)": 1515703,
+   "readout accumulate [lr16]": 4499712,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r2_S5_L16",
+  "B": 8,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 3868179840,
+   "feedback conv (L+1)*D*K per bin x S": 3427200,
+   "outer product e x^T (K*N per bin) x S": 2620800,
+   "precondition + update (K*N per step)": 3900
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 27972.0,
+   "residual delay line ((L+1) x D x 16 bit)": 68,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 340
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r2_S10_L32",
+  "B": 8,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 7736359680,
+   "feedback conv (L+1)*D*K per bin x S": 13305600,
+   "outer product e x^T (K*N per bin) x S": 5241600,
+   "precondition + update (K*N per step)": 7800
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 27972.0,
+   "residual delay line ((L+1) x D x 16 bit)": 132,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 660
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r3_lr16_S5_L16",
+  "B": 8,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 3868179840,
+   "feedback conv (L+1)*D*K per bin x S": 3427200,
+   "outer product e x^T (K*N per bin) x S": 2620800,
+   "precondition + update (K*N per step)": 3900,
+   "replay forward for readout pass": 773635968,
+   "readout accumulate [lr16]": 4499712,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 27972.0,
+   "residual delay line ((L+1) x D x 16 bit)": 68,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 340,
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r3_full_S5_L16",
+  "B": 8,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 3868179840,
+   "feedback conv (L+1)*D*K per bin x S": 3427200,
+   "outer product e x^T (K*N per bin) x S": 2620800,
+   "precondition + update (K*N per step)": 3900,
+   "replay forward for readout pass": 773635968,
+   "readout accumulate [full]": 17424288,
+   "readout solve [full]": 424345
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 27972.0,
+   "residual delay line ((L+1) x D x 16 bit)": 68,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0,
+   "readout stats [full]": 34572.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 340
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "p0_base",
+  "B": 16,
+  "macs": {
+   "accumulate": 4441344,
+   "finalize": 15185,
+   "calibrator_mlp": 201344,
+   "total": 4657873
+  },
+  "sram_bytes": {},
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1_full",
+  "B": 16,
+  "macs": {
+   "replay forward (trunk+read-in)": 1547271936,
+   "readout accumulate [full]": 34848576,
+   "readout solve [full]": 424345
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 55944.0,
+   "readout stats [full]": 34572.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1_diag",
+  "B": 16,
+  "macs": {
+   "replay forward (trunk+read-in)": 1547271936,
+   "readout accumulate [diag]": 1560384,
+   "readout solve [diag]": 258
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 55944.0,
+   "readout stats [diag]": 1548.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1_lr16",
+  "B": 16,
+  "macs": {
+   "replay forward (trunk+read-in)": 1547271936,
+   "readout accumulate [lr16]": 8999424,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 55944.0,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1s_full",
+  "B": 16,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 1547271936,
+   "extra P0 refreshes (b-1)": 3247935,
+   "readout accumulate [full]": 34848576,
+   "readout solve [full]": 424345
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "one-trial staging buffer (trial 0 normalisation)": 3496.5,
+   "readout stats [full]": 34572.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1s_lr16",
+  "B": 16,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 1547271936,
+   "extra P0 refreshes (b-1)": 3247935,
+   "readout accumulate [lr16]": 8999424,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "one-trial staging buffer (trial 0 normalisation)": 3496.5,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1s_lr16_nostaging(unevaluated)",
+  "B": 16,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 1547271936,
+   "extra P0 refreshes (b-1)": 3247935,
+   "readout accumulate [lr16]": 8999424,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r2_S5_L16",
+  "B": 16,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 7736359680,
+   "feedback conv (L+1)*D*K per bin x S": 6854400,
+   "outer product e x^T (K*N per bin) x S": 5241600,
+   "precondition + update (K*N per step)": 3900
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 55944.0,
+   "residual delay line ((L+1) x D x 16 bit)": 68,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 340
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r2_S10_L32",
+  "B": 16,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 15472719360,
+   "feedback conv (L+1)*D*K per bin x S": 26611200,
+   "outer product e x^T (K*N per bin) x S": 10483200,
+   "precondition + update (K*N per step)": 7800
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 55944.0,
+   "residual delay line ((L+1) x D x 16 bit)": 132,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 660
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r3_lr16_S5_L16",
+  "B": 16,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 7736359680,
+   "feedback conv (L+1)*D*K per bin x S": 6854400,
+   "outer product e x^T (K*N per bin) x S": 5241600,
+   "precondition + update (K*N per step)": 3900,
+   "replay forward for readout pass": 1547271936,
+   "readout accumulate [lr16]": 8999424,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 55944.0,
+   "residual delay line ((L+1) x D x 16 bit)": 68,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 340,
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r3_full_S5_L16",
+  "B": 16,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 7736359680,
+   "feedback conv (L+1)*D*K per bin x S": 6854400,
+   "outer product e x^T (K*N per bin) x S": 5241600,
+   "precondition + update (K*N per step)": 3900,
+   "replay forward for readout pass": 1547271936,
+   "readout accumulate [full]": 34848576,
+   "readout solve [full]": 424345
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 55944.0,
+   "residual delay line ((L+1) x D x 16 bit)": 68,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0,
+   "readout stats [full]": 34572.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 340
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "p0_base",
+  "B": 33,
+  "macs": {
+   "accumulate": 9160272,
+   "finalize": 15185,
+   "calibrator_mlp": 201344,
+   "total": 9376801
+  },
+  "sram_bytes": {},
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1_full",
+  "B": 33,
+  "macs": {
+   "replay forward (trunk+read-in)": 3191248368,
+   "readout accumulate [full]": 71875188,
+   "readout solve [full]": 424345
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 115384.5,
+   "readout stats [full]": 34572.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1_diag",
+  "B": 33,
+  "macs": {
+   "replay forward (trunk+read-in)": 3191248368,
+   "readout accumulate [diag]": 3218292,
+   "readout solve [diag]": 258
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 115384.5,
+   "readout stats [diag]": 1548.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1_lr16",
+  "B": 33,
+  "macs": {
+   "replay forward (trunk+read-in)": 3191248368,
+   "readout accumulate [lr16]": 18561312,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 115384.5,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1s_full",
+  "B": 33,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 3191248368,
+   "extra P0 refreshes (b-1)": 6928928,
+   "readout accumulate [full]": 71875188,
+   "readout solve [full]": 424345
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "one-trial staging buffer (trial 0 normalisation)": 3496.5,
+   "readout stats [full]": 34572.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1s_lr16",
+  "B": 33,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 3191248368,
+   "extra P0 refreshes (b-1)": 6928928,
+   "readout accumulate [lr16]": 18561312,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "one-trial staging buffer (trial 0 normalisation)": 3496.5,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r1s_lr16_nostaging(unevaluated)",
+  "B": 33,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 3191248368,
+   "extra P0 refreshes (b-1)": 6928928,
+   "readout accumulate [lr16]": 18561312,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r2_S5_L16",
+  "B": 33,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 15956241840,
+   "feedback conv (L+1)*D*K per bin x S": 14137200,
+   "outer product e x^T (K*N per bin) x S": 10810800,
+   "precondition + update (K*N per step)": 3900
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 115384.5,
+   "residual delay line ((L+1) x D x 16 bit)": 68,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 340
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r2_S10_L32",
+  "B": 33,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 31912483680,
+   "feedback conv (L+1)*D*K per bin x S": 54885600,
+   "outer product e x^T (K*N per bin) x S": 21621600,
+   "precondition + update (K*N per step)": 7800
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 115384.5,
+   "residual delay line ((L+1) x D x 16 bit)": 132,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 660
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r3_lr16_S5_L16",
+  "B": 33,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 15956241840,
+   "feedback conv (L+1)*D*K per bin x S": 14137200,
+   "outer product e x^T (K*N per bin) x S": 10810800,
+   "precondition + update (K*N per step)": 3900,
+   "replay forward for readout pass": 3191248368,
+   "readout accumulate [lr16]": 18561312,
+   "readout solve [lr16]": 5834
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 115384.5,
+   "residual delay line ((L+1) x D x 16 bit)": 68,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0,
+   "readout stats [lr16]": 672.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 340,
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "000688 (N=26)",
+  "method": "r3_full_S5_L16",
+  "B": 33,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 15956241840,
+   "feedback conv (L+1)*D*K per bin x S": 14137200,
+   "outer product e x^T (K*N per bin) x S": 10810800,
+   "precondition + update (K*N per step)": 3900,
+   "replay forward for readout pass": 3191248368,
+   "readout accumulate [full]": 71875188,
+   "readout solve [full]": 424345
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 1040.0,
+   "norm mean/std": 104,
+   "raw replay buffer": 115384.5,
+   "residual delay line ((L+1) x D x 16 bit)": 68,
+   "G accumulator K x N": 1040.0,
+   "T0 (shrink centre) K x N": 1040.0,
+   "q accumulator N": 104.0,
+   "readout stats [full]": 34572.0,
+   "readout new V (D x (H+1))": 1032.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 340
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "p0_base",
+  "B": 1,
+  "macs": {
+   "accumulate": 91854071,
+   "finalize": 2173723,
+   "calibrator_mlp": 2523136,
+   "total": 96550930
+  },
+  "sram_bytes": {},
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1_full",
+  "B": 1,
+  "macs": {
+   "replay forward (trunk+read-in)": 485920000,
+   "readout accumulate [full]": 11287500,
+   "readout solve [full]": 524191
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 332656.25,
+   "readout stats [full]": 36120.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1_diag",
+  "B": 1,
+  "macs": {
+   "replay forward (trunk+read-in)": 485920000,
+   "readout accumulate [diag]": 967500,
+   "readout solve [diag]": 645
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 332656.25,
+   "readout stats [diag]": 3096.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1_lr16",
+  "B": 1,
+  "macs": {
+   "replay forward (trunk+read-in)": 485920000,
+   "readout accumulate [lr16]": 2850000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 332656.25,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1s_full",
+  "B": 1,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 485920000,
+   "extra P0 refreshes (b-1)": 0,
+   "readout accumulate [full]": 11287500,
+   "readout solve [full]": 524191
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "one-trial staging buffer (trial 0 normalisation)": 332656.25,
+   "readout stats [full]": 36120.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1s_lr16",
+  "B": 1,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 485920000,
+   "extra P0 refreshes (b-1)": 0,
+   "readout accumulate [lr16]": 2850000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "one-trial staging buffer (trial 0 normalisation)": 332656.25,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1s_lr16_nostaging(unevaluated)",
+  "B": 1,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 485920000,
+   "extra P0 refreshes (b-1)": 0,
+   "readout accumulate [lr16]": 2850000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r2_S5_L16",
+  "B": 1,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 2429600000,
+   "feedback conv (L+1)*D*K per bin x S": 8500000,
+   "outer product e x^T (K*N per bin) x S": 25600000,
+   "precondition + update (K*N per step)": 61440
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 332656.25,
+   "residual delay line ((L+1) x D x 16 bit)": 170,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 1360
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r2_S10_L32",
+  "B": 1,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 4859200000,
+   "feedback conv (L+1)*D*K per bin x S": 33000000,
+   "outer product e x^T (K*N per bin) x S": 51200000,
+   "precondition + update (K*N per step)": 122880
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 332656.25,
+   "residual delay line ((L+1) x D x 16 bit)": 330,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 2640
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r3_lr16_S5_L16",
+  "B": 1,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 2429600000,
+   "feedback conv (L+1)*D*K per bin x S": 8500000,
+   "outer product e x^T (K*N per bin) x S": 25600000,
+   "precondition + update (K*N per step)": 61440,
+   "replay forward for readout pass": 485920000,
+   "readout accumulate [lr16]": 2850000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 332656.25,
+   "residual delay line ((L+1) x D x 16 bit)": 170,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 1360,
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r3_full_S5_L16",
+  "B": 1,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 2429600000,
+   "feedback conv (L+1)*D*K per bin x S": 8500000,
+   "outer product e x^T (K*N per bin) x S": 25600000,
+   "precondition + update (K*N per step)": 61440,
+   "replay forward for readout pass": 485920000,
+   "readout accumulate [full]": 11287500,
+   "readout solve [full]": 524191
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 332656.25,
+   "residual delay line ((L+1) x D x 16 bit)": 170,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0,
+   "readout stats [full]": 36120.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 1360
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "p0_base",
+  "B": 2,
+  "macs": {
+   "accumulate": 183708142,
+   "finalize": 2173723,
+   "calibrator_mlp": 2523136,
+   "total": 188405001
+  },
+  "sram_bytes": {},
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1_full",
+  "B": 2,
+  "macs": {
+   "replay forward (trunk+read-in)": 971840000,
+   "readout accumulate [full]": 22575000,
+   "readout solve [full]": 524191
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 665312.5,
+   "readout stats [full]": 36120.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1_diag",
+  "B": 2,
+  "macs": {
+   "replay forward (trunk+read-in)": 971840000,
+   "readout accumulate [diag]": 1935000,
+   "readout solve [diag]": 645
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 665312.5,
+   "readout stats [diag]": 3096.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1_lr16",
+  "B": 2,
+  "macs": {
+   "replay forward (trunk+read-in)": 971840000,
+   "readout accumulate [lr16]": 5700000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 665312.5,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1s_full",
+  "B": 2,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 971840000,
+   "extra P0 refreshes (b-1)": 4696859,
+   "readout accumulate [full]": 22575000,
+   "readout solve [full]": 524191
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "one-trial staging buffer (trial 0 normalisation)": 332656.25,
+   "readout stats [full]": 36120.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1s_lr16",
+  "B": 2,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 971840000,
+   "extra P0 refreshes (b-1)": 4696859,
+   "readout accumulate [lr16]": 5700000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "one-trial staging buffer (trial 0 normalisation)": 332656.25,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1s_lr16_nostaging(unevaluated)",
+  "B": 2,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 971840000,
+   "extra P0 refreshes (b-1)": 4696859,
+   "readout accumulate [lr16]": 5700000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r2_S5_L16",
+  "B": 2,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 4859200000,
+   "feedback conv (L+1)*D*K per bin x S": 17000000,
+   "outer product e x^T (K*N per bin) x S": 51200000,
+   "precondition + update (K*N per step)": 61440
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 665312.5,
+   "residual delay line ((L+1) x D x 16 bit)": 170,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 1360
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r2_S10_L32",
+  "B": 2,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 9718400000,
+   "feedback conv (L+1)*D*K per bin x S": 66000000,
+   "outer product e x^T (K*N per bin) x S": 102400000,
+   "precondition + update (K*N per step)": 122880
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 665312.5,
+   "residual delay line ((L+1) x D x 16 bit)": 330,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 2640
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r3_lr16_S5_L16",
+  "B": 2,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 4859200000,
+   "feedback conv (L+1)*D*K per bin x S": 17000000,
+   "outer product e x^T (K*N per bin) x S": 51200000,
+   "precondition + update (K*N per step)": 61440,
+   "replay forward for readout pass": 971840000,
+   "readout accumulate [lr16]": 5700000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 665312.5,
+   "residual delay line ((L+1) x D x 16 bit)": 170,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 1360,
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r3_full_S5_L16",
+  "B": 2,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 4859200000,
+   "feedback conv (L+1)*D*K per bin x S": 17000000,
+   "outer product e x^T (K*N per bin) x S": 51200000,
+   "precondition + update (K*N per step)": 61440,
+   "replay forward for readout pass": 971840000,
+   "readout accumulate [full]": 22575000,
+   "readout solve [full]": 524191
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 665312.5,
+   "residual delay line ((L+1) x D x 16 bit)": 170,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0,
+   "readout stats [full]": 36120.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 1360
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "p0_base",
+  "B": 4,
+  "macs": {
+   "accumulate": 367416284,
+   "finalize": 2173723,
+   "calibrator_mlp": 2523136,
+   "total": 372113143
+  },
+  "sram_bytes": {},
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1_full",
+  "B": 4,
+  "macs": {
+   "replay forward (trunk+read-in)": 1943680000,
+   "readout accumulate [full]": 45150000,
+   "readout solve [full]": 524191
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 1330625.0,
+   "readout stats [full]": 36120.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1_diag",
+  "B": 4,
+  "macs": {
+   "replay forward (trunk+read-in)": 1943680000,
+   "readout accumulate [diag]": 3870000,
+   "readout solve [diag]": 645
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 1330625.0,
+   "readout stats [diag]": 3096.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1_lr16",
+  "B": 4,
+  "macs": {
+   "replay forward (trunk+read-in)": 1943680000,
+   "readout accumulate [lr16]": 11400000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 1330625.0,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1s_full",
+  "B": 4,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 1943680000,
+   "extra P0 refreshes (b-1)": 14090577,
+   "readout accumulate [full]": 45150000,
+   "readout solve [full]": 524191
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "one-trial staging buffer (trial 0 normalisation)": 332656.25,
+   "readout stats [full]": 36120.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1s_lr16",
+  "B": 4,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 1943680000,
+   "extra P0 refreshes (b-1)": 14090577,
+   "readout accumulate [lr16]": 11400000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "one-trial staging buffer (trial 0 normalisation)": 332656.25,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1s_lr16_nostaging(unevaluated)",
+  "B": 4,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 1943680000,
+   "extra P0 refreshes (b-1)": 14090577,
+   "readout accumulate [lr16]": 11400000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r2_S5_L16",
+  "B": 4,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 9718400000,
+   "feedback conv (L+1)*D*K per bin x S": 34000000,
+   "outer product e x^T (K*N per bin) x S": 102400000,
+   "precondition + update (K*N per step)": 61440
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 1330625.0,
+   "residual delay line ((L+1) x D x 16 bit)": 170,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 1360
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r2_S10_L32",
+  "B": 4,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 19436800000,
+   "feedback conv (L+1)*D*K per bin x S": 132000000,
+   "outer product e x^T (K*N per bin) x S": 204800000,
+   "precondition + update (K*N per step)": 122880
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 1330625.0,
+   "residual delay line ((L+1) x D x 16 bit)": 330,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 2640
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r3_lr16_S5_L16",
+  "B": 4,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 9718400000,
+   "feedback conv (L+1)*D*K per bin x S": 34000000,
+   "outer product e x^T (K*N per bin) x S": 102400000,
+   "precondition + update (K*N per step)": 61440,
+   "replay forward for readout pass": 1943680000,
+   "readout accumulate [lr16]": 11400000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 1330625.0,
+   "residual delay line ((L+1) x D x 16 bit)": 170,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 1360,
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r3_full_S5_L16",
+  "B": 4,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 9718400000,
+   "feedback conv (L+1)*D*K per bin x S": 34000000,
+   "outer product e x^T (K*N per bin) x S": 102400000,
+   "precondition + update (K*N per step)": 61440,
+   "replay forward for readout pass": 1943680000,
+   "readout accumulate [full]": 45150000,
+   "readout solve [full]": 524191
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 1330625.0,
+   "residual delay line ((L+1) x D x 16 bit)": 170,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0,
+   "readout stats [full]": 36120.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 1360
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "p0_base",
+  "B": 8,
+  "macs": {
+   "accumulate": 734832568,
+   "finalize": 2173723,
+   "calibrator_mlp": 2523136,
+   "total": 739529427
+  },
+  "sram_bytes": {},
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1_full",
+  "B": 8,
+  "macs": {
+   "replay forward (trunk+read-in)": 3887360000,
+   "readout accumulate [full]": 90300000,
+   "readout solve [full]": 524191
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 2661250.0,
+   "readout stats [full]": 36120.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1_diag",
+  "B": 8,
+  "macs": {
+   "replay forward (trunk+read-in)": 3887360000,
+   "readout accumulate [diag]": 7740000,
+   "readout solve [diag]": 645
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 2661250.0,
+   "readout stats [diag]": 3096.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1_lr16",
+  "B": 8,
+  "macs": {
+   "replay forward (trunk+read-in)": 3887360000,
+   "readout accumulate [lr16]": 22800000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 2661250.0,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1s_full",
+  "B": 8,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 3887360000,
+   "extra P0 refreshes (b-1)": 32878013,
+   "readout accumulate [full]": 90300000,
+   "readout solve [full]": 524191
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "one-trial staging buffer (trial 0 normalisation)": 332656.25,
+   "readout stats [full]": 36120.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1s_lr16",
+  "B": 8,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 3887360000,
+   "extra P0 refreshes (b-1)": 32878013,
+   "readout accumulate [lr16]": 22800000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "one-trial staging buffer (trial 0 normalisation)": 332656.25,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1s_lr16_nostaging(unevaluated)",
+  "B": 8,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 3887360000,
+   "extra P0 refreshes (b-1)": 32878013,
+   "readout accumulate [lr16]": 22800000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r2_S5_L16",
+  "B": 8,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 19436800000,
+   "feedback conv (L+1)*D*K per bin x S": 68000000,
+   "outer product e x^T (K*N per bin) x S": 204800000,
+   "precondition + update (K*N per step)": 61440
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 2661250.0,
+   "residual delay line ((L+1) x D x 16 bit)": 170,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 1360
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r2_S10_L32",
+  "B": 8,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 38873600000,
+   "feedback conv (L+1)*D*K per bin x S": 264000000,
+   "outer product e x^T (K*N per bin) x S": 409600000,
+   "precondition + update (K*N per step)": 122880
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 2661250.0,
+   "residual delay line ((L+1) x D x 16 bit)": 330,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 2640
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r3_lr16_S5_L16",
+  "B": 8,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 19436800000,
+   "feedback conv (L+1)*D*K per bin x S": 68000000,
+   "outer product e x^T (K*N per bin) x S": 204800000,
+   "precondition + update (K*N per step)": 61440,
+   "replay forward for readout pass": 3887360000,
+   "readout accumulate [lr16]": 22800000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 2661250.0,
+   "residual delay line ((L+1) x D x 16 bit)": 170,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 1360,
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r3_full_S5_L16",
+  "B": 8,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 19436800000,
+   "feedback conv (L+1)*D*K per bin x S": 68000000,
+   "outer product e x^T (K*N per bin) x S": 204800000,
+   "precondition + update (K*N per step)": 61440,
+   "replay forward for readout pass": 3887360000,
+   "readout accumulate [full]": 90300000,
+   "readout solve [full]": 524191
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 2661250.0,
+   "residual delay line ((L+1) x D x 16 bit)": 170,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0,
+   "readout stats [full]": 36120.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 1360
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "p0_base",
+  "B": 16,
+  "macs": {
+   "accumulate": 1469665136,
+   "finalize": 2173723,
+   "calibrator_mlp": 2523136,
+   "total": 1474361995
+  },
+  "sram_bytes": {},
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1_full",
+  "B": 16,
+  "macs": {
+   "replay forward (trunk+read-in)": 7774720000,
+   "readout accumulate [full]": 180600000,
+   "readout solve [full]": 524191
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 5322500.0,
+   "readout stats [full]": 36120.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1_diag",
+  "B": 16,
+  "macs": {
+   "replay forward (trunk+read-in)": 7774720000,
+   "readout accumulate [diag]": 15480000,
+   "readout solve [diag]": 645
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 5322500.0,
+   "readout stats [diag]": 3096.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1_lr16",
+  "B": 16,
+  "macs": {
+   "replay forward (trunk+read-in)": 7774720000,
+   "readout accumulate [lr16]": 45600000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 5322500.0,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1s_full",
+  "B": 16,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 7774720000,
+   "extra P0 refreshes (b-1)": 70452885,
+   "readout accumulate [full]": 180600000,
+   "readout solve [full]": 524191
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "one-trial staging buffer (trial 0 normalisation)": 332656.25,
+   "readout stats [full]": 36120.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1s_lr16",
+  "B": 16,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 7774720000,
+   "extra P0 refreshes (b-1)": 70452885,
+   "readout accumulate [lr16]": 45600000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "one-trial staging buffer (trial 0 normalisation)": 332656.25,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1s_lr16_nostaging(unevaluated)",
+  "B": 16,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 7774720000,
+   "extra P0 refreshes (b-1)": 70452885,
+   "readout accumulate [lr16]": 45600000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r2_S5_L16",
+  "B": 16,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 38873600000,
+   "feedback conv (L+1)*D*K per bin x S": 136000000,
+   "outer product e x^T (K*N per bin) x S": 409600000,
+   "precondition + update (K*N per step)": 61440
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 5322500.0,
+   "residual delay line ((L+1) x D x 16 bit)": 170,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 1360
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r2_S10_L32",
+  "B": 16,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 77747200000,
+   "feedback conv (L+1)*D*K per bin x S": 528000000,
+   "outer product e x^T (K*N per bin) x S": 819200000,
+   "precondition + update (K*N per step)": 122880
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 5322500.0,
+   "residual delay line ((L+1) x D x 16 bit)": 330,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 2640
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r3_lr16_S5_L16",
+  "B": 16,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 38873600000,
+   "feedback conv (L+1)*D*K per bin x S": 136000000,
+   "outer product e x^T (K*N per bin) x S": 409600000,
+   "precondition + update (K*N per step)": 61440,
+   "replay forward for readout pass": 7774720000,
+   "readout accumulate [lr16]": 45600000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 5322500.0,
+   "residual delay line ((L+1) x D x 16 bit)": 170,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 1360,
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r3_full_S5_L16",
+  "B": 16,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 38873600000,
+   "feedback conv (L+1)*D*K per bin x S": 136000000,
+   "outer product e x^T (K*N per bin) x S": 409600000,
+   "precondition + update (K*N per step)": 61440,
+   "replay forward for readout pass": 7774720000,
+   "readout accumulate [full]": 180600000,
+   "readout solve [full]": 524191
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 5322500.0,
+   "residual delay line ((L+1) x D x 16 bit)": 170,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0,
+   "readout stats [full]": 36120.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 1360
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "p0_base",
+  "B": 33,
+  "macs": {
+   "accumulate": 3031184343,
+   "finalize": 2173723,
+   "calibrator_mlp": 2523136,
+   "total": 3035881202
+  },
+  "sram_bytes": {},
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1_full",
+  "B": 33,
+  "macs": {
+   "replay forward (trunk+read-in)": 16035360000,
+   "readout accumulate [full]": 372487500,
+   "readout solve [full]": 524191
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 10977656.25,
+   "readout stats [full]": 36120.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1_diag",
+  "B": 33,
+  "macs": {
+   "replay forward (trunk+read-in)": 16035360000,
+   "readout accumulate [diag]": 31927500,
+   "readout solve [diag]": 645
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 10977656.25,
+   "readout stats [diag]": 3096.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1_lr16",
+  "B": 33,
+  "macs": {
+   "replay forward (trunk+read-in)": 16035360000,
+   "readout accumulate [lr16]": 94050000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 10977656.25,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1s_full",
+  "B": 33,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 16035360000,
+   "extra P0 refreshes (b-1)": 150299488,
+   "readout accumulate [full]": 372487500,
+   "readout solve [full]": 524191
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "one-trial staging buffer (trial 0 normalisation)": 332656.25,
+   "readout stats [full]": 36120.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {}
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1s_lr16",
+  "B": 33,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 16035360000,
+   "extra P0 refreshes (b-1)": 150299488,
+   "readout accumulate [lr16]": 94050000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "one-trial staging buffer (trial 0 normalisation)": 332656.25,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r1s_lr16_nostaging(unevaluated)",
+  "B": 33,
+  "macs": {
+   "streaming forward (trunk+read-in), once per arriving bin": 16035360000,
+   "extra P0 refreshes (b-1)": 150299488,
+   "readout accumulate [lr16]": 94050000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r2_S5_L16",
+  "B": 33,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 80176800000,
+   "feedback conv (L+1)*D*K per bin x S": 280500000,
+   "outer product e x^T (K*N per bin) x S": 844800000,
+   "precondition + update (K*N per step)": 61440
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 10977656.25,
+   "residual delay line ((L+1) x D x 16 bit)": 170,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 1360
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r2_S10_L32",
+  "B": 33,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 160353600000,
+   "feedback conv (L+1)*D*K per bin x S": 1089000000,
+   "outer product e x^T (K*N per bin) x S": 1689600000,
+   "precondition + update (K*N per step)": 122880
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 10977656.25,
+   "residual delay line ((L+1) x D x 16 bit)": 330,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 2640
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r3_lr16_S5_L16",
+  "B": 33,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 80176800000,
+   "feedback conv (L+1)*D*K per bin x S": 280500000,
+   "outer product e x^T (K*N per bin) x S": 844800000,
+   "precondition + update (K*N per step)": 61440,
+   "replay forward for readout pass": 16035360000,
+   "readout accumulate [lr16]": 94050000,
+   "readout solve [lr16]": 13562
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 10977656.25,
+   "residual delay line ((L+1) x D x 16 bit)": 170,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0,
+   "readout stats [lr16]": 864.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 1360,
+   "basis U (H+1 x 16) int8": 2064
+  }
+ },
+ {
+  "case": "HD-sEMG (N=256)",
+  "method": "r3_full_S5_L16",
+  "B": 33,
+  "macs": {
+   "replay forward (trunk+read-in) x S": 80176800000,
+   "feedback conv (L+1)*D*K per bin x S": 280500000,
+   "outer product e x^T (K*N per bin) x S": 844800000,
+   "precondition + update (K*N per step)": 61440,
+   "replay forward for readout pass": 16035360000,
+   "readout accumulate [full]": 372487500,
+   "readout solve [full]": 524191
+  },
+  "sram_bytes": {
+   "trunk_state (shared with inference)": 32768.0,
+   "table T": 16384.0,
+   "norm mean/std": 1024,
+   "raw replay buffer": 10977656.25,
+   "residual delay line ((L+1) x D x 16 bit)": 170,
+   "G accumulator K x N": 16384.0,
+   "T0 (shrink centre) K x N": 16384.0,
+   "q accumulator N": 1024.0,
+   "readout stats [full]": 36120.0,
+   "readout new V (D x (H+1))": 2580.0,
+   "feature vector hb": 258,
+   "solve scratch (Cholesky in place)": 0
+  },
+  "rom_bytes": {
+   "Jbar kernel (L+1) x D x K int8": 1360
+  }
+ }
+]
