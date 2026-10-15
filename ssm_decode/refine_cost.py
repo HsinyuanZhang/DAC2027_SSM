@@ -12,6 +12,19 @@ Methods
   r2                             F7-J, S replay passes
   r3_full / r3_lr<r>             F7-J (S passes) + one readout pass
 
+MAC classes (feasibility rule 8: a "fixed-weight MAC" is weight x activation only).  Every MAC is
+assigned to one class and ``macs_by_class`` is reported:
+  fixed_weight_rram    trunk nn.Linear layers (weights fixed in RRAM)
+  sram_table_x_act     read-in table MVM (K x N table in SRAM, written per target) and the Jbar
+                       feedback convolution (ROM weights) -- weight x activation, but NOT RRAM
+  act_x_act            Mamba3 selective scan (state update and readout), e x^T outer product,
+                       readout Gram / cross-statistics, solves, per-step table update, P0 finalize
+Buffers are sized from the ACTUAL replayed bins (``replay_bins``) and the actual staging trial
+length (``staging_bins``) when given; otherwise from the mean trial length T (``B*T``), which is
+only a point estimate and under-sizes the worst case (review item 3).  Fixed-point effects are NOT
+simulated anywhere in P3: all paths are evaluated in fp32 and the int8 ROM (Jbar, readout basis)
+is a costing assumption only.
+
 Reference ``p0_base`` re-derives the MAC part of the P0 calibration (accumulate + finalize +
 per-unit MLP); it is an independent restatement, not an import of ``calib_cost``.
 """
@@ -53,13 +66,46 @@ def _readout_macs(h, d, nb, kind):
     return acc, solve
 
 
+_ACT_ACT = ("outer product", "precondition", "readout accumulate", "readout solve")
+
+
+def _classify(case, macs, nb, method, steps):
+    """Split the MAC dict into the three classes (see module docstring)."""
+    n, k = case["N"], case["K"]
+    tr = case["trunk"]
+    lin = tr.get("fixed_weight_macs", tr["total"])
+    scan = tr.get("act_x_act_macs", 0)
+    passes = steps if method == "r2" else steps + 1 if method.startswith("r3_") else 1
+    by = {"fixed_weight_rram": 0, "sram_table_x_act": 0, "act_x_act": 0}
+    for name, v in macs.items():
+        if name.startswith(("replay forward", "streaming forward")):
+            reps = steps if name.endswith("x S") else 1
+            by["fixed_weight_rram"] += reps * nb * lin
+            by["act_x_act"] += reps * nb * scan
+            by["sram_table_x_act"] += reps * nb * k * n
+        elif name.startswith("feedback conv"):
+            by["sram_table_x_act"] += v                    # Jbar ROM weights x residual activations
+        elif name.startswith("extra P0 refreshes"):
+            by["act_x_act"] += v                           # finalize (Gram algebra) + calibrator MLP;
+            #   the MLP part is weight x activation but is < 0.1% of the total and kept here
+        elif name.startswith(_ACT_ACT):
+            by["act_x_act"] += v
+        else:
+            raise ValueError(f"unclassified MAC entry: {name}")
+    assert sum(by.values()) == sum(macs.values()), (by, macs)
+    return by
+
+
 def refinement_cost(case: dict, b: int, method: str, *, steps=5, lags=16, acc_bits=32,
-                    table_bits=32, replay_label_bits=None, staging="trial") -> dict:
+                    table_bits=32, replay_label_bits=None, staging="trial",
+                    replay_bins=None, staging_bins=None) -> dict:
     n, k, d, h = case["N"], case["K"], case["D"], case["H"]
     t, mt = case["T"], case["trunk"]["total"]
     bx, by = case["bx"], replay_label_bits or case["by"]
-    nb = b * t                                      # replayed bins
-    out = {"case": case["name"], "method": method, "B": b, "T": t, "replay_bins": nb}
+    nb = b * t if replay_bins is None else int(replay_bins)      # replayed bins (actual if given)
+    stg_bins = t if staging_bins is None else int(staging_bins)
+    out = {"case": case["name"], "method": method, "B": b, "T": t, "replay_bins": nb,
+           "staging_bins": stg_bins}
     fwd_bin = mt + k * n                            # trunk + read-in MVM per replayed bin
     macs, sram, rom = {}, {}, {}
     replay_buf = nb * (n * bx + d * by + 1) / 8     # raw counts + labels + valid bit
@@ -96,7 +142,7 @@ def refinement_cost(case: dict, b: int, method: str, *, steps=5, lags=16, acc_bi
     elif method.startswith("r1s_"):
         macs["streaming forward (trunk+read-in), once per arriving bin"] = nb * fwd_bin
         if staging == "trial":      # evaluated: trial 0 is normalised with its own statistics
-            sram["one-trial staging buffer (trial 0 normalisation)"] = t * (n * bx + d * by + 1) / 8
+            sram["one-trial staging buffer (trial 0 normalisation)"] = stg_bins * (n * bx + d * by + 1) / 8
         # staging == "none": running (Welford) normalisation, NOT evaluated; keeps no raw samples
         # P0 refresh after every arriving trial except the last = (b-1) extra P0 finalize+MLP
         extra = (b - 1) * (p0_macs(n, k, d, 0, 0)["finalize"] + p0_macs(n, k, d, 0, 0)["calibrator_mlp"])
@@ -121,6 +167,8 @@ def refinement_cost(case: dict, b: int, method: str, *, steps=5, lags=16, acc_bi
         raise ValueError(method)
     out["macs"] = macs
     out["macs_total"] = sum(macs.values())
+    out["macs_by_class"] = _classify(case, macs, nb, method, steps)
+    out["fixed_weight_fraction"] = out["macs_by_class"]["fixed_weight_rram"] / max(out["macs_total"], 1)
     out["sram_bytes"] = sram
     out["sram_total"] = sum(sram.values())
     out["rom_bytes"] = rom

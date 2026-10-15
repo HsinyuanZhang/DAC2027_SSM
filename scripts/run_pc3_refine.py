@@ -36,6 +36,27 @@ from ssm_decode.population_calib import PopStats, norm_stats             # noqa:
 LMAX = 32
 LS = (8, 16, 32)
 STEPS = (1, 3, 5, 10)
+LS_EXT = (8, 16, 32, 48, 64)           # review item 10: grid-edge sensitivity (source selection only)
+STEPS_EXT = (1, 3, 5, 10, 15, 20)
+LMAX_EXT = 64
+CAP_BINS = 256                         # fixed-length replay design (review item 3)
+SETS = ("is", "oos", "oosc")          # oosc = causal OOS (only sessions dated before the target)
+# replay variants.  ``contig``: the B calibration trials are replayed as ONE contiguous stream in
+# recorded order (state carried across calibration trials only).  ``cap256``: every replayed trial
+# is truncated to its first CAP_BINS bins.  ``ext``: extended (L, S) grid, R2 only.
+VARIANTS = {"base": {}, "contig": {"contig": True}, "cap256": {"cap": CAP_BINS}, "ext": {"ext": True}}
+CFG = {"variant": "base", "cap": None, "contig": False, "ext": False, "sel_variant": None}
+
+
+def set_variant(name, sel_variant=None):
+    CFG.update({"variant": name, "cap": None, "contig": False, "ext": False,
+                "sel_variant": sel_variant if sel_variant is not None else name})
+    CFG.update(VARIANTS[name])
+
+
+def _suf(variant=None):
+    v = CFG["variant"] if variant is None else variant
+    return "" if v == "base" else f"_{v}"
 SEEDS = (0, 1)
 SEL_DRAWS = 2                      # per seed -> 4 P0 episodes per (session, B)
 RIDGE_LAMS = (1e-3, 1e-2, 3e-2, 1e-1, 3e-1, 1.0, 3.0, 10.0, 100.0)
@@ -66,7 +87,8 @@ def cmd_jacobian(args):
     world = load_world(args.stratum, True)
     base = world.adapter.model.base
     rng = np.random.default_rng(0)
-    res = {"stratum": args.stratum, "lmax": LMAX, "sessions": {}}
+    lmax = args.lmax
+    res = {"stratum": args.stratum, "lmax": lmax, "sessions": {}}
     for name in world.ids:
         sd = world.sessions[name]
         j = world.orig_ids.index(name)
@@ -77,19 +99,22 @@ def cmd_jacobian(args):
         xz = (sd.x32 - mean) / std
         ends = np.flatnonzero(valid)
         ends = rng.choice(ends, size=min(args.windows, len(ends)), replace=False)
-        s = fr.average_jacobian_session(base, xz, table, ends, lmax=LMAX, width=args.width)
+        s = fr.average_jacobian_session(base, xz, table, ends, lmax=lmax, width=args.width)
         res["sessions"][name] = {k: (v.cpu() if torch.is_tensor(v) else v) for k, v in s.items()}
         rel = fr.jacobian_representativeness(s, s["n"])
         print(f"[jac {args.stratum}] {name[-8:]} n={s['n']} rel_dev lag0/8/16/32 = "
               f"{rel[0]:.2f}/{rel[8]:.2f}/{rel[16]:.2f}/{rel[32]:.2f}  |J|_F lag0 "
               f"{float((s['sum'][0] / s['n']).norm()):.3f}", flush=True)
     OUT.mkdir(parents=True, exist_ok=True)
-    torch.save(res, OUT / f"jacobian_{args.stratum}.pt")
+    torch.save(res, OUT / (f"jacobian_{args.stratum}.pt" if lmax == LMAX else f"jacobian_{args.stratum}_l{lmax}.pt"))
 
 
 def jbar_for(stratum, lmax, exclude=None):
     """Average Jacobian kernel [lmax+1, D, K]; ``exclude`` drops one source session (LOO)."""
-    blob = torch.load(OUT / f"jacobian_{stratum}.pt", weights_only=False)
+    f = OUT / f"jacobian_{stratum}_l64.pt"
+    blob = torch.load(f if (lmax > LMAX and f.exists()) else OUT / f"jacobian_{stratum}.pt",
+                      weights_only=False)
+    assert blob["lmax"] >= lmax, f"Jacobian kernel stored up to lag {blob['lmax']}, need {lmax}"
     tot, n = 0, 0
     for name, s in blob["sessions"].items():
         if name == exclude:
@@ -133,19 +158,27 @@ def _patch_autograd_counter():
 class Ep:
     """One simulated/real B-trial calibration episode on one session."""
 
-    def __init__(self, world, sd, idx, table0, mean, std, max_bins=None):
+    def __init__(self, world, sd, idx, table0, mean, std, max_bins=None, cap=None, contig=None):
+        cap = CFG["cap"] if cap is None else cap
+        contig = CFG["contig"] if contig is None else contig
         self.world, self.sd, self.idx = world, sd, np.asarray(idx)
         self.base = world.adapter.model.base
         self.table0, self.mean, self.std = table0.float(), mean.float(), std.float()
         self.xz_all = (sd.x32 - self.mean) / self.std
         self.nb = sd.n_bins if max_bins is None else min(sd.n_bins, int(max_bins))
         self.xz = self.xz_all[:self.nb]                        # decode (and score) only the first nb bins
-        wins = [sd.trials[i] for i in self.idx]
+        full_wins = [sd.trials[i] for i in self.idx]            # idx is sorted = recorded order
+        wins = fr.cap_windows(full_wins, cap)                   # cap=None: whole trials
         self.windows = wins
-        self.X, self.Y, self.M = fr.pad_trials(self.xz_all, sd.y_norm.float(), sd.valid, wins)
+        if contig:      # one contiguous stream, state carried across calibration trials only
+            self.X, self.Y, self.M = fr.concat_trials(self.xz_all, sd.y_norm.float(), sd.valid, wins)
+        else:           # each trial replayed from the zero state (pad_trials)
+            self.X, self.Y, self.M = fr.pad_trials(self.xz_all, sd.y_norm.float(), sd.valid, wins)
         self.q = sd.query_mask(self.idx)
         self.q[self.nb:] = False
         self.replay_bins = int(sum(b - a for a, b in wins))
+        self.replay_bins_uncapped = int(sum(b - a for a, b in full_wins))
+        self.trial_lens = [int(b - a) for a, b in full_wins]
 
     def r2(self, table, v_aug=None):
         pred = fr.decode_with_readout(self.base, self.xz, table, v_aug)
@@ -192,6 +225,7 @@ def sim_sessions(world, stratum, sim_set):
     """Names of the source sessions used for the source simulation.
 
     ``is``: the six trunk-training sessions (in-sample for trunk and P0 calibrator, mostly).
+    ``oosc``: ``oos`` restricted to sessions dated before the target (causal).
     ``oos``: source sessions the trunk and the P0 calibrator never saw (pool-E extras),
     never a D1 target / dev / final session.  Days: earlier than the target.  Month/year: the
     extras dated 2014-03-07 .. 2014-12-03 (for month this includes sessions LATER than its
@@ -204,6 +238,12 @@ def sim_sessions(world, stratum, sim_set):
     names = [n for n in OOS_EXTRA if n not in set(world.orig_ids) | banned]
     if stratum != "days":
         names = [n for n in names if n.endswith(("0307", "0627", "0929", "1203"))]
+    if sim_set == "oosc":
+        # CAUSAL: only sessions dated strictly before the earliest target of the stratum and
+        # unseen by the trunk.  month (target 20140626): 0307 only (0627 is the next day; 0929 and
+        # 1203 are later).  days / year: every OOS session is already earlier than the target.
+        first = min(t[-8:] for t in D1_POOLS[stratum]["targets"])
+        names = [n for n in names if n[-8:] < first]
     for n in names:
         if n not in world.sessions:
             world.add_session(n, load_dandi688_recording(n))
@@ -216,7 +256,7 @@ def draw_sim(name, tag, B, draw, sd):
     return rpc.draw_trials(f"{tag}-{name}", B, draw, n_in)
 
 
-def stream_stats(world, sd, prior, calib, idx):
+def stream_stats(world, sd, prior, calib, idx, cap=None):
     """Cheaper alternative: readout statistics accumulated while the B trials stream in.
 
     Trial j (chronological) is forwarded ONCE with the table/normalisation produced from trials
@@ -233,6 +273,8 @@ def stream_stats(world, sd, prior, calib, idx):
             res = calib.calibrate(PopStats.from_trials(sd.bank, idx[:j]), prior)
             mean, std, table = res.mean, res.std, res.table.float()
         a, b = sd.trials[tr]
+        if cap is not None:                      # fixed-length design: only the first ``cap`` bins
+            b = min(b, a + int(cap))
         xz = (sd.x32[a:b] - mean.float()) / std.float()
         X, Y, M = fr.pad_trials(xz, sd.y_norm.float()[a:b], sd.valid[a:b], [(0, b - a)])
         st = fr.readout_stats(base, X, Y, M, table)
@@ -270,7 +312,11 @@ def cmd_basis(args):
 # ---------------------------------------------------------------- selection ----
 
 def sel_path(stratum, sim_set, stage):
-    return OUT / "select" / f"{stage}_{stratum}_{sim_set}.jsonl"
+    return OUT / "select" / f"{stage}_{stratum}_{sim_set}{_suf()}.jsonl"
+
+
+def selection_file(stratum, sim_set, variant=None):
+    return OUT / "select" / f"selection_{stratum}_{sim_set}{_suf(variant)}.json"
 
 
 def seen_keys(path):
@@ -293,6 +339,8 @@ def jb_for_sim(stratum, L, name, sim_set):
 
 
 def cmd_select(args):
+    ext = CFG["ext"]
+    ls, steps_grid = (LS_EXT, STEPS_EXT) if ext else (LS, STEPS)
     world, names = sim_world(args.stratum, args.set)
     p0 = load_p0(world, args.stratum)
     basis = load_basis(args.stratum)
@@ -302,7 +350,7 @@ def cmd_select(args):
     t0 = time.perf_counter()
     for name in names:
         sd, prior = world.sessions[name], world.priors[name]
-        jb_cache = {L: jb_for_sim(args.stratum, L, name, args.set) for L in LS}
+        jb_cache = {L: jb_for_sim(args.stratum, L, name, args.set) for L in ls}
         for seed in SEEDS:
             for B in rpc.B_GRID:
                 for draw in range(SEL_DRAWS):
@@ -310,32 +358,34 @@ def cmd_select(args):
                         continue
                     idx = draw_sim(name, f"p3sel-s{seed}", B, draw, sd)
                     ep = p0_episode(world, sd, prior, p0[seed], idx, SIM_MAX_BINS)
-                    epp = prior_episode(world, sd, prior, idx, SIM_MAX_BINS)
                     rows = []
 
                     def add(method, cfg, r2):
                         rows.append({"stratum": args.stratum, "set": args.set, "session": name, "seed": seed,
                                      "B": B, "draw": draw, "method": method, "cfg": cfg, "r2": r2})
                     add("p0", {}, ep.r2(ep.table0))
-                    add("prior", {}, epp.r2(epp.table0))
-                    st, stp = ep.stats(ep.table0), epp.stats(epp.table0)
-                    sts = stream_stats(world, sd, prior, p0[seed], idx)
-                    for kind in READOUT_KINDS:
-                        for lam in RIDGE_LAMS:
-                            add(f"r1_{kind}", {"lam": lam}, ep.r2(ep.table0, ep.v_from(st, lam, kind, basis)))
-                            add(f"r1p_{kind}", {"lam": lam}, epp.r2(epp.table0, epp.v_from(stp, lam, kind, basis)))
-                            add(f"r1s_{kind}", {"lam": lam}, ep.r2(ep.table0, ep.v_from(sts, lam, kind, basis)))
-                    for L in LS:
+                    if not ext:                      # extended grid: R2 only
+                        epp = prior_episode(world, sd, prior, idx, SIM_MAX_BINS)
+                        add("prior", {}, epp.r2(epp.table0))
+                        st, stp = ep.stats(ep.table0), epp.stats(epp.table0)
+                        sts = None if CFG["contig"] else stream_stats(world, sd, prior, p0[seed], idx, CFG["cap"])
+                        for kind in READOUT_KINDS:
+                            for lam in RIDGE_LAMS:
+                                add(f"r1_{kind}", {"lam": lam}, ep.r2(ep.table0, ep.v_from(st, lam, kind, basis)))
+                                add(f"r1p_{kind}", {"lam": lam}, epp.r2(epp.table0, epp.v_from(stp, lam, kind, basis)))
+                                if sts is not None:
+                                    add(f"r1s_{kind}", {"lam": lam}, ep.r2(ep.table0, ep.v_from(sts, lam, kind, basis)))
+                    for L in ls:
                         for eta in ETAS:
                             for rho in RHOS:
-                                snaps = ep.refine(jb_cache[L], eta, rho, STEPS)
+                                snaps = ep.refine(jb_cache[L], eta, rho, steps_grid)
                                 for S, tab in snaps.items():
-                                    if S in STEPS:
+                                    if S in steps_grid:
                                         add("r2", {"L": L, "eta": eta, "rho": rho, "S": S}, ep.r2(tab))
                     with path.open("a") as f:
                         for r in rows:
                             f.write(json.dumps(r) + "\n")
-                    print(f"[select {args.stratum}/{args.set}] {name[-8:]} s{seed} B={B} d={draw} "
+                    print(f"[select {args.stratum}/{args.set}{_suf()}] {name[-8:]} s{seed} B={B} d={draw} "
                           f"p0={rows[0]['r2']:.3f} t={time.perf_counter() - t0:.0f}s", flush=True)
     write_selection(args.stratum, args.set, "r12")
 
@@ -350,7 +400,7 @@ def _load_rows(path):
 
 def write_selection(stratum, sim_set, stage):
     df = _load_rows(sel_path(stratum, sim_set, stage))
-    p = OUT / "select" / f"selection_{stratum}_{sim_set}.json"
+    p = selection_file(stratum, sim_set)
     old = json.loads(p.read_text()) if p.exists() else {}
     for (method, B), sub in df.groupby(["method", "B"]):
         g = sub.groupby("cfgk").r2.agg(["mean", "count"])
@@ -359,16 +409,17 @@ def write_selection(stratum, sim_set, stage):
                                               "n_episodes": int(g.loc[best, "count"])}
     p.write_text(json.dumps(old, indent=1))
     df.groupby(["method", "B", "cfgk"]).r2.agg(["mean", "count"]).reset_index().to_csv(
-        OUT / "select" / f"grid_{stage}_{stratum}_{sim_set}.csv", index=False)
+        OUT / "select" / f"grid_{stage}_{stratum}_{sim_set}{_suf()}.csv", index=False)
     return old
 
 
 def cmd_select_r3(args):
     """Source simulation of R3 = F7-J (rule selected in R2, per B) then readout ridge."""
+    assert not CFG["ext"], "R3 is not evaluated for the extended grid"
     world, names = sim_world(args.stratum, args.set)
     p0 = load_p0(world, args.stratum)
     basis = load_basis(args.stratum)
-    sel = json.loads((OUT / "select" / f"selection_{args.stratum}_{args.set}.json").read_text())
+    sel = json.loads(selection_file(args.stratum, args.set).read_text())
     path = sel_path(args.stratum, args.set, "r3")
     seen = seen_keys(path)
     t0 = time.perf_counter()
@@ -403,11 +454,11 @@ def cmd_select_r3(args):
 # --------------------------------------------------------------------- eval ----
 
 def eval_path(stratum, sim_set):
-    return OUT / "eval" / f"eval_{stratum}_{sim_set}.jsonl"
+    return OUT / "eval" / f"eval_{stratum}_{sim_set}{_suf()}.jsonl"
 
 
 def diag_path(stratum, sim_set):
-    return OUT / "eval" / f"diag_{stratum}_{sim_set}.jsonl"
+    return OUT / "eval" / f"diag_{stratum}_{sim_set}{_suf()}.jsonl"
 
 
 def jsonl_keyset(path, fields):
@@ -439,11 +490,13 @@ def cmd_eval(args):
     world = load_world(args.stratum, False)
     p0 = load_p0(world, args.stratum)
     basis = load_basis(args.stratum)
-    sel = json.loads((OUT / "select" / f"selection_{args.stratum}_{args.set}.json").read_text())
+    sel = json.loads(selection_file(args.stratum, args.set, CFG["sel_variant"]).read_text())
     path, dpath = eval_path(args.stratum, args.set), diag_path(args.stratum, args.set)
     path.parent.mkdir(parents=True, exist_ok=True)
     seen = jsonl_keyset(path, ("method", "seed", "target", "B", "draw"))
     seen_d = jsonl_keyset(dpath, ("seed", "target", "B", "draw"))
+    r2_only = CFG["ext"]                 # extended-grid sensitivity: only P0 and R2 are evaluated
+    no_stream = CFG["contig"] or r2_only
     base = world.adapter.model.base
     hash0 = world.adapter._hash()
     t0 = time.perf_counter()
@@ -455,7 +508,12 @@ def cmd_eval(args):
             for draw in range(args.draws):
                 idx = rpc.draw_trials(target, B, draw, sd.bank.n_trials)
                 for seed in SEEDS:
-                    todo = lambda m: (m, seed, target, B, draw) not in seen    # noqa: E731
+                    def todo(m):
+                        if r2_only and m not in ("p0", "r2"):
+                            return False
+                        if no_stream and m.startswith("r1s_"):
+                            return False
+                        return (m, seed, target, B, draw) not in seen
                     ep = p0_episode(world, sd, prior, p0[seed], idx)
                     used = np.zeros(sd.n_bins, dtype=bool)
                     for i in idx:
@@ -464,7 +522,9 @@ def cmd_eval(args):
                     disjoint = bool(not (used & ep.q.cpu().numpy()).any())
                     base_row = {"stratum": args.stratum, "set": args.set, "pool": "O", "seed": seed,
                                 "target": target, "B": B, "draw": draw, "h4_budget": int(B),
-                                "h4_query_disjoint": disjoint, "replay_bins": ep.replay_bins}
+                                "h4_query_disjoint": disjoint, "replay_bins": ep.replay_bins,
+                                "replay_bins_uncapped": ep.replay_bins_uncapped,
+                                "max_trial_len": max(ep.trial_lens), "variant": CFG["variant"]}
                     rows = []
 
                     def emit(method, r2, cfg, passes, **extra):
@@ -495,7 +555,7 @@ def cmd_eval(args):
                                      {"lam": lam}, 1)
                     # R1s: streaming readout statistics (no replay buffer)
                     if any(todo(f"r1s_{k}") for k in READOUT_KINDS):
-                        sts = stream_stats(world, sd, prior, p0[seed], idx)
+                        sts = stream_stats(world, sd, prior, p0[seed], idx, CFG["cap"])
                         for k in READOUT_KINDS:
                             if todo(f"r1s_{k}"):
                                 lam = sel[f"r1s_{k}"][str(B)]["cfg"]["lam"]
@@ -527,14 +587,22 @@ def cmd_eval(args):
                         with dpath.open("a") as f:
                             for r in drows:
                                 f.write(json.dumps(r) + "\n")
-                    print(f"[eval {args.stratum}/{args.set}] {target[-4:]} B={B} d={draw} s{seed} "
+                    print(f"[eval {args.stratum}/{args.set}{_suf()}] {target[-4:]} B={B} d={draw} s{seed} "
                           f"t={time.perf_counter() - t0:.0f}s", flush=True)
     assert world.adapter._hash() == hash0, "trunk changed"
     torch.autograd.grad, torch.autograd.backward = og, ob
 
 
 def diag_rows(world, stratum, ep, rule, jb_rule, base_row):
-    """Gradient alignment: cos(F7-J update, true gradient) on the B trials and on query trials."""
+    """Gradient alignment: cos(F7-J update, true gradient) on the B trials and on query trials.
+
+    ``p0_step1``: from the P0 table, for every feedback length L (here the update is G/(1+eps)
+    up to a scalar, the table equals the shrinkage centre).  ``selected_traj``: along the selected
+    rule; cos_g_B is the raw F7-J estimate g vs the true gradient (no preconditioner, no shrink),
+    cos_upd_B the REALISED update (new table - table: preconditioner and shrinkage included).
+    The per-unit preconditioner is a no-op (q_i = 1), so cos_B_precond is not reported; q_dev is
+    max_i |q_i - 1| over units with variance (checked, not assumed).
+    """
     base = ep.base
     Xq, Yq, Mq = query_batch(ep)
     out = []
@@ -544,23 +612,52 @@ def diag_rows(world, stratum, ep, rule, jb_rule, base_row):
         g, q, _, _ = fr.fj_gradient(base, ep.X, ep.Y, ep.M, ep.table0, jb)
         tb = fr.diagnostic_true_neg_gradient(base, ep.X, ep.Y, ep.M, ep.table0)
         tq = fr.diagnostic_true_neg_gradient(base, Xq, Yq, Mq, ep.table0)
-        pre = 1.0 / (q + EPS_Q)[None, :]
         out.append({**base_row, "kind": "p0_step1", "L": L, "step": 1,
-                    "cos_B": fr.cosine(g, tb), "cos_B_precond": fr.cosine(g * pre, tb * pre),
-                    "cos_query": fr.cosine(g, tq), "cos_true_B_vs_query": fr.cosine(tb, tq),
-                    "norm_ratio": float(g.norm() / tb.norm().clamp_min(1e-12))})
+                    "cos_B": fr.cosine(g, tb), "cos_query": fr.cosine(g, tq),
+                    "cos_true_B_vs_query": fr.cosine(tb, tq),
+                    "norm_ratio": float(g.norm() / tb.norm().clamp_min(1e-12)),
+                    "q_dev": float((q - 1.0).abs().max())})
     # (b) along the selected trajectory
     rec = []
 
-    def hook(step, tab, g):
+    def hook(step, tab, g, upd):
         tb = fr.diagnostic_true_neg_gradient(base, ep.X, ep.Y, ep.M, tab)
         tq = fr.diagnostic_true_neg_gradient(base, Xq, Yq, Mq, tab)
-        rec.append((step, fr.cosine(g, tb), fr.cosine(g, tq), fr.cosine(tb, tq)))
+        rec.append((step, fr.cosine(g, tb), fr.cosine(g, tq), fr.cosine(upd, tb), fr.cosine(upd, tq),
+                    fr.cosine(tb, tq)))
     ep.refine(jb_rule, rule["eta"], rule["rho"], [rule["S"]], with_diag=hook)
-    for step, cb, cq, cbq in rec:
-        out.append({**base_row, "kind": "selected_traj", "L": rule["L"], "step": step, "cos_B": cb,
-                    "cos_query": cq, "cos_true_B_vs_query": cbq})
+    for step, gb, gq, ub, uq, cbq in rec:
+        out.append({**base_row, "kind": "selected_traj", "L": rule["L"], "step": step, "cos_B": gb,
+                    "cos_query": gq, "cos_upd_B": ub, "cos_upd_query": uq, "cos_true_B_vs_query": cbq})
     return out
+
+
+def cmd_diag(args):
+    """Gradient-alignment diagnostic only (autograd on the target trunk; never feeds a table)."""
+    world = load_world(args.stratum, False)
+    p0 = load_p0(world, args.stratum)
+    sel = json.loads(selection_file(args.stratum, args.set, CFG["sel_variant"]).read_text())
+    dpath = diag_path(args.stratum, args.set)
+    dpath.parent.mkdir(parents=True, exist_ok=True)
+    seen_d = jsonl_keyset(dpath, ("seed", "target", "B", "draw"))
+    t0 = time.perf_counter()
+    for target in D1_POOLS[args.stratum]["targets"]:
+        sd, prior = world.target(target)
+        for B in rpc.B_GRID:
+            rule = sel["r2"][str(B)]["cfg"]
+            jb = jbar_for(args.stratum, rule["L"])
+            for draw in range(args.draws):
+                if (0, target, B, draw) in seen_d:
+                    continue
+                idx = rpc.draw_trials(target, B, draw, sd.bank.n_trials)
+                ep = p0_episode(world, sd, prior, p0[0], idx)
+                base_row = {"stratum": args.stratum, "set": args.set, "seed": 0, "target": target, "B": B,
+                            "draw": draw, "variant": CFG["variant"]}
+                with dpath.open("a") as f:
+                    for r in diag_rows(world, args.stratum, ep, rule, jb, base_row):
+                        f.write(json.dumps(r) + "\n")
+                print(f"[diag {args.stratum}/{args.set}{_suf()}] {target[-4:]} B={B} d={draw} "
+                      f"t={time.perf_counter() - t0:.0f}s", flush=True)
 
 
 def cmd_ablate(args):
@@ -574,8 +671,8 @@ def cmd_ablate(args):
     """
     world = load_world(args.stratum, False)
     p0 = load_p0(world, args.stratum)
-    sel = json.loads((OUT / "select" / f"selection_{args.stratum}_{args.set}.json").read_text())
-    path = OUT / "eval" / f"ablate_{args.stratum}_{args.set}.jsonl"
+    sel = json.loads(selection_file(args.stratum, args.set, CFG["sel_variant"]).read_text())
+    path = OUT / "eval" / f"ablate_{args.stratum}_{args.set}{_suf()}.jsonl"
     seen = jsonl_keyset(path, ("variant", "seed", "target", "B", "draw"))
     t0 = time.perf_counter()
     for target in D1_POOLS[args.stratum]["targets"]:
@@ -617,20 +714,26 @@ def main():
     j.add_argument("--stratum", required=True, choices=list(D1_POOLS))
     j.add_argument("--windows", type=int, default=600)
     j.add_argument("--width", type=int, default=320)
-    for name in ("basis", "select", "select-r3", "eval", "ablate"):
+    j.add_argument("--lmax", type=int, default=LMAX)
+    for name in ("basis", "select", "select-r3", "eval", "ablate", "diag"):
         s = sub.add_parser(name)
         s.add_argument("--stratum", required=True, choices=list(D1_POOLS))
         if name != "basis":
-            s.add_argument("--set", required=True, choices=["is", "oos"])
-        if name in ("eval", "ablate"):
-            s.add_argument("--draws", type=int, default=rpc.N_DRAWS)
+            s.add_argument("--set", required=True, choices=list(SETS))
+            s.add_argument("--variant", default="base", choices=list(VARIANTS))
+            s.add_argument("--sel-variant", default=None, choices=list(VARIANTS),
+                           help="read the selection json of another variant (e.g. cap256 reuses base)")
+        if name in ("eval", "ablate", "diag"):
+            s.add_argument("--draws", type=int, default=rpc.N_DRAWS if name != "diag" else 4)
         if name == "eval":
-            s.add_argument("--diag-draws", type=int, default=4)
+            s.add_argument("--diag-draws", type=int, default=0)
         if name == "ablate":
             s.add_argument("--budgets", type=int, nargs="+", default=[2, 8, 33])
     args = p.parse_args()
+    if hasattr(args, "variant"):
+        set_variant(args.variant, args.sel_variant)
     {"jacobian": cmd_jacobian, "basis": cmd_basis, "select": cmd_select,
-     "select-r3": cmd_select_r3, "eval": cmd_eval, "ablate": cmd_ablate}[args.cmd](args)
+     "select-r3": cmd_select_r3, "eval": cmd_eval, "ablate": cmd_ablate, "diag": cmd_diag}[args.cmd](args)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,17 @@
+{
+ "days": {
+  "n_draw_cells": 96,
+  "max_abs_q_minus_1": 4.76837158203125e-07,
+  "median_max_abs_q_minus_1": 2.384185791015625e-07
+ },
+ "month": {
+  "n_draw_cells": 48,
+  "max_abs_q_minus_1": 4.76837158203125e-07,
+  "median_max_abs_q_minus_1": 2.980232238769531e-07
+ },
+ "year": {
+  "n_draw_cells": 48,
+  "max_abs_q_minus_1": 4.76837158203125e-07,
+  "median_max_abs_q_minus_1": 2.384185791015625e-07
+ }
+}

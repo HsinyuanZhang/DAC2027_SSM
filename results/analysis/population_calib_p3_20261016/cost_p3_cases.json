@@ -1,17 +1,87 @@
 [
  {
-  "name": "000688 (N=26)",
-  "N": 26,
+  "name": "000688 20150616 (N=17)",
+  "stratum": "days",
+  "target": "sub-M_ses-CO-20150616",
+  "N": 17,
   "K": 10,
   "D": 2,
   "H": 128,
-  "T": 252,
+  "T": 240,
   "bx": 3,
   "by": 16,
   "trunk": {
    "linear_macs": 350720,
    "scan_macs": 32768,
    "total": 383488,
+   "fixed_weight_macs": 350720,
+   "act_x_act_macs": 32768,
+   "state_elems": 16384,
+   "uncounted": "gating, RoPE, layer-norm, short conv"
+  },
+  "bin_ms": 20
+ },
+ {
+  "name": "000688 20150617 (N=17)",
+  "stratum": "days",
+  "target": "sub-M_ses-CO-20150617",
+  "N": 17,
+  "K": 10,
+  "D": 2,
+  "H": 128,
+  "T": 265,
+  "bx": 3,
+  "by": 16,
+  "trunk": {
+   "linear_macs": 350720,
+   "scan_macs": 32768,
+   "total": 383488,
+   "fixed_weight_macs": 350720,
+   "act_x_act_macs": 32768,
+   "state_elems": 16384,
+   "uncounted": "gating, RoPE, layer-norm, short conv"
+  },
+  "bin_ms": 20
+ },
+ {
+  "name": "000688 20140626 (N=26)",
+  "stratum": "month",
+  "target": "sub-M_ses-CO-20140626",
+  "N": 26,
+  "K": 10,
+  "D": 2,
+  "H": 128,
+  "T": 200,
+  "bx": 3,
+  "by": 16,
+  "trunk": {
+   "linear_macs": 350720,
+   "scan_macs": 32768,
+   "total": 383488,
+   "fixed_weight_macs": 350720,
+   "act_x_act_macs": 32768,
+   "state_elems": 16384,
+   "uncounted": "gating, RoPE, layer-norm, short conv"
+  },
+  "bin_ms": 20
+ },
+ {
+  "name": "000688 20150511 (N=24)",
+  "stratum": "year",
+  "target": "sub-M_ses-CO-20150511",
+  "N": 24,
+  "K": 10,
+  "D": 2,
+  "H": 128,
+  "T": 238,
+  "bx": 3,
+  "by": 16,
+  "trunk": {
+   "linear_macs": 350720,
+   "scan_macs": 32768,
+   "total": 383488,
+   "fixed_weight_macs": 350720,
+   "act_x_act_macs": 32768,
    "state_elems": 16384,
    "uncounted": "gating, RoPE, layer-norm, short conv"
   },
@@ -19,6 +89,8 @@
  },
  {
   "name": "HD-sEMG (N=256)",
+  "stratum": "hd",
+  "target": null,
   "N": 256,
   "K": 16,
   "D": 5,
@@ -27,9 +99,11 @@
   "bx": 8,
   "by": 16,
   "trunk": {
-   "linear_macs": 351872,
+   "linear_macs": 350720,
    "scan_macs": 32768,
-   "total": 384640,
+   "total": 383488,
+   "fixed_weight_macs": 350720,
+   "act_x_act_macs": 32768,
    "state_elems": 16384,
    "uncounted": "gating, RoPE, layer-norm, short conv"
   },

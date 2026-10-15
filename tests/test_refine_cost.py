@@ -75,3 +75,33 @@ def test_p0_baseline_macs_formula():
     m = p0_macs(6, 3, 2, 100, 4)
     assert m["accumulate"] == 100 * (36 + 16 * 6 + 9) + 4 * (6 + 24 + 2)
     assert m["finalize"] == 7 * 36 + 30 * 6 + 27
+
+
+# ---------------------------------------------------- review-fix additions ----
+
+def test_actual_replay_bins_and_staging_override_the_mean_T_sizing():
+    base = refinement_cost(CASE, 4, "r1_lr4")
+    big = refinement_cost(CASE, 4, "r1_lr4", replay_bins=1000)
+    assert base["replay_bins"] == 80 and big["replay_bins"] == 1000
+    assert big["replay_buffer_bytes"] == 1000 * (6 * 4 + 2 * 16 + 1) / 8
+    assert big["macs"]["replay forward (trunk+read-in)"] == 1000 * (1000 + 3 * 6)
+    s0 = refinement_cost(CASE, 4, "r1s_lr4")
+    s1 = refinement_cost(CASE, 4, "r1s_lr4", staging_bins=500)
+    k = "one-trial staging buffer (trial 0 normalisation)"
+    assert s0["sram_bytes"][k] == 20 * (6 * 4 + 2 * 16 + 1) / 8
+    assert s1["sram_bytes"][k] == 500 * (6 * 4 + 2 * 16 + 1) / 8
+
+
+def test_mac_classes_partition_the_total_and_scan_is_not_fixed_weight():
+    case = {**CASE, "trunk": {"total": 1000, "fixed_weight_macs": 900, "act_x_act_macs": 100, "state_elems": 100}}
+    for method, kw in (("r1_full", {}), ("r1s_lr4", {}), ("r2", {"steps": 3, "lags": 4}), ("r3_lr4", {"steps": 3, "lags": 4})):
+        r = refinement_cost(case, 5, method, **kw)
+        by = r["macs_by_class"]
+        assert sum(by.values()) == r["macs_total"]
+        assert by["fixed_weight_rram"] < r["macs_total"]               # scan, Gram, outer product are not RRAM weights
+        assert by["act_x_act"] > 0
+    r = refinement_cost(case, 5, "r1_full")
+    assert r["macs_by_class"]["fixed_weight_rram"] == 5 * 20 * 900
+    assert r["macs_by_class"]["act_x_act"] >= 5 * 20 * 100
+    assert r["macs_by_class"]["sram_table_x_act"] == 5 * 20 * 3 * 6
+    assert r["fixed_weight_fraction"] < 0.9

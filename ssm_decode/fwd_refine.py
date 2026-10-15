@@ -16,6 +16,12 @@ through the trunk on target data.  Two refinement ends are implemented:
   V = V0 + R (G + lam I)^-1 with G = mean h h^T, R = mean (y - V0 h) h^T.
   A diagonal and a low-rank (fixed source PCA basis) variant are provided.
 
+NUMERICS (review item 4, rule 8): everything here is evaluated in fp32/fp64 on a GPU.  There is
+NO fixed-point simulation of the accumulators, of the Jbar kernel (costed as int8 ROM in
+``refine_cost`` but evaluated in fp32) or of the readout statistics.  The per-unit preconditioner
+1/(q_i+eps) is a global scalar 1/(1+eps) in practice: inputs are z-scored on the same B trials
+(valid bins) that are replayed, so q_i = mean x_i^2 = 1 exactly (up to the std floor).
+
 The gradient-alignment helper uses autograd on the target trunk; it is a
 DIAGNOSTIC (never used for calibration) and is kept in clearly named
 functions.
@@ -43,6 +49,26 @@ def pad_trials(xz: torch.Tensor, y: torch.Tensor, valid: torch.Tensor, windows):
     M = torch.zeros(bn, tm, dtype=xz.dtype, device=xz.device)
     for i, (a, b) in enumerate(windows):
         X[i, :b - a], Y[i, :b - a], M[i, :b - a] = xz[a:b], y[a:b], valid[a:b].to(xz.dtype)
+    return X, Y, M
+
+
+def cap_windows(windows, cap):
+    """Truncate every trial window to its first ``cap`` bins (fixed-size replay design)."""
+    if cap is None:
+        return [tuple(w) for w in windows]
+    return [(a, min(b, a + int(cap))) for a, b in windows]
+
+
+def concat_trials(xz: torch.Tensor, y: torch.Tensor, valid: torch.Tensor, windows):
+    """The calibration trials as ONE contiguous stream, in the given (recorded) order.
+
+    Returns X [1, sum T, N], Y [1, sum T, D], M [1, sum T].  Trunk state is carried across the
+    boundaries between calibration trials only (no non-calibration bins are inserted), so the
+    stream is a surrogate for the unknown state at the start of each trial.
+    """
+    X = torch.cat([xz[a:b] for a, b in windows], 0)[None]
+    Y = torch.cat([y[a:b] for a, b in windows], 0)[None]
+    M = torch.cat([valid[a:b].to(xz.dtype) for a, b in windows], 0)[None]
     return X, Y, M
 
 
@@ -162,17 +188,19 @@ def fj_refine(base, X, Y, M, table0, jbar, eta, lam, snapshots, center=None, eps
               precondition=True, with_diag=None):
     """S forward-only F7-J steps from ``table0``; returns {step: table}.
 
-    ``with_diag`` (callable(step, table, g)) is invoked before each update for
-    gradient-alignment diagnostics.
+    ``with_diag`` (callable(step, table, g, upd)) is invoked at each step for gradient-alignment
+    diagnostics; ``g`` is the raw F7-J gradient estimate and ``upd`` = new table - table is the
+    REALISED update (preconditioner and shrinkage included).
     """
     snapshots = sorted(set(int(s) for s in snapshots))
     center = table0 if center is None else center
     tab, out = table0.clone(), {}
     for step in range(1, snapshots[-1] + 1):
         g, q, _, _ = fj_gradient(base, X, Y, M, tab, jbar)
+        new = fj_update(tab, g, q, center, eta, lam, eps, precondition)
         if with_diag is not None:
-            with_diag(step, tab, g)
-        tab = fj_update(tab, g, q, center, eta, lam, eps, precondition)
+            with_diag(step, tab, g, new - tab)
+        tab = new
         if step in snapshots:
             out[step] = tab.clone()
     return out
@@ -273,11 +301,17 @@ def decode_with_readout(base, X_full, table, v_aug=None):
 def trunk_macs_per_bin(base) -> dict:
     """MACs of one forward bin of the trunk, counted from the module tree.
 
-    Linear layers: in*out MACs each (read off ``nn.Linear`` modules, including the Mamba3
-    in/out projections and the FFN).  Mamba3 SISO selective scan: the recurrent state has
-    d_inner * d_state elements per layer; per bin each element needs one multiply-add for the
-    state update (a*h + B*x) and one for the readout (C.h), i.e. 2 MACs.  Gating, RoPE,
-    layer-norm and the short convolution are NOT counted (listed as ``uncounted``).
+    Two classes, kept apart (feasibility rule 8: "fixed-weight MAC" = weight x activation only):
+
+    * ``fixed_weight_macs`` (= ``linear_macs``): ``nn.Linear`` layers, in*out MACs each (Mamba3
+      in/out projections and the FFN); weights are fixed (RRAM-mappable), the other operand is an
+      activation.
+    * ``act_x_act_macs`` (= ``scan_macs``): the Mamba3 SISO selective scan.  The recurrent state
+      has d_inner * d_state elements per layer; per bin each element needs one multiply-add for
+      the state update (a*h + B*x) and one for the readout (C.h), i.e. 2 MACs.  Both operands are
+      activations (input-dependent a, B, C and the state), so this is NOT a fixed-weight MAC.
+
+    Gating, RoPE, layer-norm and the short convolution are not counted (``uncounted``).
     ``state_elems`` is the recurrent state kept between bins (all layers).
     """
     lin, scan, state = 0, 0, 0
@@ -288,4 +322,5 @@ def trunk_macs_per_bin(base) -> dict:
             scan += 2 * int(mod.d_inner) * int(mod.d_state)
             state += int(mod.d_inner) * int(mod.d_state)
     return {"linear_macs": int(lin), "scan_macs": int(scan), "total": int(lin + scan),
+            "fixed_weight_macs": int(lin), "act_x_act_macs": int(scan),
             "state_elems": int(state), "uncounted": "gating, RoPE, layer-norm, short conv"}

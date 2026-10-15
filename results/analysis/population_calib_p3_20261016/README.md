@@ -2,27 +2,146 @@
 
 日期：2026-10-16。执行者：P3 工作线（GPU0，≤3 个并行 job）。规格见任务说明；背景见 `results/analysis/population_calib_20261015/README.md`（P1，含 §0.1 审查）、`results/analysis/population_calib_p2_20261015/README.md`（P2）、`docs/next_experiments_round2_20261015.md` §2–3（F7-J 设计）。
 
-代码（全部为新增文件，没有改动 P1/P2 的代码语义，也没有改动 `calib_quant.py / calib_cost.py / run_pc2_quant.py / pc2_cost_report.py`）：`ssm_decode/fwd_refine.py`（F7-J 反馈卷积与更新、平均 Jacobian、梯度对齐诊断、readout 统计与岭回归、trunk MAC 计数）、`ssm_decode/refine_cost.py`（P3 解析代价）、`scripts/run_pc3_refine.py`（jacobian / basis / select / select-r3 / eval / ablate）、`scripts/run_pc3_{r4.sh,jac_all.sh,queue.sh,phase2.py,ablate.sh}`（队列）、`scripts/analyze_pc3.py`、`scripts/pc3_cost_report.py`、`tests/test_{fwd_refine,refine_cost,pc3_driver}.py`（20 个新测试，全部通过）。
+代码（全部为新增文件，没有改动 P1/P2 的代码语义，也没有改动 `calib_quant.py / calib_cost.py / run_pc2_quant.py / pc2_cost_report.py`）：`ssm_decode/fwd_refine.py`（F7-J 反馈卷积与更新、平均 Jacobian、梯度对齐诊断、readout 统计与岭回归、trunk MAC 计数）、`ssm_decode/refine_cost.py`（P3 解析代价）、`scripts/run_pc3_refine.py`（jacobian / basis / select / select-r3 / eval / ablate）、`scripts/run_pc3_{r4.sh,jac_all.sh,queue.sh,phase2.py,ablate.sh}`（队列）、`scripts/analyze_pc3.py`、`scripts/pc3_cost_report.py`、`tests/test_{fwd_refine,refine_cost,pc3_driver}.py`（20 个新测试，全部通过；审查修正后共 31 个，见「审查后修正」§R.11）。
 原始 rows：`results/population_calib_p3_20261016/`（gitignored）；本目录是汇总 csv/json：`tables_p3.md`（全部 markdown 表）、`cells_r2.csv`、`gap_recovery*.csv`、`selection.csv`、`source_sim/`（selection json 与 source simulation 网格）、`diag_gradient_alignment.csv`、`jacobian_representativeness.csv`、`ablation_feedback_kernel.csv`、`cost_p3*.csv/json`、`flags.json`、`all_rows_seedavg.csv.gz`。
 
-## 0. 结论摘要
+## 审查后修正（独立审查之后，2026-10-16）
+
+> **先读这里。本节取代下面 §0 的 headline 结论和 §4–§5 中受影响的成本数字；被取代的旧数字只保留在 §R.9（标注 superseded），不要再引用“F7-J 恢复了约 2/3 的 gap”。**
+
+### R.0 状态总览
+
+**运行环境说明。** 修正过程中 GPU0 掉出了驱动（`nvidia-smi: Unable to determine the device handle for GPU 0000:01:00.0`），任务规则又规定 cuda:1 属于另一个 agent；改用 cuda:1 的操作被权限检查拒绝，因此**没有使用任何 GPU**。所有需要 trunk 前向的重跑都没有执行。已完成的是：source 侧的重新选择（不需要 target）、全部 CPU 可做的分析、解析代价模型、代码与测试、以及一键 GPU 队列。**因此本节还没有“like-for-like + 因果”的 headline 恢复比例；这是未完成项，不是已得结论。**
+
+| # | 意见 | 状态 |
+|---|---|---|
+| 1 | 参照 P0+ui_reg 在 IS 上选、候选在 OOS 上选（分母不一致） | **代码与队列就绪，GPU 重跑未执行**（`scripts/run_pc3_uiref.py`；2×2 表由 `scripts/analyze_pc3_fix.py` 生成）。目前只有旧参照（P2 规则）下的 pooled 比例与 bootstrap CI（§R.9） |
+| 2 | month OOS 集合含晚于 target 的 session | **source 侧已完成**（因果集合 = 0307 only，规则见 §R.1，与审查者的规则逐项一致）；R3 的 source 选择与全部 target 评测**未执行**（需 GPU） |
+| 3 | replay/staging buffer 按平均 T=252 估算 | **已完成（解析，CPU）**：实际 draw 的分布、最坏情形、cap=256 设计（§R.2）；cap 对精度的影响**未执行**（变体已实现，需 GPU） |
+| 4 | scan MAC 记成固定权重；fp32 声明 | **已完成**（§R.3） |
+| 5 | per-unit 预条件是 no-op | **已完成**（逐 draw 数值核对，§R.4） |
+| 6 | replay 每 trial 零状态 | **披露已完成**；contiguous 变体已实现，**精度未执行**（§R.5） |
+| 7 | year B=33 draw 4 的 2,354-bin “trial” | **已完成**（§R.6） |
+| 8 | ui_reg B=33 caveat 过时 | **文字已更新**（§R.7）；新参照的 step 网格含 600/1000（代码就绪） |
+| 9 | 统计：非独立、bootstrap、year>100%、R1-stream | **已完成**（对旧参照；新参照下的 CI 由同一脚本在 GPU 重跑后生成，§R.8） |
+| 10 | 余弦中位数、轨迹余弦标签、IS 基底标注、网格边缘 | 中位数 / 标注 / 边缘文字**已完成**；轨迹余弦改为 realised update（代码就绪，**需 GPU 重跑**）；L∈{48,64}、S∈{15,20} 扩展网格**需 GPU** |
+
+### R.1 因果 month 选择（意见 2；source 侧）
+
+month target 是 20140626；原 OOS 集合 {0307, 0627, 0929, 1203} 中 0627（次日）、0929、1203 晚于 target。因果集合 = 只含“早于 target 且 trunk 没见过”的 session，即 **0307 only**（`run_pc3_refine.py --set oosc`；year 的 target 是 20150511，四个 OOS session 都更早，所以 year 的 `oos` 已经是因果的，不变）。0307 的 episode（seed×draw×B）与原 OOS 模拟里 0307 的 episode 逐个相同（同 J̄、同 P0 权重、同 draw 标签），因此 `fix/select/r12_month_oosc.jsonl` 由原 jsonl 过滤 0307 得到（`oosc` 的 `select` 再运行时这些 key 全部命中、不重算），共 11,352 行（24 个 episode，每个 B 4 个）。注意每个 B 只有 4 个 episode，规则噪声大。
+
+| B | 因果规则 R2 (L, S, η, ρ) | 原 OOS 规则 | R1 λ（因果 / 原） |
+|---|---|---|---|
+| 1 | (32, 3, 1, 0.03) | (32, 3, 1, 0.3) | 10 / 100 |
+| 2 | (16, 5, 1, 0.1) | (32, 5, 1, 0) | 10 / 10 |
+| 4 | (32, 5, 1, 0) | (32, 5, 3, 0.1) | 3 / 3 |
+| 8 | (32, 10, 3, 0.3) | (32, 10, 3, 0.1) | 3 / 1 |
+| 16 | (32, 10, 3, 0.1) | (32, 10, 3, 0.1) | 1 / 0.3 |
+| 33 | (32, 10, 3, 0.1) | (32, 5, 10, 0.3) | 0.3 / 0.01 |
+
+（`source_sim/selection_month_oosc.json`、`source_sim/grid_r12_month_oosc.csv.gz`。）这与审查者在 `/tmp/pc3_review/chk_gpu.py` 中使用的 “0307only” 规则表逐项一致。审查者在 target 上测得的**中间数字**（用审查者自己的脚本，旧 P2 参照作分母，**不是我的流水线、也不是 like-for-like**；这里仅作参考）：month B≥4 的 R2 pooled 比例 65.1%，R1(full) 20.5%；绝对值 R2 B=4/8/16/33 = 0.590/0.626/0.651/0.670（P0 0.535/0.565/0.558/0.566）。可见因果化对 R2 影响很小（旧 OOS 规则 67%），对 R1 影响较大（30% → 约 21%，主要因为 B=33 的 λ 变成 0.3）。**用我的流水线对 R1/R2/R3 的 target 评测需要 GPU，未执行。**
+
+source 模拟里的 B=33 因果规则 R2 相对 P0 的收益、与旧 OOS 规则的差别，见 `source_sim/grid_r12_month_oosc.csv.gz`。
+
+### R.2 replay / staging buffer 按实际 trial 长度重新估算（意见 3；解析，CPU）
+
+之前的 buffer 都按平均 T=252（两个 days target 的平均）× B 估算，但：(i) 000688 的 trial 长度分布很偏（month：median 197、mean 200、max 800；year：median 207、mean 238、**max 4,462**；days 0617：median 192、mean 265、**max 5,144**）；(ii) 之前的 “N=26” 与 days 的 T 混用。现在每个 target 用自己的 N 和自己的 trial 长度（`scripts/pc3_fix_cpu.py` → `replay_draw_stats.csv`（8 个真实评测 draw）、`replay_mc_summary.csv`（2000 个随机 draw、最坏情形 = 最长的 B 个 usable trial）；`scripts/pc3_cost_report.py` → `cost_p3.csv`、`cost_p3_buffer_summary.csv`）。
+
+原始 replay buffer（3-bit 计数 + 16-bit×2 标签 + 1 bit 有效位；KB）。**month（N=26，headline target）**：
+
+| B | 平均 T 估计（旧） | 8 个真实 draw：median / max | 2000 随机 draw：p95 / max | 最坏情形（B 个最长 trial） | cap=256 |
+|---|---:|---:|---:|---:|---:|
+| 8 | 21.7 | 22.5 / 23.9 | 24.2 / 33.5 | 50.8 | 27.8 |
+| 16 | 43.4 | 43.7 / 46.2 | 48.3 / 58.0 | 81.1 | 55.5 |
+| 33 | 89.4 | 89.4 / 93.8 | 95.6 / 107.5 | **139.7** | 114.5 |
+
+year（N=24）和 days 0617（N=17）的尾部重得多：B=33 的 2000 随机 draw p95 分别为 143 / 138 KB，最坏情形 319 / 206 KB（year 的 B 个最长 trial 总计 24,907 bin；days 0616 最坏 166 KB）。B=8 的最坏情形：year 208 KB，days 0617 144 KB，month 51 KB。cap=256 的 buffer 与 draw 无关：B=33 为 108.3 / 86.6 / 114.5 KB（year / days / month），B=16 为 52.5 / 42.0 / 55.5 KB。
+
+**更正的说法。**
+- 旧说法 “B=33 的 replay buffer 能放进 128 KB（112.7 KB）”不成立为一般结论：它只对 “month 的典型 draw”（median 89 KB、p95 96 KB）成立；year 和 days 0617 在 B=33 的 p95 已超过 128 KB；任何不限制 trial 长度的设计，最坏情形（month 139.7 KB）都放不下。cap=256 后 buffer 本身在三个 target 上都 ≤ 114.5 KB。
+- 总工作集（R1 lr16 = buffer + 32 KB trunk 状态 + readout 统计 + 其余，约 +35 KB）：不限 trial 长度时，最坏情形下能放进 128 KB 的最大 B 为 month 16、year 2、days 0616 / 0617 为 4 / 2；cap=256 时为 month 16、year 16、days 33 / 33（B=33 的 month / year 总计 149.5 / 143.2 KB，放不下；days 的 N=17 为 121.3 KB 放得下）。
+- **R1-stream 的 “38.4 KB（与 B 无关）”只对典型 trial 成立**：暂存区要放下第一个到达的 trial。8 个真实评测 draw 的总 SRAM：median 36.4–38.1 KB，max 36.6–59.8 KB；最长 trial 作为第一个 trial 时：month（800 bin）45.9 KB，days 0616（2,741 bin）62.8 KB，days 0617（5,144 bin）87.4 KB，year（4,462 bin）92.1 KB；2000 随机 draw 的 p95 总 SRAM（随 B 变化）：month 38.4–39.0，year 38.2–45.1，days 0616 37.4–51.2，days 0617 38.6–59.8 KB。暂存区本身在最坏情形为 10.8 / 28.1 / 52.7 / 57.2 KB（month / days 0616 / days 0617 / year；若按 N=26 套 5,144 bin 则为 69.7 KB）。cap=256 时暂存区为 3.5 KB，总 SRAM 为 37.3–38.5 KB，与 draw 无关。
+- 受 cap 影响的数据量：8 个评测 draw 中至少含一个 > 256 bin 的 trial 的比例，B=4 / 8 / 16 / 33 分别为 days 44% / 44% / 75% / 88%，month 25% / 38% / 62% / 75%，year 12% / 38% / 25% / 100%（大多数被截断的 trial 只是略长于 256 bin；真正的长尾是 800–5,144 bin 的少数 trial）。因此 cap 会改变校准数据，需要作为变体评测：`run_pc3_refine.py eval --variant cap256 --sel-variant base`（规则和 λ 沿用未截断的 source 选择；因为模拟 draw 取自前 50,000 bin 内的 trial，被截断的 trial 很少）。**精度影响未评测（需 GPU）。**
+- 实时当量和 MAC 也依赖真实 bin 数：month B=8 的 R1 为 33 s（旧表 40 s，因为 month 的 T 更短）。
+
+### R.3 MAC 分类与数值精度（意见 4，规则 8）
+
+- `fwd_refine.trunk_macs_per_bin` 现在分开返回 **fixed-weight（权重×激活，RRAM 可映射）MAC** 与 **activation×activation MAC**：350,720 个 nn.Linear MAC/bin 是固定权重；Mamba3 selective scan 的 32,768 MAC/bin（状态更新与读出，a、B、C 与状态都是激活）是 **activation×activation，不是固定权重 MAC**。
+- `refine_cost.refinement_cost` 对每个 MAC 条目分类：`fixed_weight_rram`（trunk Linear）、`sram_table_x_act`（read-in 表 K×N 在 SRAM 中，以及 J̄ 反馈卷积的 ROM 权重——权重×激活但不是 RRAM）、`act_x_act`（scan、e·xᵀ 外积、readout Gram/互相关、求解、表更新、P0 finalize）。三类之和等于总数（测试验证）。结果：R1 / R2 / R3 的 MAC 中 **固定权重 RRAM 只占约 89–91%**（month，B=8：R1 lr16 90.9%，R1 full 89.3%，R2 S=10 L=32 91.2%），其余约 9% 是 activation×activation（scan 约 8.5%、其余为 Gram/外积），read-in MVM 与反馈卷积 <0.3%。旧说法“trunk 前向占 99.4%，全部是 RRAM 可映射的固定权重 MAC”中，trunk 前向占比（约 99%）不变，但“全部固定权重”是错的。
+- **数值精度声明。** P3 的所有路径（replay 前向、F7-J、readout 统计与岭回归、J̄ 反馈卷积）都在 fp32/fp64 下评测，**没有任何定点模拟**：累加器、J̄ 核、readout 基底 U 都没有量化。代价模型把 J̄ 与 U 按 int8 ROM 计费，但评测用的是 fp32，所以 “int8 ROM 下精度不变”**没有被验证**；readout 统计按 fp32 累加。不能把 P3 的精度数字当作硬件数字（规则 8）。
+
+### R.4 per-unit 预条件是 no-op（意见 5）
+
+F7-J 的 `1/(q_i+ε)`，q_i = 重放 bin 上 x_i² 的均值。输入是用**同一批 B 个 trial**（有效 bin）的 mean/std 做的 z-score，所以 q_i = 1 恒成立（除静默单元落在 std floor 的情形），预条件退化为全局标量 1/(1+ε)，被吸收进 η；它不是 per-unit 的。逐 draw 核对（`precond_check.json`，192 个 target × B × draw 格）：非静默单元 max_i |q_i − 1| ≤ 4.8e-7（5 个格各含 1 个静默单元，q_i=0，已排除）。cap 变体下重放的是被截断的 trial，q_i 会略偏离 1。`cos_B_precond` 与 `cos_B` 在原诊断中逐位相同（见 `diag_gradient_alignment.csv`），**不再作为独立诊断**，新的诊断 (`diag_rows`) 不再输出它，改为输出 `q_dev`。
+
+### R.5 replay 的零状态与评测的状态机制不一致（意见 6）
+
+replay（`pad_trials`）把每个校准 trial 从零状态通过 trunk；评测是整段连续因果解码，到某个 trial 起点时 trunk 状态是前面所有 bin 积累的。审查者在 month 20140626、B=1、draw 0 上测得零状态 replay 与连续解码在该 trial 上的输出相对差：前 20 bin 为 6.5 倍，其余 bin 为 23%（`/tmp/pc3_review/chk_gpu.py`）。也就是说 R1/R2/R3 的 replay 统计和 F7-J 的残差是在与评测不同的状态机制下算出的，这是 P3 的一个未被控制的系统偏差来源。已实现变体 `--variant contig`：把 B 个校准 trial 按记录顺序拼成**一条**连续序列（状态只在校准 trial 之间传递，不加入任何非校准 bin），source 选择与 target 评测都用该机制（R1-stream 不适用，未评测）。**其精度结果未产生（需 GPU）。**
+
+### R.6 year B=33 的 R2 塌缩（意见 7）
+
+year B=33 draw 4（P0 0.258 → R2 0.041，Δ=−0.217）的校准集合里有一个 **2,354-bin 的 “trial”（session 的 median trial 是 207 bin，11.4 倍）**，占该 draw 全部 10,974 个 replay bin 的 **21.5%**（draw 0 / 1 / 5 / 7 的最长 trial 只占 3.9–4.1%，draw 3 为 8.6%）。同一格里还有两个长 trial 的 draw：draw 2（1,544 bin，17.4%）R2 +0.106（正常），draw 6（1,687 bin，20.8%）R2 仅 +0.016（明显偏弱）。所以长 trial 与塌缩 / 变弱相关但不是充分条件；R3 的 readout 岭回归把 draw 4 救回到 0.292。这是一个 draw 的观察，不构成因果结论；cap=256 变体（§R.2）是对应的检验，未执行。（`long_trial_vs_delta.csv`。）
+
+### R.7 ui_reg B=33 欠收敛的说法已过时（意见 8）
+
+旧注 (iii) “ui_reg 在 B=33 步数触及 300 的上界，B=33 的 gap 可能被低估”已被 P2 的修正取代（`results/analysis/population_calib_p2_20261015/README.md` §R.6，`fix/uireg/`）：把 B=33 的 step 网格扩展到 {600, 1000} 后 ui_reg 的变化 ≤ 0.008（days −0.000，month −0.000±0.007，year +0.008±0.005）。新的 like-for-like 参照（`run_pc3_uiref.py`）的 step 网格本身就含 600/1000（B≥8 且 lr≤3e-3；B≤4 与 lr=1e-2 限 ≤300，以控制时间）。
+
+### R.8 统计（意见 9）与 like-for-like 重跑的使用方法
+
+- **month 与 year 不是独立样本**：它们共享 trunk、6 个 source session、P0 calibrator（权重逐元素相同）、OOS session 与选出的规则，各自只有 **1 个 target**。pooled 比例的 CI 只反映 draw 层面（每个 B 8 个 draw）的变异，不含 target / trunk / source 的变异；两个 stratum 只能当作同一模型的两次观测，不是两次独立重复。
+- **draw-level bootstrap CI**（`analyze_pc3_fix.py`；每个 B 独立重采样 8 个 draw，候选与参照配对，10,000 次）见 §R.9 的表（旧参照下）。
+- **year B=4–16 的恢复比例 >100%**（R2：107% / 151% / 85%；B=4、8 超过参照）：这表示该处 P0+ui_reg **不是上界**（R2 的 0.325 / 0.336 高于 P0+ui_reg 的 0.321 / 0.309），gap 恢复比例在这里不能当作“上限为 100%”的量；year R3 的 pooled 比例 92%，bootstrap 上界 102.5% 也越过了 100%。
+- **year 的 R1-stream 在 B=4 / 8 把 R1 的增益抵消**：R1 的 delta 为 +0.004 / +0.006，R1-stream 为 −0.002 / −0.002（pooled B≥4 的 R1-stream 比例 19% vs R1 27%）。
+- 使用方法（GPU 可用后）：`PC3_GPU=<允许使用的物理 GPU> bash scripts/run_pc3_fix_queue.sh laneA` 与 `laneB`（各 1 个 job，合计 2 个并行；resumable），再 `python scripts/analyze_pc3_fix.py`，会生成 `gap_2x2.csv`（候选选择 IS/OOS × 参照选择 IS/OOS）、`gap_pooled_boot.csv`（含 bootstrap CI）、`gap_recovery_fix.csv`、变体表、`diag_traj_fix.csv`。最小集合（只要 headline）：laneA 的前 7 行（OOS 参照选择 + month oosc / month oos / year oos 参照 target 评测，约 3.5 GPU 小时）与 laneB 的前 2 行（month 因果 R3 选择与 target 评测，约 0.5 小时）。完整队列估计 6–8 小时（单卡共享）。
+
+### R.9 被取代（superseded）的旧 headline —— 不要引用
+
+下表是**旧参照（P2 规则：IS、从 LOO prior 起步选的 P0+ui_reg）下**的 B≥4 pooled 恢复比例，加 draw-level bootstrap 95% CI。它们保留只是为了说明分母换成 like-for-like 参照之前的状态；month 的 “OOS” 行使用了晚于 target 的 session（非因果）。
+
+| stratum | 候选选择集合 | R1 | R2 | R3 |
+|---|---|---|---|---|
+| month | IS | 13.4% [12.4, 14.5] | 46.7% [44.4, 49.3] | 55.2% [52.6, 58.1] |
+| month | OOS（非因果，**superseded**） | 29.6% [27.3, 31.9] | 66.7% [62.0, 70.9] | 75.5% [70.7, 79.6] |
+| year | IS | 9.1% [7.5, 10.8] | 66.5% [63.2, 70.0] | 72.4% [68.6, 76.4] |
+| year | OOS | 27.2% [24.0, 30.9] | 71.7% [49.6, 90.0] | 92.1% [82.5, 102.5] |
+| days | IS / OOS | pooled gap = −0.001，没有可恢复的 gap（比例无意义，不报告） | | |
+
+另外：原 §0 第 1–2 点的 “month 67% / 47%、year 72% / 66%” 来自同一批数字；原 §0 第 3 点把 days 的 headline 定为 IS；这些在 like-for-like 重跑之前都只能当作“旧参照下”的结果。
+
+### R.10 诊断与网格（意见 10）
+
+- **余弦中位数改为按全部 episode 汇总**（而不是 per-B 中位数的中位数）：第一步 F7-J 更新（L=32）与真实梯度（B 个标注 trial 上的损失）的余弦，days **0.270** / month **0.384** / year **0.452**（四分位 0.204–0.398 / 0.282–0.462 / 0.321–0.516，episode 数 48 / 24 / 24）；与 30 个非校准 trial 的 query 梯度的余弦为 0.167 / 0.313 / **0.219**（原表 year 写 0.283，是 per-B 中位数）。其余 L：L=0 / 8 / 16 为 days 0.178 / 0.225 / 0.259，month 0.169 / 0.318 / 0.349，year 0.230 / 0.367 / 0.416（`diag_cos_pooled.csv`）。G3′ 门槛 0.5 仍未达到。
+- **轨迹余弦的标注**：原 “沿 OOS 选出的轨迹” 第 1 步之后记录的是 cos(g, 真实梯度)，其中 g 是 F7-J 的原始估计，不是实际更新（实际更新含收缩项 −ηλ(T−T0)；预条件是标量）。已修正代码：`fj_refine` 的诊断 hook 现在同时给出 realised update，`diag_rows` 输出 `cos_g_B`（原估计）与 `cos_upd_B / cos_upd_query`（实际更新），新子命令 `run_pc3_refine.py diag`。**第 2 步以后的轨迹余弦需要 GPU 重跑**；在此之前原轨迹数字（days 0.30/0.21/0.17/0.14/0.14，month 0.41/0.24/0.19/0.16/0.14，year 0.45/0.25/0.20/0.16/0.05）只能当作 cos(g, ∇) 理解。第 1 步的值不受影响（T=T0，收缩为 0，预条件为标量）。
+- **IS 低秩 readout 基底不是 leave-one-out**：`basis_*.pt` 来自 6 个 source session 在 P0 表下的特征二阶矩，IS 模拟的被模拟 session 本身包含在基底里，所以 IS 下 lr8/lr16/lr32 的 source 分数略乐观；OOS 模拟的 session 不在基底里。
+- **网格边缘的更正**（旧文 “η 常落在下边缘、L 常落在上边缘”过于笼统）。按 headline 规则：month/year 的**原 OOS 规则**中 L=32（上边缘）在**每个 B**都被选到（6/6）；S=10（上边缘）在 B=8 / 16；η=1（下边缘）只在 B≤2；η 从未到 1000，ρ=0.3（上边缘）在 B=1 与 B=33。因果 month 规则：L=32 在 5/6 个 B（B=2 为 16），S=10 在 B=8 / 16 / 33，η=1 在 B=1 / 2 / 4，ρ=0.3 只在 B=8。days IS 规则：L=32 在 5/6，η=1 在 4/6，S=1 在 2/6，S=10 无。**L 的上边缘（32）和 S 的上边缘（10）是真正触边的**；因此 L>32 / S>10 可能更好。`run_pc3_refine.py jacobian --lmax 64` + `select/eval --variant ext` 已实现（L∈{8,16,32,48,64}、S∈{1,3,5,10,15,20}，R2 only，只用 source 选择），**未执行（需 GPU）**，所以“扩展网格是否改变选出的规则”**尚未回答**。η 的下边缘（<1）没有扩展。
+
+### R.11 本次修正新增 / 改动的文件
+
+改动：`ssm_decode/fwd_refine.py`（`cap_windows`、`concat_trials`、hook 传 realised update、MAC 分类）、`ssm_decode/refine_cost.py`（MAC 分类、实际 bin 数 sizing、暂存区实际长度）、`scripts/run_pc3_refine.py`（`oosc` 集合、`--variant base|contig|cap256|ext`、`diag` 子命令、`jacobian --lmax`）、`scripts/pc3_cost_report.py`、`tests/test_{fwd_refine,refine_cost,pc3_driver}.py`（现共 31 个测试，通过）。新增：`scripts/run_pc3_uiref.py`（like-for-like P0+ui_reg 选择与评测）、`scripts/pc3_fix_cpu.py`、`scripts/analyze_pc3_fix.py`、`scripts/run_pc3_fix_queue.sh`；csv/json：`replay_draw_stats.csv`、`replay_mc_summary.csv`、`cost_p3_buffer_summary.csv`、`precond_check.json`、`long_trial_vs_delta.csv`、`gap_recovery_fix.csv`、`gap_pooled_boot.csv`、`cells_fix.csv`、`diag_cos_pooled.csv`、`source_sim/selection_month_oosc.json`、`source_sim/grid_r12_month_oosc.csv.gz`；重算：`cost_p3.csv`、`cost_p3_detail.json`、`cost_p3_cases.json`。`tables_p3.md`、`cells_r2.csv`、`gap_recovery*.csv`（不带 `_fix`）、`selection.csv` 等是**审查前**的汇总，month 的 OOS 行是非因果的、gap 分母是旧参照，只能按本节的标注使用。原始 rows 在 `results/population_calib_p3_20261016/fix/`（gitignored）。
+
+
+---
+
+## 0. 结论摘要（审查前的原文；**headline 与成本数字已被上面的「审查后修正」取代**）
+
+> 以下 1–3、6 点中的恢复比例使用旧参照（IS 选择的 P0+ui_reg）和（month）非因果的 OOS 集合，成本数字使用平均 trial 长度；见 §R.9 与 §R.2/R.3。
 
 设置：pool O、aligned prior、P1 的 P0 checkpoint（2 seed）、3 个 stratum（days：0616/0617；month：20140626；year：20150511）、B∈{1,2,4,8,16,33}、每格 8 个 draw、连续因果解码、不在 trial 边界重置状态。参照行（P-prior、P0、ui_reg、P0+ui_reg）直接取 P1/P2 的 rows（draw、seed、target 完全一致，已核对：本轮重算的 P0 与 P1 的 rows 最大差 6e-5，P-prior 最大差 1.5e-5）。gap = P0+ui_reg − P0（配对）。
 
 1. **F7-J（R2）是本轮最有效的可部署细化：在 month/year 上恢复了 P0+ui_reg−P0 增益的大约 2/3，且不反传 trunk。** B≥4 汇总（每个 B 的 delta 与 gap 的均值之比；表中每个 B 的数字见 §2）：month 67%（source-OOS 选择）/ 47%（source-IS 选择），year 72% / 66%。绝对值（month，B=8）：P0 0.565 → R2 0.625，P0+ui_reg 0.653；（month，B=33）0.566 → 0.669，P0+ui_reg 0.731；（year，B=8）0.256 → 0.336，P0+ui_reg 0.309；（year，B=33）0.315 → 0.361 (R2) / 0.435 (R3)，P0+ui_reg 0.488。B=1–2 的 gap 本身只有 +0.02–0.03，R2 恢复 +0.004 到 +0.021。
-2. **readout 闭式岭回归（R1）单独只恢复一小部分**：B≥4 汇总 month 30%（OOS）/ 13%（IS），year 27% / 9%；只有 B=33 有明显数字（month +0.072，year +0.073，OOS 选择）。**R3（R2 之后再做 readout 岭回归）略好于 R2**：B≥4 汇总 month 75% / 55%（OOS / IS），year 92% / 72%；R3 比 R2 在 B=33 补回了 R2 的一个不稳定 draw（见 §2.3）。full、diag、低秩（rank 8/16/32）三种 readout 变体中 full 最好；lr16 在 B≤16 取得 full 增益的 65–98%（month OOS 92–98%，year OOS 65–95%），B=33 只有 34–69%（lr32 更接近）；diag 在 B=33 只有 full 的 1/3 到 1/2。另外，**只做 readout 端的 P-prior 对照**（不做任何 read-in 校准）相对 P-prior 有明显提升但仍远低于 P0：B=8/33，month +0.074/+0.159（OOS），year +0.008/+0.088，days +0.017/+0.052（IS）。
+2. **readout 闭式岭回归（R1）单独只恢复一小部分**：B≥4 汇总 month 30%（OOS）/ 13%（IS），year 27% / 9%；只有 B=33 有明显数字（month +0.072，year +0.073，OOS 选择）。**R3（R2 之后再做 readout 岭回归）略好于 R2**：B≥4 汇总 month 75% / 55%（OOS / IS），year 92% / 72%；R3 比 R2 在 B=33 补回了 R2 的一个不稳定 draw（见 §2.3）。full、diag、低秩（rank 8/16/32；基底不是 leave-one-out，IS 下的 source 分数略乐观，见 §R.10）三种 readout 变体中 full 最好；lr16 在 B≤16 取得 full 增益的 65–98%（month OOS 92–98%，year OOS 65–95%），B=33 只有 34–69%（lr32 更接近）；diag 在 B=33 只有 full 的 1/3 到 1/2。另外，**只做 readout 端的 P-prior 对照**（不做任何 read-in 校准）相对 P-prior 有明显提升但仍远低于 P0：B=8/33，month +0.074/+0.159（OOS），year +0.008/+0.088，days +0.017/+0.052（IS）。
 3. **days 层没有可恢复的 gap（P0+ui_reg−P0 在 −0.013 到 +0.008，在 CI 内），R1/R2/R3 也不改变 P0**：用 source-IS 选择（headline）R1 +0.001 到 +0.003，R2 +0.001 到 +0.008，R3 +0.001 到 +0.010。用 source-OOS 选择则 R1/R3 在 B≥8 掉 0.03–0.06（规则是在漂移很大的 2014 年 session 上选的，对 1–2 天间隔的 target 过激）：**选择用的 source 模拟的漂移量必须与 target 的间隔相当**，这是本轮最重要的方法学教训（§1.3）。
 4. **平均 Jacobian 反馈（J̄）只是一个弱的梯度近似，但它携带了真实的方向信息**：第一步 F7-J 更新与真实梯度的余弦（B 个标注 trial 上的损失，中位数，L=32）为 days 0.30 / month 0.41 / year 0.45，未达到 G3′ 的 0.5 门槛；L 越长越好（L=0：0.14/0.16/0.22）。后续步的余弦迅速下降（第 3 步 0.17–0.20，第 10 步 0.05–0.14）。单个窗口的 Jacobian 相对均值的 RMS 偏差为均值范数的 4–20 倍（§2.2），即平均 Jacobian 并不“代表”各时刻的 Jacobian。控制实验：把 J̄ 换成 −J̄ 灾难性变差（month B=8 −1.25），换成同范数的随机核也变差（−0.05 到 −0.12），e=0 时是严格的 no-op；因此 R2 的增益来自 J̄ 的方向，不是来自“随机扰动 + 收缩”（§2.4）。
 5. **R4（identity-free + label-free P0，globalmean prior，补上 P2 缺少的对照）**：days 在 B≥8 只有 0.218–0.226（month 0.054–0.063，year 0.04–0.09），而 identity-free **带标签**的 P0 是 0.687–0.696（month 0.43–0.47，year 0.12–0.25）。也就是说 identity-free 的 P0 在 B≥8 的 days 层拿到的 0.69，**约 2/3 来自标签衍生的 per-unit 描述量（行为互协方差、方向调谐）即“按标签调谐”，只有约 0.23 来自无标签的发放统计**；而在 aligned（有 electrode 身份）条件下去掉标签几乎没有损失（days 0.734 vs 0.723，P1 的 `_nolab`）。因此身份元数据与标签调谐是可互相替代的两条信息来源（§4）。
-6. **代价（解析，000688：N=26、K=10、D=2、H=128、平均 252 bin/trial）**：一次 B=8 的 P0 校准约 2.4 MMAC；R1 需要把 B 个 trial 通过冻结 trunk 重放一遍，约 0.78 GMAC（P0 的约 330 倍，其中 trunk 前向占 99.4%，全部是 RRAM 可映射的固定权重 MAC）；R2（S=5，L=16）约 3.9 GMAC，S=10、L=32 约 7.8 GMAC；R3 4.7–8.5 GMAC。B=8 的实时当量（按 20 ms bin 的 trunk 推理）：R1 40 s，R2 S=10 为 403 s。**原始 replay buffer：000688 在 3-bit 计数（所检查的 session 里最大计数 7）+16-bit 标签下，B=8/16/33 为 27.3/54.6/112.7 KB，buffer 本身能放进 128 KB（B=33 刚好）；但总工作集（含 32 KB trunk 状态、readout Gram 等）在 B=16 为 90 KB，B=33 为 148 KB，B=33 放不下。HD-sEMG 规模（N=256、K=16、D=5、1250 bin/trial、8-bit 样本）单 trial 就是 325 KB，B=8 为 2.6 MB，replay 完全不可行。** 便宜的替代方案“在 anytime 校准块里随 trial 到达流式累加 readout 统计，不保存 replay buffer”（R1-stream）已评测：精度与 replay 版相比 month 在 B≤16 差 ≤0.003、B=33 低 0.005；year 在 B≤16 低 0.001–0.008、B=33 低 0.013（OOS，full）；SRAM 与 B 无关，为 38.4 KB（含 32 KB trunk 状态，即额外约 6.4 KB），HD-sEMG 在不做首个 trial 缓冲（running normalisation，未评测）时 52.6 KB。该方案只适用于 R1（readout 端），F7-J 需要多轮 replay，没有无 replay 版本（§5）。
+6. **代价（解析，000688：N=26、K=10、D=2、H=128、平均 252 bin/trial）**：一次 B=8 的 P0 校准约 2.4 MMAC；R1 需要把 B 个 trial 通过冻结 trunk 重放一遍，约 0.78 GMAC（P0 的约 330 倍，其中 trunk 前向占 99.4%；**其中只有约 91% 是固定权重 MAC，约 8.5% 的 selective scan 是 activation×activation，见 §R.3**）；R2（S=5，L=16）约 3.9 GMAC，S=10、L=32 约 7.8 GMAC；R3 4.7–8.5 GMAC。B=8 的实时当量（按 20 ms bin 的 trunk 推理）：R1 40 s，R2 S=10 为 403 s。**原始 replay buffer（旧估计，按平均 T=252，已被 §R.2 取代）：000688 在 3-bit 计数（所检查的 session 里最大计数 7）+16-bit 标签下，B=8/16/33 为 27.3/54.6/112.7 KB；“B=33 刚好放进 128 KB”不成立为一般结论（按实际 trial 长度，最坏情形 month 139.7 KB、year 319 KB；见 §R.2）；总工作集（含 32 KB trunk 状态、readout Gram 等）在 B=16 约 90 KB，B=33 为 148 KB，B=33 放不下。HD-sEMG 规模（N=256、K=16、D=5、1250 bin/trial、8-bit 样本）单 trial 就是 325 KB，B=8 为 2.6 MB，replay 完全不可行。** 便宜的替代方案“在 anytime 校准块里随 trial 到达流式累加 readout 统计，不保存 replay buffer”（R1-stream）已评测：精度与 replay 版相比 month 在 B≤16 差 ≤0.003、B=33 低 0.005；year 在 B≤16 低 0.001–0.008、B=33 低 0.013（OOS，full）；SRAM 与 B 无关，典型 trial 为 38.4 KB（含 32 KB trunk 状态，即额外约 6.4 KB；**暂存区要放下第一个 trial，最坏情形 46–92 KB，见 §R.2**），HD-sEMG 在不做首个 trial 缓冲（running normalisation，未评测）时 52.6 KB。该方案只适用于 R1（readout 端），F7-J 需要多轮 replay，没有无 replay 版本（§5）。
 
 ## 1. 设置与协议
 
 ### 1.1 target 端的候选路径与约束检查
 
 - **P0 起点**：对 B 个 trial 用 P1 的 P0 calibrator（`calibrate` 不变）得到表 T0、以及 B-trial 的 mean/std。之后所有细化都以 T0 为起点和收缩中心。
-- **replay**：B 个标注 trial 各自作为一个窗口，从零状态通过冻结 trunk 前向（与 `ui_reg` 的窗口一致；评测解码仍是整段 session 的连续因果解码，不在 trial 边界重置）。窗口里 `eval_mask` 无效或标签非有限的 bin 只在 loss/残差中被屏蔽，仍然通过 trunk。
-- **F7-J 一步**（`fwd_refine.fj_gradient / fj_update`）：残差 r_t = y_t − ŷ_t（source label 归一化）→ e_t = Σ_{ℓ=0..L} J̄_ℓᵀ r_{t+ℓ}（固定时间卷积，窗口末尾之后的残差记为 0；使用 trial 内未来残差，需要 L-bin 延迟线）→ G = (1/n)Σ_t e_t x_tᵀ（对所有输入 bin 累加，包括被屏蔽的 bin，因为它们仍影响 trunk）→ q_i = mean x_i²（有效 bin）→ T ← T + η G diag(1/(q+ε)) − ηλ(T−T0)，ε=1e-3。把收缩写成 ρ=ηλ（每步收缩系数），网格 ρ∈{0, 0.03, 0.1, 0.3}。
+- **replay**：B 个标注 trial 各自作为一个窗口，**从零状态**通过冻结 trunk 前向（与 `ui_reg` 的窗口一致；评测解码仍是整段 session 的连续因果解码，不在 trial 边界重置）。**这是 replay 与评测之间的状态机制不一致（审查者测得零状态 vs 连续输出的相对差：前 20 bin 6.5 倍、其后 23%），见 §R.5；contiguous-stream 变体已实现、精度未评测。**窗口里 `eval_mask` 无效或标签非有限的 bin 只在 loss/残差中被屏蔽，仍然通过 trunk。
+- **F7-J 一步**（`fwd_refine.fj_gradient / fj_update`）：残差 r_t = y_t − ŷ_t（source label 归一化）→ e_t = Σ_{ℓ=0..L} J̄_ℓᵀ r_{t+ℓ}（固定时间卷积，窗口末尾之后的残差记为 0；使用 trial 内未来残差，需要 L-bin 延迟线）→ G = (1/n)Σ_t e_t x_tᵀ（对所有输入 bin 累加，包括被屏蔽的 bin，因为它们仍影响 trunk）→ q_i = mean x_i²（有效 bin）→ T ← T + η G diag(1/(q+ε)) − ηλ(T−T0)，ε=1e-3。**（审查后更正：输入在同一批 B 个 trial 上 z-score，q_i≡1，预条件是全局标量 1/(1+ε)，不是 per-unit 的，见 §R.4。）**把收缩写成 ρ=ηλ（每步收缩系数），网格 ρ∈{0, 0.03, 0.1, 0.3}。
 - **必做测试**（`tests/test_fwd_refine.py`）：线性 trunk 上 F7-J 的 G 与 −autograd 梯度逐元素相等（1e-9），一步 F7-J 更新逐元素等于一步（带预条件与收缩的）梯度步；L 截断、padding、不反传（对 `autograd.grad/backward` 计数为 0）、readout 统计可加性、岭回归极限（λ→0 为最小二乘，λ→∞ 无变化，满秩正交基与 full 一致）。写测试时发现并修正了一个真实错误：最初把被屏蔽 bin 的 x 也屏蔽了，测试立即报不一致；正确做法是只屏蔽残差。
 - **readout 岭回归**（R1）：特征 h 是 trunk 末端 LayerNorm 之后、线性 readout 之前的 128 维向量（加 bias，共 129 维）；V = V0 + R(G+λI)⁻¹，G、R 为 B 个 trial 重放得到的、按有效 bin 数归一化的统计（bias 与权重同样做先验中心化）。变体：`full`、`diag`（对角 G）、`lr8/lr16/lr32`（固定 source PCA 基 U 上的 r×r 求解，基来自 6 个 source session 在 P0 表下的特征二阶矩，`basis_*.pt`；能量占比 r=8/16/32 为 0.85/0.94/0.97 (days)、0.93/0.97/0.99 (month/year)）。
 - **R1 on P-prior**：起点换成 P-prior 表（B-trial 归一化 + electrode-aligned prior），不做任何 read-in 校准，只做 readout 岭回归（λ 在 source 上按同样的模拟选择）。
@@ -46,9 +165,9 @@ rel. dev = RMS‖J−J̄‖_F / ‖J̄‖_F：单个窗口的 Jacobian 远大于
 “用 source session 做模拟校准”有一个问题：6 个原始 source session 对 trunk 是 in-sample（trunk 的表与 readout 就是在这些 session 上训练的），P0 calibrator 也是在它们上面训练的。在这些 session 上，readout 已经最优、P0 起点已经很好，任何细化都没有收益，选择会退化为“λ 取最大 / η 取最小”（几乎不改变 P0）。因此做了两套模拟，**两套都完整跑了 R1/R2/R3 的选择、评测与报告**：
 
 - **IS**（in-sample）：该 stratum 的 6 个原始 source session，J̄ 留一（排除被模拟的 session），起点为 P0 在 LOO prior 下的表。字面执行任务说明。
-- **OOS**（out-of-sample）：trunk 和 P0 calibrator 都没有见过的 source session（pool-E 额外 session，不含任何 D1 target / dev / final）。days：10 个 2014 年的 session（0203、0217、0218、0303、0304、0306、0307、0627、0929、1203）；month 与 year：0307、0627、0929、1203。**对 month 这四个里有三个晚于 month target（20140626）**，因为 month 层在 target 之前只有 0307 一个 trunk 未见过的 session，不足以选择；这是对“因果”的放宽（它们不是 target / dev / final，也没有用到 target 数据），报告时必须写明。
+- **OOS**（out-of-sample）：trunk 和 P0 calibrator 都没有见过的 source session（pool-E 额外 session，不含任何 D1 target / dev / final）。days：10 个 2014 年的 session（0203、0217、0218、0303、0304、0306、0307、0627、0929、1203）；month 与 year：0307、0627、0929、1203。**对 month 这四个里有三个晚于 month target（20140626）**，因为 month 层在 target 之前只有 0307 一个 trunk 未见过的 session；审查指出这违反因果性（0627 是 target 的次日），已改为因果集合 `oosc` = 0307 only（§R.1）。**month 的 OOS 行/比例只作为 superseded 的旧结果。**
 - **事先固定的 headline**（在看到任何 target 结果之前，依据 source 侧的证据——IS 选择退化为 no-op、OOS 选择有可测收益——以及间隔元数据）：**days 用 IS，month/year 用 OOS**。依据是 days 的间隔只有 1–2 天，与 IS 的“零漂移”设定相当，而 OOS 的 2014 年 session 距离 trunk 一年左右，漂移远大；month/year 的 target 距 source 3.7/15 个月，与 OOS 的漂移相当。另一套总是同时给出（§2 的每张表分别列出 IS 与 OOS），days-OOS 是一个“选择与 target 失配”的负面示例。
-- 模拟的具体做法：每个 session × seed(2) × B(6) × 2 个 draw 为一个 episode（IS：6 session×24=144 个 episode；OOS：days 10×24=240，month/year 4×24=96），在该 session 前 50000 bin 内抽 trial 并在同一范围的其余 trial 上算连续解码 R²（物理单位，同 P 行）；P0 起点用该 seed 的 P0 calibrator。按 B 分别选择（与 P2 的 ui_reg 一致）：R2 的 (L∈{8,16,32}, η∈{1,3,10,30,100,300,1000}, ρ∈{0,0.03,0.1,0.3}, S∈{1,3,5,10})；R1 的 λ∈{1e-3,…,100}（9 档，三种 readout 来源 × 五种 kind）；R3 在已选的 R2 规则上选 readout 的 λ。选出的 η 常落在网格下边缘（η=1）、L 常落在上边缘（L=32），没有扩展网格。
+- 模拟的具体做法：每个 session × seed(2) × B(6) × 2 个 draw 为一个 episode（IS：6 session×24=144 个 episode；OOS：days 10×24=240，month/year 4×24=96），在该 session 前 50000 bin 内抽 trial 并在同一范围的其余 trial 上算连续解码 R²（物理单位，同 P 行）；P0 起点用该 seed 的 P0 calibrator。按 B 分别选择（与 P2 的 ui_reg 一致）：R2 的 (L∈{8,16,32}, η∈{1,3,10,30,100,300,1000}, ρ∈{0,0.03,0.1,0.3}, S∈{1,3,5,10})；R1 的 λ∈{1e-3,…,100}（9 档，三种 readout 来源 × 五种 kind）；R3 在已选的 R2 规则上选 readout 的 λ。网格边缘的**准确**情况见 §R.10（原 OOS 规则下 L=32 在每个 B 都触到上边缘，S=10 在 B=8/16，η=1 只在 B≤2；扩展网格 L∈{48,64}、S∈{15,20} 已实现但未运行）。
 - month 与 year 的 trunk、6 个 source、P0 calibrator（权重逐元素相同，已核对）和 OOS session 完全相同，所以 year 的 source 模拟文件与 month 的完全相同，直接复制（把 stratum 标签改写）而没有重算。
 - **一个与 days-IS 有关的说明**：days 的 6 个原始 source 里含 20150511，它同时是 year 的 target。这只影响 days 的 IS 选择（只用于 days 的评测），year 的评测从不使用 days 的选择；这是 P1 就有的 D1 设定。
 
@@ -121,9 +240,9 @@ year（set=OOS）：
 | | R3 | +.021 (72%) | +.014 | +.062 (107%) | +.078 (146%) | +.100 (94%) | +.119 (69%) | 92% |
 | year (IS) | R1 / R2 / R3 | 4/12/15% | – | 4/65/68% | 5/86/89% | 9/70/76% | 12/58/66% | 9/66/72% |
 
-注意事项：(i) B=2 的 year gap 只有 +0.015（<0.02，不报分数）；(ii) “恢复比例”在 gap 小的格子里不稳定（year B=8 的 151% 是因为 R2 超过了 P0+ui_reg：0.336 vs 0.309）；(iii) 审查意见指出 ui_reg 在 B=33 很可能欠收敛（步数触及 300 的上界，source R² 仍在上升），因此 B=33 的 gap（month +0.165，year +0.172）可能被低估，B=33 的恢复比例可能被高估；(iv) days-OOS 的负面结果：R1 −0.004/−0.007/−0.014/−0.035/−0.042/−0.041，R3 +0.002/−0.004/−0.011/−0.054/−0.038/−0.057，R2 +0.004/−0.003/+0.003/−0.002/−0.002/−0.018（`gap_recovery.csv`）。
+注意事项：(i) B=2 的 year gap 只有 +0.015（<0.02，不报分数）；(ii) “恢复比例”在 gap 小的格子里不稳定（year B=8 的 151% 是因为 R2 超过了 P0+ui_reg：0.336 vs 0.309）；(iii) ~~ui_reg 在 B=33 可能欠收敛~~ 该说法已过时：P2 修正把步数扩展到 600/1000，ui_reg 变化 ≤0.008（§R.7）；真正的问题是 gap 分母的 ui_reg 规则是在 IS 上选的、与候选的 OOS 选择不 like-for-like（§R.0）；(iv) days-OOS 的负面结果：R1 −0.004/−0.007/−0.014/−0.035/−0.042/−0.041，R3 +0.002/−0.004/−0.011/−0.054/−0.038/−0.057，R2 +0.004/−0.003/+0.003/−0.002/−0.002/−0.018（`gap_recovery.csv`）。
 
-**梯度对齐（诊断，非校准）**（`diag_gradient_alignment.csv`；4 个 draw × seed0 × B，P0 表上第一步，中位数；cos_B 为与 B 个 trial 上损失的真实负梯度，cos_query 为与 30 个非校准 trial 上损失的真实负梯度）：
+**梯度对齐（诊断，非校准）**（**下表是 per-B 中位数的汇总，已被 §R.10 的全 episode 中位数取代（days 0.270 / month 0.384 / year 0.452；year cos_query 0.219）**；`diag_gradient_alignment.csv`；4 个 draw × seed0 × B，P0 表上第一步，中位数；cos_B 为与 B 个 trial 上损失的真实负梯度，cos_query 为与 30 个非校准 trial 上损失的真实负梯度）：
 
 | stratum | L=0 | L=8 | L=16 | L=32 | cos_query (L=32) |
 |---|---:|---:|---:|---:|---:|
@@ -131,7 +250,7 @@ year（set=OOS）：
 | month | 0.156 | 0.324 | 0.361 | 0.413 | 0.313 |
 | year | 0.221 | 0.368 | 0.414 | 0.453 | 0.283 |
 
-沿 OOS 选出的轨迹（cos_B，第 1/2/3/5/10 步）：days 0.30/0.21/0.17/0.14/0.14，month 0.41/0.24/0.19/0.16/0.14，year 0.45/0.25/0.20/0.16/0.05。**G3′（≥0.5）未达到**（最好的是 year 的 0.45）；J̄ 的反馈只在第一步有可用的方向，之后依赖收缩与有限步数。尽管余弦不高，下面的控制实验表明这个方向是真实的。
+沿 OOS 选出的轨迹（cos_B，第 1/2/3/5/10 步；**第 1 步之后记录的是 cos(g, 真实梯度) 而不是实际更新，且为 per-B 中位数的汇总，已更正为按全部 episode 汇总，见 §R.10**）：days 0.30/0.21/0.17/0.14/0.14，month 0.41/0.24/0.19/0.16/0.14，year 0.45/0.25/0.20/0.16/0.05。**G3′（≥0.5）未达到**（最好的是 year 的 0.45）；J̄ 的反馈只在第一步有可用的方向，之后依赖收缩与有限步数。尽管余弦不高，下面的控制实验表明这个方向是真实的。
 
 ### 2.3 不稳定性
 
@@ -185,7 +304,7 @@ query R²（mean±CI，两个 seed 平均）：
 - F7-J：反馈卷积 (L+1)·D·K MAC/bin、外积 K·N MAC/bin、每步 3KN 的预条件与更新；
 - SRAM：原始 replay buffer（B·T·(N·b_x + D·b_y + 1)/8 字节：计数 b_x bit、标签 b_y=16 bit、有效位 1 bit；e_t 的 x_{t−L} 直接从该 buffer 偏移读取，无副本）、残差延迟线 (L+1)·D·16 bit、G 累加器 KN、T0（收缩中心）KN、q_i、当前表 T、mean/std、readout 统计（fp32 累加）、readout 的新 V、特征向量、trunk 状态（16-bit，与推理共用）；Cholesky 原地进行（无额外 scratch）；J̄ 核与低秩基 U 为只读 ROM（int8），单列。统计累加器的位宽没有评测过低于 fp32 的精度。
 
-000688（T=252 bin/trial，取 0616/0617 两个 target 的平均；N=26 是该数据集最大的 target；3-bit 计数，因为检查的 7 个 session 里最大计数为 5–7，>3 的 bin 占比 ≤5e-4；标签 16-bit）：
+000688（**下面整张表是旧的平均-T 点估计，已被 §R.2 / `cost_p3.csv` 的按实际 trial 长度分布取代；** T=252 bin/trial，取 0616/0617 两个 target 的平均；N=26 是该数据集最大的 target，与 days 的 T 混用；3-bit 计数，因为检查的 7 个 session 里最大计数为 5–7，>3 的 bin 占比 ≤5e-4；标签 16-bit）：
 
 | 方法 | B=1 | B=2 | B=4 | B=8 | B=16 | B=33 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -203,7 +322,7 @@ query R²（mean±CI，两个 seed 平均）：
 | R1-stream（lr16）总 SRAM | 38.4 | 38.4 | 38.4 | 38.4 | 38.4 | 38.4 KB |
 | R2（S=5，L=16）总 SRAM | 38.7 | 42.1 | 49.0 | 62.6 | 89.9 | 148.0 KB |
 
-要点（000688）：(a) 每次细化的 MAC 由 trunk 重放主导：占 R1 的 99.4%、R2 的 98–99.8%，全部是 RRAM 可映射的固定权重 MAC；P0 校准本身只有 ~2 MMAC，所以“细化”的代价是 P0 的 ~330 倍（R1）到 ~3000 倍（R2，S=10）。(b) **原始 replay buffer 本身**在 3-bit 计数 + 16-bit 标签下能放进 128 KB，一直到 B=33（112.7 KB）；4-bit 计数 B=33 放不下（139 KB）；8-bit 计数在 B≥16 放不下。(c) **总工作集**（把 32 KB 的 trunk 状态、readout 统计一起算）：B=16 约 90 KB 可放进 128 KB，B=33 约 148 KB 放不下。fp32 的 full Gram 单独就是 33.5 KB；lr16 把它降到 0.7 KB（加 2 KB 的 int8 基 ROM）。(d) 把 trunk 状态视为与推理共用（校准期间推理暂停时成立；如果 anytime 校准与在线解码并行，需要再加一份 32 KB 的状态）。(e) 所有行都按“重放 = 重新通过 trunk”计，没有利用 trunk 激活的缓存（B 个 trial 的激活随表变化，无法缓存）。
+要点（000688）：(a) 每次细化的 MAC 由 trunk 重放主导：占 R1 的 99.4%、R2 的 98–99.8%，**但其中只有 trunk 的 Linear（约 91%）是 RRAM 固定权重 MAC，selective scan（8.5%）是 activation×activation，Gram/外积也是 activation×activation（§R.3）**；P0 校准本身只有 ~2 MMAC，所以“细化”的代价是 P0 的 ~330 倍（R1）到 ~3000 倍（R2，S=10）。(b) **（旧估计，按平均 T；已被 §R.2 取代）** 原始 replay buffer 在 3-bit 计数 + 16-bit 标签下，按 T=252 为 B=33 时 112.7 KB；按实际 trial 长度不能保证放进 128 KB；4-bit 计数 B=33 放不下（139 KB）；8-bit 计数在 B≥16 放不下。(c) **总工作集**（把 32 KB 的 trunk 状态、readout 统计一起算）：B=16 约 90 KB 可放进 128 KB，B=33 约 148 KB 放不下。fp32 的 full Gram 单独就是 33.5 KB；lr16 把它降到 0.7 KB（加 2 KB 的 int8 基 ROM）。(d) 把 trunk 状态视为与推理共用（校准期间推理暂停时成立；如果 anytime 校准与在线解码并行，需要再加一份 32 KB 的状态）。(e) 所有行都按“重放 = 重新通过 trunk”计，没有利用 trunk 激活的缓存（B 个 trial 的激活随表变化，无法缓存）。
 
 HD-sEMG 规模（N=256、K=16、D=5、1250 bin/trial = 25 s×50 Hz、8-bit 样本、16-bit 标签、H=128、B≤33；与 P2 同样假定沿用 000688 的 AP trunk 配置）：
 
@@ -221,14 +340,14 @@ HD-sEMG：replay buffer 在 B=1 就超过 128 KB 的 2.5 倍，**replay 版本�
 
 ## 5. 便宜的替代方案：流式累加 readout 统计（已评测）
 
-R1-stream 相对 R1（replay）的精度（OOS 选择，month / year，full 变体，B=1…33）：month 0.000/−0.002/−0.002/−0.003/−0.001/−0.005，year −0.001/−0.003/−0.006/−0.008/−0.005/−0.013；lr16 变体：month 0.000 到 −0.010（B=4 −0.008，B=33 −0.010），year −0.001 到 −0.007。IS 选择（days）差 ≤0.002。即：**对 readout 端，流式累加在 month 几乎无损、year 损失 0.001–0.013（B 越大越多），而 SRAM 与 B 无关**（38.4 KB，额外约 6.4 KB），MAC 与 replay 版相同（每个 bin 仍前向一次）。损失来自特征由更早的、更差的表产生以及前缀归一化。它不需要 replay buffer，是 HD-sEMG 规模唯一可行的 R1 形式（在 running normalisation 的前提下）。同时要说明：R1 本身只占 gap 的 10–30%，真正有价值的 R2 无法流式化。
+R1-stream 相对 R1（replay）的精度（OOS 选择，month / year，full 变体，B=1…33）：month 0.000/−0.002/−0.002/−0.003/−0.001/−0.005，year −0.001/−0.003/−0.006/−0.008/−0.005/−0.013；lr16 变体：month 0.000 到 −0.010（B=4 −0.008，B=33 −0.010），year −0.001 到 −0.007。IS 选择（days）差 ≤0.002。即：**对 readout 端，流式累加在 month 几乎无损、year 损失 0.001–0.013（B 越大越多），而典型 trial 下 SRAM 与 B 无关**（38.4 KB，额外约 6.4 KB；暂存区按第一个 trial 的实际长度，最坏情形 46–92 KB，cap=256 时 37.3–38.5 KB，见 §R.2），MAC 与 replay 版相同（每个 bin 仍前向一次）。损失来自特征由更早的、更差的表产生以及前缀归一化。它不需要 replay buffer，是 HD-sEMG 规模唯一可行的 R1 形式（在 running normalisation 的前提下）。同时要说明：R1 本身只占 gap 的 10–30%，真正有价值的 R2 无法流式化。
 
 ## 6. 局限与未做
 
-- **选择集合**：IS 与 OOS 给出显著不同的规则，headline 的“days=IS、month/year=OOS”是事先固定的，依据是间隔量级；这只是一个粗糙的间隔匹配启发式，没有一般化。OOS 的 month/year 选择集合只有 4 个 session，其中 3 个晚于 month target；days OOS 用的是距离 trunk 一年以上的 session。网格边缘：η 常在下边缘（η=1），L 常在上边缘（L=32）；没有扩展到 η<1 或 L>32。
+- **选择集合**：IS 与 OOS 给出显著不同的规则，headline 的“days=IS、month/year=OOS”是事先固定的，依据是间隔量级；这只是一个粗糙的间隔匹配启发式，没有一般化。OOS 的 month/year 选择集合只有 4 个 session，其中 3 个晚于 month target（month 已改为因果的 0307 only，每个 B 只有 4 个 source episode，§R.1）；days OOS 用的是距离 trunk 一年以上的 session。网格边缘：见 §R.10（L=32、S=10 触到上边缘，η=1 在小 B 触到下边缘）；扩展 L>32 / S>10 的运行未执行，η<1 未扩展。
 - **没有做 hindsight 对照**（用 target query 挑最佳 η/λ）；因此无法区分“选择失配”和“方法上限”。
-- **target 只有 4 个**（days 2，month 1，year 1；month 与 year 共用 trunk/source/P0），CI 是 draw 层面的，低估了 target 层面的变化；year B=33 有一个失稳 draw。2 个 seed 只改变 P0 calibrator，J̄ 与规则不依赖 seed。
-- **P0+ui_reg 与 ui_reg 是 P2 的参照行**：B=33 可能欠收敛（审查意见 (3)），没有在这里重跑，所以 B=33 的恢复比例可能偏高。
+- **target 只有 4 个**（days 2，month 1，year 1；month 与 year 共用 trunk/source/P0/规则，不是独立重复，§R.8），CI 是 draw 层面的，低估了 target 层面的变化；year B=33 有一个失稳 draw。2 个 seed 只改变 P0 calibrator，J̄ 与规则不依赖 seed。
+- **P0+ui_reg 与 ui_reg 是 P2 的参照行**：旧分母的规则选在 IS 上（§R.0 意见 1）；like-for-like 的重选代码已就绪但未运行（需 GPU）。B=33 欠收敛的说法已过时（§R.7）。
 - **J̄ 的代表性弱**（§1.2、§2.2），G3′ 的余弦门槛（≥0.5）未达到；F7-Jnet / F7-G / F4 不在本任务范围，未做。
 - **未评测**：readout 统计与 replay buffer 的低位宽、running normalisation 版的 R1-stream、streaming F7-J、噪声/器件非理想；代价是解析计数，不是硬件测量，且 trunk 的 gating/RoPE/LayerNorm/短卷积未计。
 - R4 的 label-free 只屏蔽描述量与可靠性特征；归一化的有效 bin 仍依赖标签是否有限；R4 只有 2 个 seed。

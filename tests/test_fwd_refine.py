@@ -199,3 +199,64 @@ def test_pad_trials_padding_does_not_change_valid_outputs():
     solo = base(X[1:2, :22] @ T.T)
     pad = base(X[1:2] @ T.T)[:, :22]
     torch.testing.assert_close(solo, pad)
+
+
+# ---------------------------------------------------- review-fix additions ----
+
+def test_cap_windows_truncates_only_long_trials():
+    assert fr.cap_windows([(0, 10), (10, 300)], 256) == [(0, 10), (10, 266)]
+    assert fr.cap_windows([(5, 9)], None) == [(5, 9)]
+
+
+def test_concat_trials_is_one_stream_in_given_order_and_carries_state():
+    base = LinTrunk()
+    g = torch.Generator().manual_seed(3)
+    xz = torch.randn(60, N, generator=g, dtype=torch.float64)
+    y = torch.randn(60, D, generator=g, dtype=torch.float64)
+    valid = torch.ones(60, dtype=torch.bool)
+    wins = [(5, 20), (30, 52)]
+    X, Y, M = fr.concat_trials(xz, y, valid, wins)
+    assert X.shape == (1, 15 + 22, N) and Y.shape == (1, 37, D) and M.shape == (1, 37)
+    torch.testing.assert_close(X[0, :15], xz[5:20])
+    torch.testing.assert_close(X[0, 15:], xz[30:52])
+    T = torch.randn(K, N, generator=g, dtype=torch.float64) * 0.3
+    # zero-state per-trial replay differs from the contiguous stream only after the boundary,
+    # and only within the trunk memory (LAGS bins) for this finite-memory trunk
+    Xp, _, _ = fr.pad_trials(xz, y, valid, wins)
+    yp = fr.run_trunk(base, Xp, T)
+    yc = fr.run_trunk(base, X, T)
+    torch.testing.assert_close(yc[0, :15], yp[0, :15])
+    torch.testing.assert_close(yc[0, 15 + LAGS:], yp[1, LAGS:22])
+    assert (yc[0, 15:15 + LAGS] - yp[1, :LAGS]).abs().max() > 1e-6
+
+
+def test_fj_refine_hook_reports_realised_update_with_shrinkage():
+    base = LinTrunk()
+    X, Y, M, T = _data()
+    jbar = base.exact_jbar(LAGS + 1)
+    seen = []
+    out = fr.fj_refine(base, X, Y, M, T, jbar, 0.5, 0.2, [3],
+                       with_diag=lambda s, tab, g, upd: seen.append((s, tab.clone(), upd.clone())))
+    assert [s for s, _, _ in seen] == [1, 2, 3]
+    torch.testing.assert_close(seen[0][1], T)
+    # the realised update of step 3 is the table difference, and includes the shrink term
+    torch.testing.assert_close(seen[2][1] + seen[2][2], out[3])
+    assert float(seen[1][2].norm()) > 0
+    # with rho > 0 the realised update differs from eta * g / (q + eps)
+    g, q, _, _ = fr.fj_gradient(base, X, Y, M, seen[1][1], jbar)
+    plain = 0.5 * g / (q + 1e-3)[None, :]
+    assert (seen[1][2] - plain).abs().max() > 1e-9
+
+
+def test_trunk_mac_classes_are_separated():
+    class S(nn.Module):
+        d_state, headdim, d_inner = 8, 4, 16
+
+    class Tr(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.a = nn.Linear(3, 5)
+            self.ssm = S()
+    m = fr.trunk_macs_per_bin(Tr())
+    assert m["fixed_weight_macs"] == 15 and m["act_x_act_macs"] == 2 * 16 * 8
+    assert m["total"] == m["fixed_weight_macs"] + m["act_x_act_macs"]
