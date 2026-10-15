@@ -62,3 +62,16 @@
 2. P3/P4 没有在噪声底以上胜过 P1/P2，就停止加深 attention，记录结论，转向更便宜的版本。
 3. 报错时，最多花约 1 小时修复；修不好的写明阻塞原因，跳过并继续。
 4. 不允许用占位实现冒充已完成的项。
+
+## 5. P1 结果要点与 P2 迭代（2026-10-15 晚）
+
+**P1 结果要点**（详见 `results/analysis/population_calib_20261015/README.md` 和 `results/analysis/hyser_20261015/README.md`）：
+1. 000688：P0（independent encoder）在 B=8 达到 0.723 / 0.565 / 0.256，B=1 已有 0.65（days）。独立审查确认没有泄漏。主要来源是 electrode-aligned prior 加 B 个 trial 的无标签 per-unit 统计；在 days 层已经接近这个 trunk 的静态表上限（约 0.75）。
+2. set pooling（P2–P4）相对 P0 没有超出噪声的增益；扩大 source pool 也没有帮助。
+3. Hyser：跨天漂移主要是输入归一化的漂移；B ≥ 5 时闭式 ridge 已经接近 table 拟合的最好结果；B=1–2 的瓶颈是统计量估计。
+
+**P2 迭代（工作线 A′，GPU0）**：
+- A′1 **无身份条件**：不提供 electrode 映射。prior 取不对齐的全局均值列，或者干脆不用 prior；描述量中去掉 prior 列。在这个条件下比较 P0 和 P2/P3/P4。假设：没有身份元数据时，群体信息能帮助推断每个 unit 的角色。这是 set-attention 真正应该起作用的场景（APST 的设定），年尺度上电极与神经元的对应也会漂移。
+- A′2 **公平的梯度参照**：prior-centered L2 正则 + 步数/学习率在 source 上模拟选择（ui_reg），从 electrode prior 起步。
+- A′3 **校准通路的量化与近似计算**（只做评测，不重训）：描述量累加器位宽、calibrator 权重 8/4 bit 和 ternary（2T2R）、输出表 int8/int4、softmax 的 exp2 LUT（P3/P4）。报告各项相对 FP 的 R² 变化（source val 与 target 分开报告）。
+- A′4 **架构级代价**：每次校准的 MAC 数和 SRAM 占用（按实际 tensor 统计），以及 per-trial anytime 更新的代价。
