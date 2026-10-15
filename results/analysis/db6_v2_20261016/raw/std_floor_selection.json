@@ -1,0 +1,89 @@
+{
+ "chosen_floor": 0.01,
+ "ckpt": "results/db6_v2_20261016/select/k8_w128_l2_s32_tau160/best.pt",
+ "rule": "same checkpoint, several test floors: best stress score among floors with natural >= natural(1e-3) - 0.005",
+ "main": [
+  {
+   "ckpt": "results/db6_v2_20261016/select/k8_w128_l2_s32_tau160/best.pt",
+   "train_floor": 0.001,
+   "test_floor": 0.001,
+   "source_val_srcnorm": 0.8463894796599027,
+   "source_val_shuf": 0.8604821504777956,
+   "natural_all": 0.8295337845529881,
+   "natural_s1_4": 0.8308375838234792,
+   "stress_s1_4": 0.7790242531458115
+  },
+  {
+   "ckpt": "results/db6_v2_20261016/select/k8_w128_l2_s32_tau160/best.pt",
+   "train_floor": 0.001,
+   "test_floor": 0.01,
+   "source_val_srcnorm": 0.8463894796599027,
+   "source_val_shuf": 0.8604821504777956,
+   "natural_all": 0.8257845528790406,
+   "natural_s1_4": 0.8310363356742761,
+   "stress_s1_4": 0.7815744770646749
+  },
+  {
+   "ckpt": "results/db6_v2_20261016/select/k8_w128_l2_s32_tau160/best.pt",
+   "train_floor": 0.001,
+   "test_floor": 0.02,
+   "source_val_srcnorm": 0.8463894796599027,
+   "source_val_shuf": 0.8604821504777956,
+   "natural_all": 0.820292916176325,
+   "natural_s1_4": 0.8313585052555557,
+   "stress_s1_4": 0.7928335386922724
+  },
+  {
+   "ckpt": "results/db6_v2_20261016/select/k8_w128_l2_s32_tau160/best.pt",
+   "train_floor": 0.001,
+   "test_floor": 0.05,
+   "source_val_srcnorm": 0.8463894796599027,
+   "source_val_shuf": 0.8604821504777956,
+   "natural_all": 0.8063230595349028,
+   "natural_s1_4": 0.8277966335701367,
+   "stress_s1_4": 0.8078430628953193
+  },
+  {
+   "ckpt": "results/db6_v2_20261016/select/k8_w128_l2_s32_tau160/best.pt",
+   "train_floor": 0.001,
+   "test_floor": 0.1,
+   "source_val_srcnorm": 0.8463894796599027,
+   "source_val_shuf": 0.8604821504777956,
+   "natural_all": 0.7968064346169963,
+   "natural_s1_4": 0.8235738374919793,
+   "stress_s1_4": 0.8071710655000092
+  },
+  {
+   "ckpt": "results/db6_v2_20261016/select/k8_w128_l2_s32_tau160/best.pt",
+   "train_floor": 0.001,
+   "test_floor": 0.2,
+   "source_val_srcnorm": 0.8463894796599027,
+   "source_val_shuf": 0.8604821504777956,
+   "natural_all": 0.7906178271387384,
+   "natural_s1_4": 0.8194416224945548,
+   "stress_s1_4": 0.803131156259762
+  }
+ ],
+ "reference_retrained": [
+  {
+   "ckpt": "results/db6_v2_20261016/floor/k8_w128_l2_s32_tau160_floor0.05/best.pt",
+   "train_floor": 0.05,
+   "test_floor": 0.05,
+   "source_val_srcnorm": 0.8371007943595499,
+   "source_val_shuf": 0.8607228498843441,
+   "natural_all": 0.8206144584943258,
+   "natural_s1_4": 0.8186750613070921,
+   "stress_s1_4": 0.8019433579096472
+  },
+  {
+   "ckpt": "results/db6_v2_20261016/floor/k8_w128_l2_s32_tau160_floor0.2/best.pt",
+   "train_floor": 0.2,
+   "test_floor": 0.2,
+   "source_val_srcnorm": 0.8315532687572981,
+   "source_val_shuf": 0.8494273453710005,
+   "natural_all": 0.8121507290503417,
+   "natural_s1_4": 0.809146273875221,
+   "stress_s1_4": 0.7931984906164149
+  }
+ ]
+}

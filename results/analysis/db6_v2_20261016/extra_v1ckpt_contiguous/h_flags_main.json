@@ -1,0 +1,8 @@
+{
+ "h1_all_true": true,
+ "h5_all_true": true,
+ "n_rows": 12000,
+ "rows_by_role": {
+  "baseline": 12000
+ }
+}

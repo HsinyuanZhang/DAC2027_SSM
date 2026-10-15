@@ -1,3 +1,5 @@
+> **SUPERSEDED（2026-10-16）：本报告（v1）的解码在每个 trial 边界重置 SSM 状态与 ridge EMA，这既泄漏标签时序又不能流式实现；同一 checkpoint 改成整段连续解码后 source val 0.874 -> 0.676，target 的 reuse/mean 行掉 0.17-0.26。请使用 `results/analysis/db6_v2_20261016/README.md`（v2）。本文件保留仅用于对比；其中 “table-only 上限约 0.80”、“own-subject 先验不比群体均值好”、通道 8/16 “恒为噪声底” 等说法已在 v2 中更正或降级。**
+
 # NinaPro DB6 管线、backbone 与跨天参照行（协议 D-A，2026-10-15/16）
 
 对应 `docs/feasibility_p1_20261015.md` 第 3 节的 Hyser 模式，换成 DB6 抓取分类：10 名受试者 x 5 天 x 每天 2 个 session（上午 T1、下午 T2），14 通道 sEMG，7 种抓取 + 休息。

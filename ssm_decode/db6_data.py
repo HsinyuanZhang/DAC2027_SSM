@@ -25,8 +25,9 @@ repetition.  One *trial* = one maximal run of constant ``rerepetition > 0`` (tak
 the bin level), and it must contain exactly one non-zero ``restimulus`` code
 (otherwise it is recorded in ``meta['bad_runs']`` and excluded).  The ~1 s of rest
 after the last movement carries ``rerepetition == 0`` and belongs to no trial.
-Trials are disjoint and cover every labeled repetition exactly once.  Each trial is
-decoded as an independent sequence from zero model state.
+Trials are disjoint and cover every labeled repetition exactly once.  Trials only select which
+bins are trained on / scored; decoding itself is one causal pass over the whole session stream
+(model state is NEVER reset at trial boundaries, see ``db6_backbone``).
 
 Front end (strictly causal, streaming-implementable):
   1. volts -> millivolts, per-channel rectification |x|;

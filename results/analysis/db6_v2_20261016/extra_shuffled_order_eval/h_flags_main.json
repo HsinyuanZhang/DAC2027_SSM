@@ -1,0 +1,9 @@
+{
+ "h1_all_true": true,
+ "h5_all_true": true,
+ "n_rows": 9000,
+ "rows_by_role": {
+  "baseline": 6000,
+  "deployable_closed_form": 3000
+ }
+}

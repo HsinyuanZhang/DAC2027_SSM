@@ -1,0 +1,6 @@
+B,n_classes_seen_mean,n_classes_seen_min,max_minus_min_grasp_count,n_rows
+1,2.0,2,1,600
+2,3.0,3,1,600
+4,5.0,5,1,600
+8,8.0,8,1,600
+16,8.0,8,1,600

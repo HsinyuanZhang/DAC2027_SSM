@@ -1,0 +1,38 @@
+[
+ {
+  "ckpt": "results/db6_20261015/final/seed0/best.pt",
+  "orig_order": 0.6759354255594697,
+  "shuffled_order": 0.2605801028295708,
+  "shuffle_trials_in_training": false
+ },
+ {
+  "ckpt": "results/db6_20261015/final/seed1/best.pt",
+  "orig_order": 0.6002636658072128,
+  "shuffled_order": 0.22211072442478055,
+  "shuffle_trials_in_training": false
+ },
+ {
+  "ckpt": "results/db6_v2_20261016/blockorder/k8_w128_l2_s32_tau160/best.pt",
+  "orig_order": 0.9374823340039186,
+  "shuffled_order": 0.5687193897461658,
+  "shuffle_trials_in_training": false
+ },
+ {
+  "ckpt": "results/db6_v2_20261016/blockorder/k14_w128_l2_s32_tau160/best.pt",
+  "orig_order": 0.9345205322818799,
+  "shuffled_order": 0.525087197652913,
+  "shuffle_trials_in_training": false
+ },
+ {
+  "ckpt": "results/db6_v2_20261016/final/seed0/best.pt",
+  "orig_order": 0.8463894796599027,
+  "shuffled_order": 0.8571874732279238,
+  "shuffle_trials_in_training": true
+ },
+ {
+  "ckpt": "results/db6_v2_20261016/final/seed1/best.pt",
+  "orig_order": 0.8424863268576863,
+  "shuffled_order": 0.8555317468910476,
+  "shuffle_trials_in_training": true
+ }
+]

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Aggregate DB6 D-A rows.jsonl files into reference tables (mean and 95% CI over subjects).
 
-usage: summarize_db6.py <out_dir> <rows.jsonl> [<rows.jsonl> ...]   (one file per backbone seed, ridge_v2 rows concatenated)
+usage: summarize_db6.py <out_dir> <rows.jsonl> [<rows.jsonl> ...]   (one file per backbone seed)
 
 Aggregation: row -> mean over draws (per target session) -> mean over the subject's sessions of the
 same day gap -> mean over seeds -> mean over the 10 subjects; CI = t(0.975, n-1) * sd / sqrt(n).
@@ -35,9 +35,7 @@ def load(paths):
             r["seed_file"] = si
             rows.append(r)
     df = pd.DataFrame(rows)
-    df["method"] = df["method"].replace({"rownorm_ridge": "rownorm_ridge_v1grid"})   # limited-grid first pass
-    # B = 42 (diagnostic budget) was run for seed 0 only; partial seed-1 rows are dropped
-    return df[~((df.B == 42) & (df.seed_file != 0))].reset_index(drop=True)
+    return df.reset_index(drop=True)
 
 
 def per_subject_table(df):
@@ -88,11 +86,17 @@ def main():
         s_, _ = summarize(ps_all[ps_all.seed_file == si])
         s_.to_csv(out / f"reference_rows_seed{si}.csv", index=False)
     pairs = [("reuse_latest_calnorm", "reuse_latest_srcnorm"), ("reuse_latest_calnorm", "mean_table_calnorm"),
-             ("rownorm_ridge_v2", "reuse_latest_calnorm"), ("ui_prior_latest_calnorm", "reuse_latest_calnorm"),
-             ("ui_prior_latest_calnorm", "rownorm_ridge_v2"), ("ui_prior_mean_calnorm", "mean_table_calnorm"),
-             ("ui_prior_latest_calnorm", "ui_prior_mean_calnorm")]
+             ("mean_table_calnorm", "reuse_latest_calnorm"), ("mean_table_calnorm", "mean_loso_calnorm"),
+             ("rownorm_ridge", "reuse_latest_calnorm"), ("rownorm_ridge_origsel", "rownorm_ridge"),
+             ("ui_prior_latest_calnorm", "reuse_latest_calnorm"),
+             ("ui_prior_latest_calnorm", "rownorm_ridge"), ("ui_prior_mean_calnorm", "mean_table_calnorm"),
+             ("ui_prior_latest_calnorm", "ui_prior_mean_calnorm"),
+             ("within_table_latestinit_long", "ui_prior_latest_calnorm"),
+             ("within_table_supinit", "ui_prior_latest_calnorm")]
     paired(ps, pairs).to_csv(out / "paired_diffs_main.csv", index=False)
     # class coverage of the calibration draws and unique-draw counts
+    ncount = df[df.B == 42].groupby("seed_file")["target"].nunique().to_dict()
+    print("targets with B=42 rows per seed file:", ncount)
     cov = df[df.method == "reuse_latest_calnorm"].copy()
     cov["n_classes_seen"] = cov["coverage"].apply(lambda c: int(sum(v > 0 for v in c))) + 1   # + rest
     cov_tab = cov.groupby("B").agg(n_classes_seen_mean=("n_classes_seen", "mean"),
