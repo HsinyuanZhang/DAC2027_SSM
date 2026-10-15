@@ -1,0 +1,14 @@
+{
+ "sub-M_ses-CO-20150616": {
+  "n_units": 17,
+  "n_trials": 183,
+  "mean_bins": 240.27322404371586,
+  "max_bins": 2741
+ },
+ "sub-M_ses-CO-20140626": {
+  "n_units": 26,
+  "n_trials": 670,
+  "mean_bins": 199.98059701492537,
+  "max_bins": 800
+ }
+}

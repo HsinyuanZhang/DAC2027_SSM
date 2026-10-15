@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import sys
 import time
 import zlib
@@ -35,16 +36,18 @@ from ssm_decode.dandi688_data import (DEV_SESSIONS, FINAL_SESSIONS,        # noq
 from ssm_decode.eval_checks import check_physical_units                    # noqa: E402
 from ssm_decode.population_calib import (PopStats, PopulationCalibrator,   # noqa: E402
                                          SessionData, desc_dim, describe,
-                                         electrode_mean_table, mac_counts,
-                                         norm_stats)
+                                         electrode_mean_table, identity_free_prior,
+                                         mac_counts, norm_stats)
 from ssm_decode.track_a_experiment import (_prior_correct, _source_profiles,  # noqa: E402
                                            ui_grad_table)
 
-OUT = ROOT / "results/population_calib_20261015"
+P1_OUT = ROOT / "results/population_calib_20261015"
+OUT = Path(os.environ.get("PC_OUT", str(P1_OUT)))      # P2 runs set PC_OUT
 B_GRID = (1, 2, 4, 8, 16, 33)
 B_SCREEN = (1, 8, 33)
 N_DRAWS = 8
-INVENTORY = OUT / "session_inventory.json"
+PRIOR_SUFFIX = {"aligned": "", "globalmean": "_na_gm", "zero": "_na_zero"}
+INVENTORY = P1_OUT / "session_inventory.json"
 
 
 # ------------------------------------------------------------------ world ----
@@ -65,8 +68,9 @@ def sessions_for(stratum: str, pool: str):
 
 
 class World:
-    def __init__(self, stratum, pool, device, load_sessions=True):
+    def __init__(self, stratum, pool, device, load_sessions=True, prior_mode="aligned"):
         self.stratum, self.pool, self.device = stratum, pool, device
+        self.prior_mode = prior_mode
         spec = D1_POOLS[stratum]
         self.adapter = APBackboneAdapter(ROOT / spec["ap"], device)
         for p in self.adapter.model.parameters():
@@ -94,19 +98,24 @@ class World:
                                                       exclude=exclude)
         return self._avg[exclude]
 
+    def prior_for(self, sd, exclude):
+        """Prior table [K, N] of a session; identity-free modes ignore the electrodes."""
+        if self.prior_mode == "aligned":
+            return torch.from_numpy(self.prior_avg(exclude)[:, sd.electrodes]).to(self.device)
+        tab = identity_free_prior(self.orig_tables, sd.n_units, self.prior_mode, exclude=exclude)
+        return torch.from_numpy(tab).to(self.device)
+
     def add_session(self, name, rec):
         sd = SessionData(rec, self.label_stats, self.device, name=name)
         exclude = self.orig_ids.index(name) if name in self.orig_ids else None
-        avg = self.prior_avg(exclude)                          # LOO for original sources
         self.sessions[name] = sd
-        self.priors[name] = torch.from_numpy(avg[:, sd.electrodes]).to(self.device)
+        self.priors[name] = self.prior_for(sd, exclude)
         return sd
 
     def target(self, name):
         rec = load_dandi688_recording(name)
         sd = SessionData(rec, self.label_stats, self.device, name=name)
-        prior = torch.from_numpy(self.prior_avg(None)[:, sd.electrodes]).to(self.device)
-        return sd, prior
+        return sd, self.prior_for(sd, None)
 
 
 # ---------------------------------------------------------------- helpers ----
@@ -153,7 +162,8 @@ def build_calibrator(args_like, world):
     c = PopulationCalibrator(args_like["variant"], world.k, desc_dim(world.k),
                              m=args_like.get("m", 8), output=args_like.get("output", "residual"),
                              label_free=bool(args_like.get("label_free", False)),
-                             hidden=int(args_like.get("hidden", 64)))
+                             hidden=int(args_like.get("hidden", 64)),
+                             prior_mode=args_like.get("prior_mode", "aligned"))
     return c.to(world.device)
 
 
@@ -235,9 +245,15 @@ def cmd_train(args):
     run_dir.mkdir(parents=True, exist_ok=True)
     torch.manual_seed(args.seed)
     rng = np.random.default_rng(1000 + args.seed)
-    world = World(args.stratum, args.pool, device)
+    world = World(args.stratum, args.pool, device, prior_mode=args.prior_mode)
     calib = build_calibrator(vars(args), world)
-    fit_normalizers(world, calib, rng)
+    if args.init_from:                       # QAT fine-tune from a trained FP checkpoint (source only)
+        from ssm_decode.calib_quant import enable_qat
+        blob0 = torch.load(args.init_from, map_location=device, weights_only=False)
+        calib.load_state_dict(blob0["calibrator"])
+        enable_qat(calib, args.qat)
+    else:
+        fit_normalizers(world, calib, rng)
     params = [p for p in calib.parameters() if p.requires_grad]
     opt = torch.optim.AdamW(params, lr=args.lr, weight_decay=1e-4)
     ym, ys = [torch.as_tensor(s, dtype=torch.float32, device=device) for s in world.label_stats]
@@ -386,7 +402,7 @@ def shuffled_label_session(world, sd):
 def cmd_evaluate(args):
     _patch_backward_counter()
     device = torch.device(args.device)
-    world = World(args.stratum, args.pool, device, load_sessions=False)
+    world = World(args.stratum, args.pool, device, load_sessions=False, prior_mode=args.prior_mode)
     run_dir = OUT / "runs" / f"{args.stratum}_{args.pool}" / args.tag / f"seed{args.seed}"
     calib, blob, done = load_run(run_dir, world)
     rows_path = run_dir / "eval_rows.jsonl"
@@ -397,6 +413,8 @@ def cmd_evaluate(args):
         variant += "_nolab"
     if a.get("hidden", 64) != 64:
         variant += f"_h{a['hidden']}"
+    if a.get("prior_mode", "aligned") != "aligned":
+        variant += PRIOR_SUFFIX[a["prior_mode"]]
     if args.shuffle_labels:
         variant += "_shufY"
         rows_path = run_dir / "eval_rows_shufY.jsonl"
@@ -452,8 +470,9 @@ def cmd_reference(args):
     """P-prior (no calibration) and non-deployable gradient references."""
     _patch_backward_counter()
     device = torch.device(args.device)
-    world = World(args.stratum, "O", device, load_sessions=False)
-    rows_path = OUT / "reference" / (f"prior_{args.stratum}.jsonl" if args.prior_only
+    world = World(args.stratum, "O", device, load_sessions=False, prior_mode=args.prior_mode)
+    psuf = PRIOR_SUFFIX[args.prior_mode]
+    rows_path = OUT / "reference" / (f"prior_{args.stratum}{psuf}.jsonl" if args.prior_only
                                      else f"{args.stratum}.jsonl")
     rows_path.parent.mkdir(parents=True, exist_ok=True)
     seen = done_keys(rows_path)
@@ -468,10 +487,10 @@ def cmd_reference(args):
                 idx = draw_trials(target, B, draw, sd.bank.n_trials)
                 base = {"stratum": args.stratum, "pool": "-", "tag": "ref", "seed": 0,
                         "target": target, "B": B, "draw": draw, "diagnostic_only": False}
-                if ("p_prior", target, B, draw) not in seen:
+                if ("p_prior" + psuf, target, B, draw) not in seen:
                     _BWD["n"] = 0                      # H2 counts backward calls per row
                     r2, unit, table, secs, stats = eval_point(world, sd, prior, None, idx)
-                    append_row(rows_path, {**base, "variant": "p_prior", "r2": r2,
+                    append_row(rows_path, {**base, "variant": "p_prior" + psuf, "r2": r2,
                                            "unit_ratio": unit["unit_ratio"],
                                            "unit_check_passed": unit["passed"],
                                            "n_units": int(table.shape[1]),
@@ -496,7 +515,7 @@ def cmd_oracle(args):
     """P-oracle: descriptors from ALL labeled trials of the target (diagnostic)."""
     _patch_backward_counter()
     device = torch.device(args.device)
-    world = World(args.stratum, args.pool, device, load_sessions=False)
+    world = World(args.stratum, args.pool, device, load_sessions=False, prior_mode=args.prior_mode)
     run_dir = OUT / "runs" / f"{args.stratum}_{args.pool}" / args.tag / f"seed{args.seed}"
     calib, blob, done = load_run(run_dir, world)
     a = blob["args"]
@@ -549,6 +568,7 @@ def main():
         s = sub.add_parser(name)
         s.add_argument("--stratum", required=True, choices=list(D1_POOLS))
         s.add_argument("--device", default="cuda:0")
+        s.add_argument("--prior-mode", default="aligned", choices=["aligned", "globalmean", "zero"])
         if name != "reference":
             s.add_argument("--pool", required=True, choices=["O", "E"])
             s.add_argument("--variant", default="p0")
@@ -565,6 +585,8 @@ def main():
             s.add_argument("--val-interval", type=int, default=100)
             s.add_argument("--batch", type=int, default=8)
             s.add_argument("--lr", type=float, default=1e-3)
+            s.add_argument("--init-from", default=None)
+            s.add_argument("--qat", default="tern", choices=["tern", "w4", "w8"])
         if name in ("evaluate", "oracle", "reference"):
             s.add_argument("--draws", type=int, default=N_DRAWS)
             s.add_argument("--budgets", type=int, nargs="*", default=None)
@@ -576,7 +598,7 @@ def main():
     if getattr(args, "tag", None) is None and args.cmd != "reference":
         args.tag = args.variant + (f"_m{args.m}" if args.variant in ("p3", "p4") else "") + \
             ("" if args.output == "residual" else "_abs") + ("_nolab" if args.label_free else "") + \
-            ("" if args.hidden == 64 else f"_h{args.hidden}")
+            ("" if args.hidden == 64 else f"_h{args.hidden}") + PRIOR_SUFFIX[args.prior_mode]
     {"train": cmd_train, "evaluate": cmd_evaluate, "oracle": cmd_oracle,
      "reference": cmd_reference}[args.cmd](args)
 

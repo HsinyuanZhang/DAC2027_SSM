@@ -179,6 +179,21 @@ def label_columns(k: int):
     return cols, [4, 5]                          # descriptor cols, reliability cols (kappa)
 
 
+PRIOR_MODES = ("aligned", "globalmean", "zero")
+
+
+def corr_columns(k: int):
+    """Descriptor columns holding the correlation with the prior latents."""
+    c0 = 2 + len(AC_LAGS)
+    return list(range(c0, c0 + k))
+
+
+def prior_columns(k: int):
+    """Descriptor columns holding the (electrode-aligned) prior column itself."""
+    c0 = 2 + len(AC_LAGS) + k + len(CROSS_LAGS) * D_OUT + DIR_BINS + 2
+    return list(range(c0, c0 + k))
+
+
 def norm_stats(stats: PopStats):
     """Per-unit input normalisation (mean, std) from the labeled bins only."""
     s = stats.d
@@ -270,6 +285,25 @@ def electrode_mean_table(tables: list, electrodes: list, width: int = 96, exclud
     return acc / np.maximum(cnt, 1)[None, :]
 
 
+def identity_free_prior(tables: list, n_units: int, mode: str, exclude=None):
+    """Prior table [K, n_units] that uses NO unit-identity (electrode) metadata.
+
+    ``globalmean``: the mean over ALL source-unit columns of ALL source tables
+    (every source unit weighted equally, ``exclude`` drops one session for
+    leave-one-out); the same K-vector is assigned to every target unit.
+    ``zero``: the zero table.  Neither depends on which unit is which, so the
+    resulting calibrator is blind to the unit-to-electrode map.
+    """
+    k = tables[0].shape[0]
+    if mode == "zero":
+        return np.zeros((k, n_units))
+    if mode != "globalmean":
+        raise ValueError(mode)
+    cols = [t for j, t in enumerate(tables) if exclude is None or j != exclude]
+    c = np.concatenate(cols, axis=1).mean(1)
+    return np.repeat(c[:, None], n_units, axis=1)
+
+
 # ------------------------------------------------------------ calibrator ----
 
 def _mlp(i, o, hidden=64, layers=2, zero_last=False):
@@ -309,10 +343,12 @@ def online_softmax_pool(scores: torch.Tensor, values: torch.Tensor, chunk: int =
 class PopulationCalibrator(nn.Module):
     def __init__(self, variant: str, k: int, fd: int, fr: int = REL_DIM, *, m: int = 8,
                  hidden: int = 64, dctx: int = 32, output: str = "residual",
-                 label_free: bool = False):
+                 label_free: bool = False, prior_mode: str = "aligned"):
         super().__init__()
         if variant not in VARIANTS:
             raise ValueError(variant)
+        if prior_mode not in PRIOR_MODES:
+            raise ValueError(prior_mode)
         self.variant, self.k, self.fd, self.m, self.output = variant, k, fd, m, output
         self.dctx = dctx
         self.hidden = hidden
@@ -325,6 +361,13 @@ class PopulationCalibrator(nn.Module):
             dc, rc = label_columns(k)
             d_keep[dc], r_keep[rc] = 0.0, 0.0
         self.label_free = label_free
+        self.prior_mode = prior_mode
+        if prior_mode != "aligned":       # identity-free: the prior column carries no per-unit info
+            d_keep[prior_columns(k)] = 0.0
+            if prior_mode == "zero":      # zero prior latents -> correlation features are void
+                d_keep[corr_columns(k)] = 0.0
+        self.softmax_fn = torch.softmax   # replaceable (exp2-LUT softmax in A'3)
+        self.weight_quant = None          # optional fn applied to the PMA seed matrices u, a (QAT)
         self.register_buffer("d_keep", d_keep)
         self.register_buffer("r_keep", r_keep)
         self.lam_override = None
@@ -378,12 +421,13 @@ class PopulationCalibrator(nn.Module):
             inp = torch.cat([dt, ctx], 1)
         else:
             ph = self.phi(dt)
-            scores = ph @ self.u.T / math.sqrt(self.hidden)            # [N, m]
+            wq = self.weight_quant or (lambda w: w)
+            scores = ph @ wq(self.u).T / math.sqrt(self.hidden)        # [N, m]
             if self.variant == "p4":
                 scores = scores + torch.log(lam.clamp_min(1e-6))[:, None]
             values = self.val(ph)                                      # [N, dctx]
-            zj = torch.softmax(scores, dim=0).T @ values               # [m, dctx]
-            beta = torch.softmax(ph @ self.a.T / math.sqrt(self.hidden), dim=1)
+            zj = self.softmax_fn(scores, dim=0).T @ values             # [m, dctx]
+            beta = self.softmax_fn(ph @ wq(self.a).T / math.sqrt(self.hidden), dim=1)
             mu_i = beta @ zj
             inp = torch.cat([dt, mu_i, lam[:, None]], 1)
             aux["scores"], aux["values"], aux["zj"], aux["beta"] = scores, values, zj, beta
