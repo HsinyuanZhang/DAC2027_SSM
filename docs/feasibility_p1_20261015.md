@@ -10,6 +10,9 @@
 4. 不使用 final session（000688 的 0623/0625/0626），不读取 `results/official_evalai/`。
 5. 所有超参数和配置选择只在 source validation 上进行，不看 target query。
 6. ui_prior（反传穿过 trunk）只作为非部署的精度参照行。
+7. **（10-16 增补）评测必须严格流式**：解码是整段连续的因果前向，不能在 trial 边界或任何由标签推出的边界重置 SSM state 或 EMA。query 只在 query trial 的 bin 上计分。（来源：DB6 v1 审查）
+8. **（10-16 增补）硬件数字必须逐步模拟硬件行为**：定点累加器每次累加都取整并饱和，计数器单独按整数计；代价模型要算全所有缓冲（逐 trial 临时缓存、lag 延迟线、replay 缓存、第二遍缓存），“固定权重 MAC”只计 weight × activation。（来源：P2 审查）
+9. **（10-16 增补）不要把同一过程的长步数版本当作“上限”**：诊断性上限必须是独立的过程。（来源：Hyser 与 DB6 审查）
 
 ## 1. 核心问题
 
