@@ -1,0 +1,213 @@
+{
+ "mean_over_subjects": {
+  "corr_logmean_cross_day": 0.601643608867225,
+  "corr_logmean_within_day": 0.9881546969875558,
+  "corr_logstd_cross_day": 0.4556074031735807,
+  "gain_log_ratio_mean": -0.04458731203339994,
+  "gain_log_ratio_std": 0.2494488913565874,
+  "within_day_log_ratio_std": 0.03937645768746734,
+  "force_std_ratio": 1.008628785610199
+ },
+ "per_subject": [
+  {
+   "subject": 1,
+   "corr_logmean_cross_day": 0.7036371018947641,
+   "corr_logmean_within_day": 0.9943777546534421,
+   "corr_logstd_cross_day": 0.37453316075555726,
+   "gain_log_ratio_mean": -0.03482609987258911,
+   "gain_log_ratio_std": 0.23362316191196442,
+   "within_day_log_ratio_std": 0.03699636459350586,
+   "force_std_ratio": 1.2087388038635254
+  },
+  {
+   "subject": 2,
+   "corr_logmean_cross_day": 0.4815283453559097,
+   "corr_logmean_within_day": 0.9921997059842083,
+   "corr_logstd_cross_day": 0.07665489368896165,
+   "gain_log_ratio_mean": -0.24360187351703644,
+   "gain_log_ratio_std": 0.2911953628063202,
+   "within_day_log_ratio_std": 0.04259565472602844,
+   "force_std_ratio": 1.072339415550232
+  },
+  {
+   "subject": 3,
+   "corr_logmean_cross_day": 0.5517846244859387,
+   "corr_logmean_within_day": 0.9967428001146291,
+   "corr_logstd_cross_day": 0.15517934493903404,
+   "gain_log_ratio_mean": -0.1290973722934723,
+   "gain_log_ratio_std": 0.34217509627342224,
+   "within_day_log_ratio_std": 0.03080764226615429,
+   "force_std_ratio": 1.111493706703186
+  },
+  {
+   "subject": 4,
+   "corr_logmean_cross_day": 0.6089016470379351,
+   "corr_logmean_within_day": 0.9930237933411128,
+   "corr_logstd_cross_day": 0.2323498170707938,
+   "gain_log_ratio_mean": -0.15564411878585815,
+   "gain_log_ratio_std": 0.16211269795894623,
+   "within_day_log_ratio_std": 0.024289637804031372,
+   "force_std_ratio": 0.9404664635658264
+  },
+  {
+   "subject": 5,
+   "corr_logmean_cross_day": 0.5683982576520815,
+   "corr_logmean_within_day": 0.9923697811806814,
+   "corr_logstd_cross_day": 0.3672497807802883,
+   "gain_log_ratio_mean": -0.023336615413427353,
+   "gain_log_ratio_std": 0.18633703887462616,
+   "within_day_log_ratio_std": 0.026136605069041252,
+   "force_std_ratio": 1.0796928405761719
+  },
+  {
+   "subject": 6,
+   "corr_logmean_cross_day": 0.7026614842183494,
+   "corr_logmean_within_day": 0.9984226775841141,
+   "corr_logstd_cross_day": 0.381629323438778,
+   "gain_log_ratio_mean": -0.04686857759952545,
+   "gain_log_ratio_std": 0.24907678365707397,
+   "within_day_log_ratio_std": 0.021164121106266975,
+   "force_std_ratio": 1.0473389625549316
+  },
+  {
+   "subject": 7,
+   "corr_logmean_cross_day": 0.852577277285794,
+   "corr_logmean_within_day": 0.9906260099984682,
+   "corr_logstd_cross_day": 0.688668910807593,
+   "gain_log_ratio_mean": 0.0668090283870697,
+   "gain_log_ratio_std": 0.15693560242652893,
+   "within_day_log_ratio_std": 0.04070395976305008,
+   "force_std_ratio": 1.118095874786377
+  },
+  {
+   "subject": 8,
+   "corr_logmean_cross_day": 0.6232303460366381,
+   "corr_logmean_within_day": 0.9934499664685361,
+   "corr_logstd_cross_day": 0.4038179477261534,
+   "gain_log_ratio_mean": -0.27325063943862915,
+   "gain_log_ratio_std": 0.31753963232040405,
+   "within_day_log_ratio_std": 0.04729757085442543,
+   "force_std_ratio": 0.8236691951751709
+  },
+  {
+   "subject": 9,
+   "corr_logmean_cross_day": 0.4917190739137712,
+   "corr_logmean_within_day": 0.9583960616628507,
+   "corr_logstd_cross_day": 0.4521601321883873,
+   "gain_log_ratio_mean": 0.27819740772247314,
+   "gain_log_ratio_std": 0.1740448772907257,
+   "within_day_log_ratio_std": 0.041928716003894806,
+   "force_std_ratio": 0.9540876746177673
+  },
+  {
+   "subject": 10,
+   "corr_logmean_cross_day": 0.48293935020573336,
+   "corr_logmean_within_day": 0.9792408639730821,
+   "corr_logstd_cross_day": 0.6586697863845635,
+   "gain_log_ratio_mean": 0.09683327376842499,
+   "gain_log_ratio_std": 0.2999747097492218,
+   "within_day_log_ratio_std": 0.05309655889868736,
+   "force_std_ratio": 0.8429924845695496
+  },
+  {
+   "subject": 11,
+   "corr_logmean_cross_day": 0.5736771475144131,
+   "corr_logmean_within_day": 0.9852683971030533,
+   "corr_logstd_cross_day": 0.46627745962237443,
+   "gain_log_ratio_mean": -0.18986013531684875,
+   "gain_log_ratio_std": 0.2581992447376251,
+   "within_day_log_ratio_std": 0.046552035957574844,
+   "force_std_ratio": 0.7125085592269897
+  },
+  {
+   "subject": 12,
+   "corr_logmean_cross_day": 0.20013122699432698,
+   "corr_logmean_within_day": 0.9908388183864776,
+   "corr_logstd_cross_day": 0.2280887397687463,
+   "gain_log_ratio_mean": 0.0838218554854393,
+   "gain_log_ratio_std": 0.41358909010887146,
+   "within_day_log_ratio_std": 0.051756322383880615,
+   "force_std_ratio": 1.289188027381897
+  },
+  {
+   "subject": 13,
+   "corr_logmean_cross_day": 0.699036066350964,
+   "corr_logmean_within_day": 0.9932346901044741,
+   "corr_logstd_cross_day": 0.6203320809060837,
+   "gain_log_ratio_mean": -0.2526499629020691,
+   "gain_log_ratio_std": 0.25739380717277527,
+   "within_day_log_ratio_std": 0.04131491109728813,
+   "force_std_ratio": 0.8513950705528259
+  },
+  {
+   "subject": 14,
+   "corr_logmean_cross_day": 0.5995048961535453,
+   "corr_logmean_within_day": 0.9566116849438941,
+   "corr_logstd_cross_day": 0.5268535927909991,
+   "gain_log_ratio_mean": 0.08241603523492813,
+   "gain_log_ratio_std": 0.1762741208076477,
+   "within_day_log_ratio_std": 0.05442965030670166,
+   "force_std_ratio": 1.1231377124786377
+  },
+  {
+   "subject": 15,
+   "corr_logmean_cross_day": 0.5172585312413291,
+   "corr_logmean_within_day": 0.9962523505870604,
+   "corr_logstd_cross_day": 0.5592040476489558,
+   "gain_log_ratio_mean": 0.04313502460718155,
+   "gain_log_ratio_std": 0.388885498046875,
+   "within_day_log_ratio_std": 0.03737354278564453,
+   "force_std_ratio": 0.9518529772758484
+  },
+  {
+   "subject": 16,
+   "corr_logmean_cross_day": 0.405621200957818,
+   "corr_logmean_within_day": 0.9960287732262046,
+   "corr_logstd_cross_day": 0.2804100099582358,
+   "gain_log_ratio_mean": 0.09293361008167267,
+   "gain_log_ratio_std": 0.2984745502471924,
+   "within_day_log_ratio_std": 0.025330305099487305,
+   "force_std_ratio": 1.106858730316162
+  },
+  {
+   "subject": 17,
+   "corr_logmean_cross_day": 0.7621535905650871,
+   "corr_logmean_within_day": 0.9890914087100436,
+   "corr_logstd_cross_day": 0.5990113751397252,
+   "gain_log_ratio_mean": 0.11273565143346786,
+   "gain_log_ratio_std": 0.22473174333572388,
+   "within_day_log_ratio_std": 0.05629416182637215,
+   "force_std_ratio": 1.3110934495925903
+  },
+  {
+   "subject": 18,
+   "corr_logmean_cross_day": 0.683227157145791,
+   "corr_logmean_within_day": 0.9864456905090144,
+   "corr_logstd_cross_day": 0.6724569478387864,
+   "gain_log_ratio_mean": -0.17695659399032593,
+   "gain_log_ratio_std": 0.22349698841571808,
+   "within_day_log_ratio_std": 0.037905752658843994,
+   "force_std_ratio": 0.6408794522285461
+  },
+  {
+   "subject": 19,
+   "corr_logmean_cross_day": 0.9535883884593906,
+   "corr_logmean_within_day": 0.9884736425614449,
+   "corr_logstd_cross_day": 0.8241596891791855,
+   "gain_log_ratio_mean": -0.013787827454507351,
+   "gain_log_ratio_std": 0.07607132941484451,
+   "within_day_log_ratio_std": 0.037252020090818405,
+   "force_std_ratio": 1.1102737188339233
+  },
+  {
+   "subject": 20,
+   "corr_logmean_cross_day": 0.571296463874922,
+   "corr_logmean_within_day": 0.9919990686583215,
+   "corr_logstd_cross_day": 0.5444410228384121,
+   "gain_log_ratio_mean": -0.20874831080436707,
+   "gain_log_ratio_std": 0.2588464915752411,
+   "within_day_log_ratio_std": 0.03430362045764923,
+   "force_std_ratio": 0.8764725923538208
+  }
+ ]
+}

@@ -1,0 +1,43 @@
+{
+ "h1_all_true": true,
+ "h5_all_pass": true,
+ "n_rows": 6720,
+ "backprop_steps_by_method": {
+  "reuse_s1_srcnorm": [
+   0
+  ],
+  "reuse_s1_calnorm": [
+   0
+  ],
+  "mean_table_calnorm": [
+   0
+  ],
+  "mean_loso_calnorm": [
+   0
+  ],
+  "rownorm_ridge": [
+   0
+  ],
+  "ui_prior_s1_srcnorm": [
+   300
+  ],
+  "ui_prior_s1_calnorm": [
+   300
+  ],
+  "ui_prior_mean_calnorm": [
+   300
+  ],
+  "within_table_s1init_long": [
+   1000
+  ],
+  "within_table_supinit": [
+   1000
+  ],
+  "reuse_s1_oracle_norm": [
+   0
+  ],
+  "mean_table_oracle_norm": [
+   0
+  ]
+ }
+}
