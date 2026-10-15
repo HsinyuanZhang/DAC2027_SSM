@@ -27,17 +27,18 @@ ENV = dict(os.environ, PYTHONNOUSERSITE="1", CUDA_VISIBLE_DEVICES="0",
            OMP_NUM_THREADS="4")
 
 
-def tag_of(variant, m=8, output="residual", label_free=False):
+def tag_of(variant, m=8, output="residual", label_free=False, hidden=64):
     return variant + (f"_m{m}" if variant in ("p3", "p4") else "") + \
-        ("" if output == "residual" else "_abs") + ("_nolab" if label_free else "")
+        ("" if output == "residual" else "_abs") + ("_nolab" if label_free else "") + \
+        ("" if hidden == 64 else f"_h{hidden}")
 
 
 def job(stratum, pool, variant, seed, *, m=8, output="residual", label_free=False,
-        evaluate=True, oracle=False, shuffle=False):
-    tag = tag_of(variant, m, output, label_free)
+        evaluate=True, oracle=False, shuffle=False, hidden=64):
+    tag = tag_of(variant, m, output, label_free, hidden)
     common = ["--stratum", stratum, "--pool", pool, "--variant", variant, "--seed", str(seed),
               "--m", str(m), "--output", output, "--tag", tag] + \
-        (["--label-free"] if label_free else [])
+        (["--label-free"] if label_free else []) + (["--hidden", str(hidden)] if hidden != 64 else [])
     cmds = [[PY, DRIVER, "train", *common]]
     if evaluate:
         cmds.append([PY, DRIVER, "evaluate", *common])
@@ -161,6 +162,12 @@ def main():
                 m = select_m(variant, pool) if variant in ("p3", "p4") else 8
                 for s in SEEDS:
                     items.append(job(st, pool, variant, s, m=m, label_free=True))
+    elif a.stage.startswith("H:"):   # capacity probe: 4x wider generator
+        variant = a.stage[2:]
+        for st in STRATA:
+            for pool in POOLS:
+                for s in SEEDS:
+                    items.append(job(st, pool, variant, s, hidden=256))
     else:
         sys.exit("unknown stage")
     run_all(items, a.workers)

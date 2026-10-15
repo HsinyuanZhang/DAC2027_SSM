@@ -1,0 +1,25 @@
+{
+ "rows": 7872,
+ "H1_trunk_unchanged_rate": 1.0,
+ "H2_zero_backprop_rate": 1.0,
+ "H4_query_disjoint_rate": 1.0,
+ "H5_within_32kb_rate": 1.0,
+ "H5_max_bytes": 1040,
+ "unit_check_pass_rate": 1.0,
+ "H3_fixed_ratio_mean_by_variant": {
+  "p0": 0.1395,
+  "p0_h256": 0.1395,
+  "p0_nolab": 0.1395,
+  "p1": 0.141,
+  "p2": 0.2185,
+  "p3_m16": 0.2735,
+  "p3_m4": 0.2735,
+  "p3_m8": 0.263,
+  "p4_m16": 0.2735,
+  "p4_m4": 0.2735,
+  "p4_m8": 0.263,
+  "p4_m8_nolab": 0.263
+ },
+ "n_runs_trained": 116,
+ "n_eval_rows": 7680
+}

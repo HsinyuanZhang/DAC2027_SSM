@@ -152,7 +152,8 @@ def eval_point(world, sd, prior, calib, idx, sd_stats=None):
 def build_calibrator(args_like, world):
     c = PopulationCalibrator(args_like["variant"], world.k, desc_dim(world.k),
                              m=args_like.get("m", 8), output=args_like.get("output", "residual"),
-                             label_free=bool(args_like.get("label_free", False)))
+                             label_free=bool(args_like.get("label_free", False)),
+                             hidden=int(args_like.get("hidden", 64)))
     return c.to(world.device)
 
 
@@ -394,6 +395,8 @@ def cmd_evaluate(args):
     variant = a["variant"] + (f"_m{a['m']}" if a["variant"] in ("p3", "p4") else "")
     if a.get("label_free"):
         variant += "_nolab"
+    if a.get("hidden", 64) != 64:
+        variant += f"_h{a['hidden']}"
     if args.shuffle_labels:
         variant += "_shufY"
         rows_path = run_dir / "eval_rows_shufY.jsonl"
@@ -450,7 +453,8 @@ def cmd_reference(args):
     _patch_backward_counter()
     device = torch.device(args.device)
     world = World(args.stratum, "O", device, load_sessions=False)
-    rows_path = OUT / "reference" / f"{args.stratum}.jsonl"
+    rows_path = OUT / "reference" / (f"prior_{args.stratum}.jsonl" if args.prior_only
+                                     else f"{args.stratum}.jsonl")
     rows_path.parent.mkdir(parents=True, exist_ok=True)
     seen = done_keys(rows_path)
     hash_before = world.adapter._hash()
@@ -465,6 +469,7 @@ def cmd_reference(args):
                 base = {"stratum": args.stratum, "pool": "-", "tag": "ref", "seed": 0,
                         "target": target, "B": B, "draw": draw, "diagnostic_only": False}
                 if ("p_prior", target, B, draw) not in seen:
+                    _BWD["n"] = 0                      # H2 counts backward calls per row
                     r2, unit, table, secs, stats = eval_point(world, sd, prior, None, idx)
                     append_row(rows_path, {**base, "variant": "p_prior", "r2": r2,
                                            "unit_ratio": unit["unit_ratio"],
@@ -472,7 +477,7 @@ def cmd_reference(args):
                                            "n_units": int(table.shape[1]),
                                            **h_fields(world, sd, stats, None, table, B, idx,
                                                       hash_before)})
-                if B in B_SCREEN and draw < args.ui_draws and \
+                if not args.prior_only and B in B_SCREEN and draw < args.ui_draws and \
                         ("ui_elec", target, B, draw) not in seen:
                     tabs, mean, std = _ui_rows_for(world, sd, prior, target, B, draw, idx,
                                                    g_fit, world.label_stats)
@@ -495,7 +500,8 @@ def cmd_oracle(args):
     run_dir = OUT / "runs" / f"{args.stratum}_{args.pool}" / args.tag / f"seed{args.seed}"
     calib, blob, done = load_run(run_dir, world)
     a = blob["args"]
-    variant = "p_oracle_" + a["variant"] + (f"_m{a['m']}" if a["variant"] in ("p3", "p4") else "")
+    variant = "p_oracle_" + a["variant"] + (f"_m{a['m']}" if a["variant"] in ("p3", "p4") else "") + \
+        (f"_h{a['hidden']}" if a.get("hidden", 64) != 64 else "")
     rows_path = run_dir / "oracle_rows.jsonl"
     seen = done_keys(rows_path)
     hash_before = world.adapter._hash()
@@ -551,6 +557,7 @@ def main():
             s.add_argument("--m", type=int, default=8)
             s.add_argument("--output", default="residual", choices=["residual", "absolute"])
             s.add_argument("--label-free", action="store_true")
+            s.add_argument("--hidden", type=int, default=64)
         if name == "train":
             s.add_argument("--steps", type=int, default=1000)
             s.add_argument("--min-steps", type=int, default=600)
@@ -564,10 +571,12 @@ def main():
             s.add_argument("--shuffle-labels", action="store_true")
         if name == "reference":
             s.add_argument("--ui-draws", type=int, default=5)
+            s.add_argument("--prior-only", action="store_true")
     args = p.parse_args()
     if getattr(args, "tag", None) is None and args.cmd != "reference":
         args.tag = args.variant + (f"_m{args.m}" if args.variant in ("p3", "p4") else "") + \
-            ("" if args.output == "residual" else "_abs") + ("_nolab" if args.label_free else "")
+            ("" if args.output == "residual" else "_abs") + ("_nolab" if args.label_free else "") + \
+            ("" if args.hidden == 64 else f"_h{args.hidden}")
     {"train": cmd_train, "evaluate": cmd_evaluate, "oracle": cmd_oracle,
      "reference": cmd_reference}[args.cmd](args)
 
