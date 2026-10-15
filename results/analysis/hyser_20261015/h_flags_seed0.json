@@ -1,7 +1,7 @@
 {
  "h1_all_true": true,
  "h5_all_pass": true,
- "n_rows": 6720,
+ "n_rows": 7360,
  "backprop_steps_by_method": {
   "reuse_s1_srcnorm": [
    0
@@ -16,6 +16,9 @@
    0
   ],
   "rownorm_ridge": [
+   0
+  ],
+  "rownorm_ridge_perB": [
    0
   ],
   "ui_prior_s1_srcnorm": [

@@ -20,7 +20,7 @@ from ssm_decode.hyser_data import N_CH, load_session  # noqa: E402
 
 spec = importlib.util.spec_from_file_location("ev", ROOT / "scripts/run_hyser_eval.py")
 ev = importlib.util.module_from_spec(spec); spec.loader.exec_module(ev)
-LAMS = [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0, 10000.0]
+LAMS = [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0, 1e4, 1e5, 1e6, 1e7, 1e8]
 EMAS = [0.0, 0.5, 0.8, 0.9, 0.95]
 DRAWS = 8
 OUT = ROOT / "results/hyser_20261015/eval_closed_form"
