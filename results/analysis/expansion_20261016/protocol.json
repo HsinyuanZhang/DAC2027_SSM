@@ -1,5 +1,5 @@
 {
- "schema": "expansion_20261016_v1",
+ "schema": "expansion_20261016_v2",
  "k": 10,
  "b_list": [
   1,
@@ -363,6 +363,54 @@
    "size_bytes": 47598160
   }
  },
+ "duplicate_targets": {
+  "n_pairs": 35,
+  "n_distinct_sessions": 27,
+  "duplicated": {
+   "sub-C_ses-CO-20150709": [
+    "sc_0708",
+    "sc_0629"
+   ],
+   "sub-C_ses-CO-20150713": [
+    "sc_0708",
+    "sc_0713",
+    "sc_0629"
+   ],
+   "sub-C_ses-CO-20150714": [
+    "sc_0708",
+    "sc_0713"
+   ],
+   "sub-C_ses-CO-20150716": [
+    "sc_0713",
+    "sc_0629",
+    "sc_0309"
+   ],
+   "sub-C_ses-CO-20150629": [
+    "sc_0629",
+    "sc_0309"
+   ],
+   "sub-C_ses-CO-20150706": [
+    "sc_0629",
+    "sc_0309"
+   ]
+  },
+  "p1_design_targets": [
+   "sub-M_ses-CO-20150616",
+   "sub-M_ses-CO-20150617"
+  ],
+  "other_protocol_exam_faces": {
+   "sub-C_ses-CO-20150713": "exp1_narrow / exp1_poverty exam face (EXP1_NARROW_EXAM_SESSIONS 0713-0716)",
+   "sub-C_ses-CO-20150714": "exp1_narrow / exp1_poverty exam face (EXP1_NARROW_EXAM_SESSIONS 0713-0716)",
+   "sub-C_ses-CO-20150715": "exp1_narrow / exp1_poverty exam face (EXP1_NARROW_EXAM_SESSIONS 0713-0716)",
+   "sub-C_ses-CO-20150716": "exp1_narrow / exp1_poverty exam face (EXP1_NARROW_EXAM_SESSIONS 0713-0716)",
+   "sub-C_ses-CO-20151103": "exp2_full / exp2015_full exam face (manifest val = APST development sessions)",
+   "sub-C_ses-CO-20151104": "exp2_full / exp2015_full exam face (manifest val = APST development sessions)",
+   "sub-C_ses-CO-20151106": "exp2_full / exp2015_full exam face (manifest val = APST development sessions)",
+   "sub-C_ses-CO-20151109": "exp2_full / exp2015_full exam face (manifest val = APST development sessions)",
+   "sub-C_ses-CO-20151110": "exp2_full / exp2015_full exam face (manifest val = APST development sessions)",
+   "sub-C_ses-CO-20151112": "exp2_full / exp2015_full exam face (manifest val = APST development sessions)"
+  }
+ },
  "backbones": [
   {
    "bid": "sm_0307",
@@ -391,7 +439,20 @@
     "p0_stratum": "month"
    },
    "note": "existing month/year trunk + P1 P0 calibrators (pool O); 20140307 is the causal selection session of the old month rules, here it is a TARGET and is never used for selection (selection = pool val 20140306)",
-   "val_session": "sub-M_ses-CO-20140306"
+   "val_session": "sub-M_ses-CO-20140306",
+   "trunk_sources": [
+    "sub-M_ses-CO-20140203",
+    "sub-M_ses-CO-20140217",
+    "sub-M_ses-CO-20140218",
+    "sub-M_ses-CO-20140303",
+    "sub-M_ses-CO-20140304",
+    "sub-M_ses-CO-20140306"
+   ],
+   "heldout": [],
+   "selection_scope": "IS: pool[-1] seen by the (reused) trunk",
+   "trunk_gap_days": {
+    "sub-M_ses-CO-20140307": 1
+   }
   },
   {
    "bid": "sm_0627",
@@ -416,7 +477,21 @@
    "k": 10,
    "reuse": {},
    "note": "",
-   "val_session": "sub-M_ses-CO-20140626"
+   "val_session": "sub-M_ses-CO-20140626",
+   "trunk_sources": [
+    "sub-M_ses-CO-20140218",
+    "sub-M_ses-CO-20140303",
+    "sub-M_ses-CO-20140304",
+    "sub-M_ses-CO-20140306",
+    "sub-M_ses-CO-20140307"
+   ],
+   "heldout": [
+    "sub-M_ses-CO-20140626"
+   ],
+   "selection_scope": "OOS: pool[-1] held out of trunk training (trunk-unseen, causal)",
+   "trunk_gap_days": {
+    "sub-M_ses-CO-20140627": 112
+   }
   },
   {
    "bid": "sm_0512",
@@ -441,7 +516,21 @@
    "k": 10,
    "reuse": {},
    "note": "20141203 (10 units) is skipped: below the Ledermann minimum for K=10",
-   "val_session": "sub-M_ses-CO-20150511"
+   "val_session": "sub-M_ses-CO-20150511",
+   "trunk_sources": [
+    "sub-M_ses-CO-20140306",
+    "sub-M_ses-CO-20140307",
+    "sub-M_ses-CO-20140626",
+    "sub-M_ses-CO-20140627",
+    "sub-M_ses-CO-20140929"
+   ],
+   "heldout": [
+    "sub-M_ses-CO-20150511"
+   ],
+   "selection_scope": "OOS: pool[-1] held out of trunk training (trunk-unseen, causal)",
+   "trunk_gap_days": {
+    "sub-M_ses-CO-20150512": 225
+   }
   },
   {
    "bid": "sm_0611",
@@ -494,7 +583,25 @@
    "k": 10,
    "reuse": {},
    "note": "20150616/17 are the old sub-M dev targets; here with a different (rolling) pool",
-   "val_session": "sub-M_ses-CO-20150610"
+   "val_session": "sub-M_ses-CO-20150610",
+   "trunk_sources": [
+    "sub-M_ses-CO-20140626",
+    "sub-M_ses-CO-20140627",
+    "sub-M_ses-CO-20140929",
+    "sub-M_ses-CO-20150511",
+    "sub-M_ses-CO-20150512"
+   ],
+   "heldout": [
+    "sub-M_ses-CO-20150610"
+   ],
+   "selection_scope": "OOS: pool[-1] held out of trunk training (trunk-unseen, causal)",
+   "trunk_gap_days": {
+    "sub-M_ses-CO-20150611": 30,
+    "sub-M_ses-CO-20150612": 31,
+    "sub-M_ses-CO-20150615": 34,
+    "sub-M_ses-CO-20150616": 35,
+    "sub-M_ses-CO-20150617": 36
+   }
   },
   {
    "bid": "sc_0708",
@@ -631,7 +738,37 @@
    "k": 10,
    "reuse": {},
    "note": "days targets 0708-0714; month targets are the APST dev sessions (not held out); year targets (2016) are optional",
-   "val_session": "sub-C_ses-CO-20150707"
+   "val_session": "sub-C_ses-CO-20150707",
+   "trunk_sources": [
+    "sub-C_ses-CO-20150629",
+    "sub-C_ses-CO-20150630",
+    "sub-C_ses-CO-20150701",
+    "sub-C_ses-CO-20150703",
+    "sub-C_ses-CO-20150706"
+   ],
+   "heldout": [
+    "sub-C_ses-CO-20150707"
+   ],
+   "selection_scope": "OOS: pool[-1] held out of trunk training (trunk-unseen, causal)",
+   "trunk_gap_days": {
+    "sub-C_ses-CO-20150708": 2,
+    "sub-C_ses-CO-20150709": 3,
+    "sub-C_ses-CO-20150710": 4,
+    "sub-C_ses-CO-20150713": 7,
+    "sub-C_ses-CO-20150714": 8,
+    "sub-C_ses-CO-20151103": 120,
+    "sub-C_ses-CO-20151104": 121,
+    "sub-C_ses-CO-20151106": 123,
+    "sub-C_ses-CO-20151109": 126,
+    "sub-C_ses-CO-20151110": 127,
+    "sub-C_ses-CO-20151112": 129,
+    "sub-C_ses-CO-20160909": 431,
+    "sub-C_ses-CO-20160914": 436,
+    "sub-C_ses-CO-20160919": 441,
+    "sub-C_ses-CO-20160923": 445,
+    "sub-C_ses-CO-20160929": 451,
+    "sub-C_ses-CO-20161006": 458
+   }
   },
   {
    "bid": "sc_0713",
@@ -677,7 +814,24 @@
    "k": 10,
    "reuse": {},
    "note": "",
-   "val_session": "sub-C_ses-CO-20150710"
+   "val_session": "sub-C_ses-CO-20150710",
+   "trunk_sources": [
+    "sub-C_ses-CO-20150703",
+    "sub-C_ses-CO-20150706",
+    "sub-C_ses-CO-20150707",
+    "sub-C_ses-CO-20150708",
+    "sub-C_ses-CO-20150709"
+   ],
+   "heldout": [
+    "sub-C_ses-CO-20150710"
+   ],
+   "selection_scope": "OOS: pool[-1] held out of trunk training (trunk-unseen, causal)",
+   "trunk_gap_days": {
+    "sub-C_ses-CO-20150713": 4,
+    "sub-C_ses-CO-20150714": 5,
+    "sub-C_ses-CO-20150715": 6,
+    "sub-C_ses-CO-20150716": 7
+   }
   },
   {
    "bid": "sc_0629",
@@ -737,7 +891,26 @@
    "k": 10,
    "reuse": {},
    "note": "only 5 sessions exist in 2015-03; 20131220 completes the pool",
-   "val_session": "sub-C_ses-CO-20150319"
+   "val_session": "sub-C_ses-CO-20150319",
+   "trunk_sources": [
+    "sub-C_ses-CO-20131220",
+    "sub-C_ses-CO-20150309",
+    "sub-C_ses-CO-20150311",
+    "sub-C_ses-CO-20150312",
+    "sub-C_ses-CO-20150313"
+   ],
+   "heldout": [
+    "sub-C_ses-CO-20150319"
+   ],
+   "selection_scope": "OOS: pool[-1] held out of trunk training (trunk-unseen, causal)",
+   "trunk_gap_days": {
+    "sub-C_ses-CO-20150629": 108,
+    "sub-C_ses-CO-20150701": 110,
+    "sub-C_ses-CO-20150706": 115,
+    "sub-C_ses-CO-20150709": 118,
+    "sub-C_ses-CO-20150713": 122,
+    "sub-C_ses-CO-20150716": 125
+   }
   },
   {
    "bid": "sc_0309",
@@ -797,7 +970,26 @@
    "k": 10,
    "reuse": {},
    "note": "",
-   "val_session": "sub-C_ses-CO-20131220"
+   "val_session": "sub-C_ses-CO-20131220",
+   "trunk_sources": [
+    "sub-C_ses-CO-20131031",
+    "sub-C_ses-CO-20131101",
+    "sub-C_ses-CO-20131203",
+    "sub-C_ses-CO-20131204",
+    "sub-C_ses-CO-20131219"
+   ],
+   "heldout": [
+    "sub-C_ses-CO-20131220"
+   ],
+   "selection_scope": "OOS: pool[-1] held out of trunk training (trunk-unseen, causal)",
+   "trunk_gap_days": {
+    "sub-C_ses-CO-20150309": 445,
+    "sub-C_ses-CO-20150312": 448,
+    "sub-C_ses-CO-20150319": 455,
+    "sub-C_ses-CO-20150629": 557,
+    "sub-C_ses-CO-20150706": 564,
+    "sub-C_ses-CO-20150716": 574
+   }
   }
  ]
 }

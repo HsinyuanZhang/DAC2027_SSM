@@ -210,6 +210,73 @@ def test_register_does_not_clobber_p1_pools(backbones, tmp_path):
     ep.register_d1_pools(backbones, tmp_path)
     for k, v in before.items():
         assert D1_POOLS[k] == v
-    assert D1_POOLS["sc_0713"]["sources"].split(",") == list(next(b for b in backbones if b.bid == "sc_0713").pool)
+    bb = next(b for b in backbones if b.bid == "sc_0713")
+    assert D1_POOLS["sc_0713"]["sources"].split(",") == list(bb.pool[:-1])        # trunk sources only
+    assert D1_POOLS["sc_0713"]["heldout"] == [bb.pool[-1]]
+    reused = D1_POOLS["sm_0307"]
+    assert reused["sources"].split(",") == list(next(b for b in backbones if b.bid == "sm_0307").pool)
+    assert "heldout" not in reused
     for k in [b.bid for b in backbones]:
         D1_POOLS.pop(k, None)
+
+
+# ---- out-of-sample selection protocol (2026-10-16) ---------------------------------------------------------
+
+def test_new_backbones_hold_pool_last_out_of_trunk_training(backbones):
+    for bb in backbones:
+        if bb.reuse:
+            assert bb.trunk_sources == bb.pool and not bb.heldout and not bb.oos_selection
+            assert bb.selection_scope.startswith("IS")
+        else:
+            assert bb.trunk_sources == bb.pool[:5] and len(bb.trunk_sources) == 5
+            assert bb.heldout == (bb.pool[-1],) == (bb.val_session,) and bb.oos_selection
+            assert bb.val_session not in bb.trunk_sources
+            assert bb.selection_scope.startswith("OOS")
+        # causal: the held-out selection session is earlier than every target
+        assert all(ep.date_of(bb.val_session) < ep.date_of(t.session) for t in bb.targets)
+    assert [b.bid for b in backbones if b.reuse] == ["sm_0307"]
+
+
+def test_trunk_gap_is_measured_from_the_latest_trunk_training_session(backbones):
+    sm0627 = next(b for b in backbones if b.bid == "sm_0627")
+    # pool[-1] = 20140626 is held out; the trunk's last training session is 20140307
+    assert sm0627.targets[0].gap_days == 1 and sm0627.trunk_gap_days(sm0627.targets[0].session) == 112
+    for bb in backbones:
+        for t in bb.targets:
+            assert bb.trunk_gap_days(t.session) >= t.gap_days
+    reused = next(b for b in backbones if b.reuse)
+    assert reused.trunk_gap_days(reused.targets[0].session) == reused.targets[0].gap_days
+
+
+def test_d1_spec_alignment_for_the_p1_world():
+    bb = bb_of(["20140101", "20140102", "20140103", "20140104", "20140105", "20140106"], ["20140107"])
+    spec = ep.d1_spec(bb, "x.pt")
+    assert spec["sources"].split(",") == list(bb.pool[:5]) and spec["heldout"] == [bb.pool[5]]
+    reuse = ep.Backbone("t", "sub-M", bb.pool, bb.targets, reuse={"ap": "a"})
+    assert "heldout" not in ep.d1_spec(reuse, "x.pt") and ep.d1_spec(reuse, "x.pt")["sources"].split(",") == list(bb.pool)
+
+
+def test_duplicate_targets_are_reported_by_session(backbones):
+    prim = ep.select_tier(backbones, tier="primary")
+    subc = [b for b in prim if b.subject == "sub-C"]
+    rep = ep.duplicate_target_report(subc)
+    assert rep["n_pairs"] == 27 and rep["n_distinct_sessions"] == 19
+    dup = {s[-4:]: len(b) for s, b in rep["duplicated"].items()}
+    assert dup == {"0713": 3, "0716": 3, "0629": 2, "0706": 2, "0709": 2, "0714": 2}
+    # sub-M: sm_0611 targets 0616 / 0617 were P1 design targets
+    rep_m = ep.duplicate_target_report([b for b in prim if b.subject == "sub-M"])
+    assert rep_m["n_pairs"] == rep_m["n_distinct_sessions"] == 8
+    assert set(rep_m["p1_design_targets"]) == {"sub-M_ses-CO-20150616", "sub-M_ses-CO-20150617"}
+    # disclosure: sub-C targets that are exam faces of other protocols (not forbidden)
+    faces = rep["other_protocol_exam_faces"]
+    assert {s[-4:] for s in faces} >= {"0713", "0714", "0716", "1103", "1112"}
+    assert not set(faces) & ep.ALL_FORBIDDEN
+
+
+def test_no_2016_session_in_the_primary_tier(backbones):
+    prim = ep.select_tier(backbones, tier="primary")
+    assert not any("CO-2016" in t.session for b in prim for t in b.targets)
+    assert not any("CO-2016" in s for b in prim for s in b.pool)
+    protocol = ep.protocol_dict()
+    assert protocol["schema"] == "expansion_20261016_v2" and "duplicate_targets" in protocol
+    assert not any("CO-2016" in s for s in protocol["duplicate_targets"]["duplicated"])

@@ -121,3 +121,67 @@ def test_rt_and_foreign_sessions_rejected():
 def test_subm_final_sessions_stay_withheld_in_plan():
     with pytest.raises(PermissionError):
         d.dandi688_plan(targets=["sub-M_ses-CO-20150623"])
+
+
+# ---- review fixes 2026-10-16: sub-M finals refused by the loader, _scan_session guarded --------------------
+SUBM_FINAL = ("sub-M_ses-CO-20150623", "sub-M_ses-CO-20150625", "sub-M_ses-CO-20150626")
+
+
+@pytest.mark.parametrize("session", SUBM_FINAL)
+def test_loader_refuses_subm_final_before_opening_any_file(session, no_nwb_access):
+    with pytest.raises(PermissionError, match="sub-M final"):
+        d.load_dandi688_recording(session)
+    assert no_nwb_access == []
+
+
+@pytest.mark.parametrize("session", SUBM_FINAL)
+def test_inventory_refuses_subm_final_when_requested(session, no_nwb_access):
+    with pytest.raises(PermissionError):
+        d.list_dandi688_co_sessions("sub-M", sessions=[session])
+    assert no_nwb_access == []
+
+
+@pytest.mark.parametrize("session", APST_FINAL + SUBM_FINAL)
+def test_scan_session_itself_refuses_final_sessions(session, monkeypatch):
+    """The low-level scanner is guarded too: no caller can reach a held-out file through it (pynwb is not even
+    imported: the guard runs first, so a non-existent path is enough)."""
+    import sys
+    monkeypatch.setitem(sys.modules, "pynwb", None)          # an import attempt would raise ImportError instead
+    with pytest.raises(PermissionError):
+        d._scan_session(Path("/nonexistent") / f"{session}{d.NWB_SUFFIX}")
+
+
+def test_scan_session_guard_does_not_block_allowed_sessions(monkeypatch):
+    import sys
+    monkeypatch.setitem(sys.modules, "pynwb", None)
+    with pytest.raises(ImportError):                         # got past the guard, failed at the (blocked) import
+        d._scan_session(Path("/nonexistent") / f"{SUBC_SMALL}{d.NWB_SUFFIX}")
+    with pytest.raises(ImportError):
+        d._scan_session(Path("/nonexistent") / "sub-M_ses-CO-20150612_behavior+ecephys.nwb")
+
+
+def test_whole_subject_inventory_skips_subm_finals(monkeypatch):
+    seen = []
+
+    def stub(path):
+        seen.append(Path(path).name)
+        edges = np.arange(0.0, 1.0, 0.02)
+        return {"edges": edges, "spikes": [np.array([0.1])], "trials": [], "canonical_keys": list(range(96))}
+    monkeypatch.setattr(d, "_scan_session", stub)
+    rows = d.list_dandi688_co_sessions("sub-M")
+    assert rows and not {r["session"] for r in rows} & set(SUBM_FINAL)
+    assert not any(any(f in n for f in SUBM_FINAL) for n in seen)
+
+
+def test_all_refused_set_is_the_union():
+    assert d.ALL_REFUSED_SESSIONS == set(SUBM_FINAL) | set(APST_FINAL)
+    for s in d.TRAIN_SESSIONS + d.DEV_SESSIONS:
+        d.assert_session_allowed(s)                           # allowed sub-M sessions pass
+
+
+def test_plan_with_include_final_still_plans_paths_but_never_reads():
+    plan = d.dandi688_plan(sessions=d.TRAIN_SESSIONS, targets=["sub-M_ses-CO-20150623"], include_final=True)
+    assert plan["target_sessions"] == ["sub-M_ses-CO-20150623"] and plan["final_accessed"] is False
+    with pytest.raises(PermissionError):
+        d.dandi688_plan(sessions=d.TRAIN_SESSIONS, targets=["sub-M_ses-CO-20150623"], include_final=True,
+                        with_metadata=True)

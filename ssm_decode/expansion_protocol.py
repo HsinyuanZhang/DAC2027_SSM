@@ -16,8 +16,14 @@ Rules enforced by :func:`validate_backbone` (all unit-tested):
 * the stratum label of a target agrees with its gap (days) from the latest pool session:
   days 1-7, month 90-130, year >= 365.
 
-Selection (R1-stream lambda/readout kind, P0 early stopping) uses source data only: the P0 validation
-session = the last pool session.  It is a pool member, hence never a target of its backbone.
+Selection protocol (changed 2026-10-16 after the P3 review: in-sample selection collapses towards "no
+change"): for every NEW backbone the AP trunk is trained on the first 5 of the 6 pool sessions
+(``trunk_sources``) and the 6th, latest session (``heldout`` = ``pool[-1]`` = ``val_session``) is held out of
+trunk training.  It is the P0 early-stopping session and the source-simulation session on which the
+R1-stream / R2 (F7-J) / R3 rules are selected.  It is trunk-unseen (out-of-sample, OOS) and causal (earlier than
+every target).  The reused sm_0307 backbone keeps its 6-session trunk, so its ``val_session`` is
+in-sample (IS) and its rows must never be merged with the OOS rows or with the P3 / drift-curve R1-R3 rows
+(selected on 20140307, which is the sm_0307 target).
 """
 from __future__ import annotations
 
@@ -44,6 +50,19 @@ STRATUM_GAP_DAYS = {"days": (1, 7), "month": (90, 130), "year": (365, 10_000)}
 PREFIX = {"sub-M": "sub-M_ses-CO-", "sub-C": "sub-C_ses-CO-"}
 ALL_FORBIDDEN = frozenset(FINAL_SESSIONS) | FORBIDDEN_SESSIONS
 
+# Disclosure only (not forbidden): sub-C sessions that other SPINT / btransform protocols use as exam faces
+# (SPINT/btransform_unified_v2/dandi688_bench_v1/src/dandi688_bench_v1/plan.py: EXP1_NARROW_EXAM_SESSIONS at line
+# ~682, EXP2016_EXAM_SESSIONS at line ~727; exp2_full / exp2015_full exam = the manifest val = APST dev sessions).
+OTHER_PROTOCOL_EXAM_FACES = {
+    **{f"sub-C_ses-CO-{d}": "exp1_narrow / exp1_poverty exam face (EXP1_NARROW_EXAM_SESSIONS 0713-0716)"
+       for d in ("20150713", "20150714", "20150715", "20150716")},
+    **{f"sub-C_ses-CO-{d}": "exp2_full / exp2015_full exam face (manifest val = APST development sessions)"
+       for d in ("20151103", "20151104", "20151106", "20151109", "20151110", "20151112")},
+}
+# sub-M targets that were P1 design targets (days pool dev targets); their rows come from a different pool here.
+P1_DESIGN_TARGETS = frozenset({"sub-M_ses-CO-20150616", "sub-M_ses-CO-20150617", "sub-M_ses-CO-20140626",
+                               "sub-M_ses-CO-20150511"})
+
 
 @dataclass(frozen=True)
 class Target:
@@ -66,8 +85,31 @@ class Backbone:
 
     @property
     def val_session(self) -> str:
-        """P0 early-stopping and R1-stream selection session = last pool session (source only)."""
+        """P0 early-stopping and R1/R2/R3 selection session = last pool session (source only)."""
         return self.pool[-1]
+
+    @property
+    def oos_selection(self) -> bool:
+        """True when ``val_session`` is held out of the trunk (new backbones); False for the reused sm_0307."""
+        return not self.reuse
+
+    @property
+    def trunk_sources(self) -> tuple[str, ...]:
+        """Sessions the AP trunk is trained on (and the Jacobian / PCA basis are computed on)."""
+        return self.pool if self.reuse else self.pool[:-1]
+
+    @property
+    def heldout(self) -> tuple[str, ...]:
+        return () if self.reuse else (self.pool[-1],)
+
+    @property
+    def selection_scope(self) -> str:
+        return ("OOS: pool[-1] held out of trunk training (trunk-unseen, causal)" if self.oos_selection
+                else "IS: pool[-1] seen by the (reused) trunk")
+
+    def trunk_gap_days(self, session: str) -> int:
+        """Days from the latest trunk-TRAINING session to ``session`` (>= the stratum gap, measured from pool[-1])."""
+        return (to_date(date_of(session)) - to_date(date_of(max(self.trunk_sources, key=date_of)))).days
 
 
 def to_date(date: str) -> dt.date:
@@ -228,19 +270,43 @@ def select_tier(backbones: list[Backbone], *, tier: str = "primary", exclude_aps
     return out
 
 
+def target_clusters(backbones: list[Backbone]) -> dict[str, list[str]]:
+    """target session -> backbone ids that evaluate it.  Rows of one session are NOT independent targets:
+    the aggregation clusters by session (see ``scripts/analyze_expansion.py``)."""
+    out: dict[str, list[str]] = {}
+    for bb in backbones:
+        for t in bb.targets:
+            out.setdefault(t.session, []).append(bb.bid)
+    return out
+
+
+def duplicate_target_report(backbones: list[Backbone]) -> dict:
+    cl = target_clusters(backbones)
+    dup = {s: b for s, b in cl.items() if len(b) > 1}
+    return {"n_pairs": sum(len(b) for b in cl.values()), "n_distinct_sessions": len(cl),
+            "duplicated": dup, "p1_design_targets": sorted(set(cl) & P1_DESIGN_TARGETS),
+            "other_protocol_exam_faces": {s: OTHER_PROTOCOL_EXAM_FACES[s] for s in sorted(cl)
+                                          if s in OTHER_PROTOCOL_EXAM_FACES}}
+
+
 def protocol_dict(inventory: dict[str, dict] | None = None) -> dict:
     inventory = inventory or load_inventory()
     bbs = build_backbones()
     audits = [validate_backbone(bb, inventory) for bb in bbs]
     sessions = sorted({s for bb in bbs for s in list(bb.pool) + [t.session for t in bb.targets]})
     return {
-        "schema": "expansion_20261016_v1", "k": K_TARGET, "b_list": list(B_LIST), "n_draws": N_DRAWS,
+        "schema": "expansion_20261016_v2", "k": K_TARGET, "b_list": list(B_LIST), "n_draws": N_DRAWS,
         "seeds": list(SEEDS), "pool_size": POOL_SIZE, "min_pool_units": MIN_POOL_UNITS,
         "min_target_trials": MIN_TARGET_TRIALS, "stratum_gap_days": STRATUM_GAP_DAYS,
         "forbidden_sessions": sorted(ALL_FORBIDDEN), "audits": audits,
         "sessions": {s: {"n_units": inventory[s]["n_units"], "n_usable_trials": inventory[s]["n_usable_trials"],
                          "size_bytes": inventory[s]["size_bytes"]} for s in sessions},
-        "backbones": [{**{k: v for k, v in asdict(bb).items()}, "val_session": bb.val_session} for bb in bbs],
+        "duplicate_targets": duplicate_target_report([b for b in select_tier(bbs, tier="primary")]),
+        "backbones": [{**{k: v for k, v in asdict(bb).items()}, "val_session": bb.val_session,
+                       "trunk_sources": list(bb.trunk_sources), "heldout": list(bb.heldout),
+                       "selection_scope": bb.selection_scope,
+                       "trunk_gap_days": {t.session: bb.trunk_gap_days(t.session) for t in bb.targets}}
+                      for bb in bbs],
     }
 
 
@@ -254,13 +320,23 @@ def bundle_files(backbones: list[Backbone], inventory: dict[str, dict]) -> list[
              "size_bytes": inventory[s]["size_bytes"]} for s in sessions]
 
 
+def d1_spec(bb: Backbone, ap: str) -> dict:
+    """``D1_POOLS`` entry of a backbone: ``sources`` = trunk sources (they align with the trunk's tables),
+    ``heldout`` = trunk-unseen pool[-1] (appended by ``run_population_calib.sessions_for`` as the P0 validation
+    session).  Entries of the P1 strata have no ``heldout`` key and are unaffected."""
+    spec = dict(sources=",".join(bb.trunk_sources), targets=[t.session for t in bb.targets], ap=ap)
+    if bb.heldout:
+        spec["heldout"] = list(bb.heldout)
+    return spec
+
+
 def register_d1_pools(backbones: list[Backbone], out_root: str | Path) -> dict:
     """Add each backbone to ``run_labeled_calibration.D1_POOLS`` so the P1 World/driver code can be reused."""
     from scripts.run_labeled_calibration import D1_POOLS
     out_root = Path(out_root)
     for bb in backbones:
         ap = bb.reuse.get("ap") or str(out_root / "backbones" / bb.bid / "final" / "best.pt")
-        D1_POOLS[bb.bid] = dict(sources=",".join(bb.pool), targets=[t.session for t in bb.targets], ap=ap)
+        D1_POOLS[bb.bid] = d1_spec(bb, ap)
     return D1_POOLS
 
 

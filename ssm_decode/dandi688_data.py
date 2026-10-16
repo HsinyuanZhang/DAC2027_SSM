@@ -95,6 +95,10 @@ SUBC_APST_DEV_SESSIONS = (
 )
 SUBJECTS = (SUBJECT, SUBJECT_C)
 FORBIDDEN_SESSIONS = frozenset(SUBC_FINAL_SESSIONS)
+# Every session the loader, the scanner and the inventory refuse to open: the six APST held-out sub-C sessions
+# and the three sub-M final sessions.  There is no override flag (``dandi688_plan(include_final=True)`` only
+# plans paths; it never reads a recording).
+ALL_REFUSED_SESSIONS = frozenset(FINAL_SESSIONS) | FORBIDDEN_SESSIONS
 
 
 @dataclass(frozen=True)
@@ -133,9 +137,11 @@ def dandi688_subm_root(root: str | Path | None = None) -> Path:
 
 
 def assert_session_allowed(session: str) -> None:
-    """Raise PermissionError for APST held-out (final) sub-C sessions.  No override exists."""
+    """Raise PermissionError for final sessions (APST held-out sub-C, sub-M 0623/0625/0626).  No override exists."""
     if session in FORBIDDEN_SESSIONS:
         raise PermissionError(f"{session} is an APST held-out (final) sub-C session; never load it")
+    if session in FINAL_SESSIONS:
+        raise PermissionError(f"{session} is a sub-M final session; never load it")
 
 
 def session_subject(session: str) -> str:
@@ -147,7 +153,12 @@ def session_subject(session: str) -> str:
 
 
 def _scan_session(path: Path) -> dict:
-    """Open one NWB once and gather M1 units, spike edges, velocity and trials."""
+    """Open one NWB once and gather M1 units, spike edges, velocity and trials.
+
+    Final sessions are refused here too (before pynwb is imported), so no caller can reach a held-out
+    file through this helper.
+    """
+    assert_session_allowed(Path(path).name.removesuffix(NWB_SUFFIX).removesuffix(".nwb"))
     from pynwb import NWBHDF5IO
 
     with NWBHDF5IO(str(path), "r", load_namespaces=True) as io:
@@ -213,9 +224,10 @@ def list_dandi688_co_sessions(subject: str = SUBJECT, *, root: str | Path | None
     """Inventory one subject's CO sessions with per-session load metadata.
 
     Each row reports date, M1 unit count, bin count, trial counts and the
-    mean per-unit firing rate.  Pass ``sessions`` to scan a subset.  APST
-    held-out sub-C sessions are never opened: requested explicitly they raise
-    PermissionError, and they are skipped when the whole subject is scanned.
+    mean per-unit firing rate.  Pass ``sessions`` to scan a subset.  Final
+    sessions (APST held-out sub-C, sub-M 0623/0625/0626) are never opened:
+    requested explicitly they raise PermissionError, and they are skipped
+    when the whole subject is scanned.
     """
     subject_dir = dandi688_subject_root(subject, root)
     surface = f"_ses-{TASK_SURFACE}-"
@@ -230,7 +242,7 @@ def list_dandi688_co_sessions(subject: str = SUBJECT, *, root: str | Path | None
         if missing:
             raise KeyError(f"{subject} CO session(s) not found under {subject_dir}: {missing}")
     else:
-        rows = [row for row in rows if row["session"] not in FORBIDDEN_SESSIONS]
+        rows = [row for row in rows if row["session"] not in ALL_REFUSED_SESSIONS]
     result = []
     for row in rows:
         scan = _scan_session(Path(row["path"]))
@@ -261,8 +273,9 @@ def list_dandi688_subm_co_sessions(*, root: str | Path | None = None,
 def load_dandi688_recording(session: str, *, root: str | Path | None = None) -> Dandi688Recording:
     """Load one ``sub-M_ses-CO-YYYYMMDD`` (or ``sub-C_ses-CO-YYYYMMDD``) session as a pilot ``Recording``.
 
-    sub-M behaviour is unchanged.  sub-C sessions are served by the same code path, except that the six
-    APST held-out (final) sessions raise PermissionError before any file is opened.
+    sub-M behaviour is unchanged for allowed sessions.  sub-C sessions are served by the same code path.
+    The six APST held-out (final) sub-C sessions and the three sub-M final sessions raise PermissionError
+    before any file is opened.
 
     ``neural`` is [T, N_s] non-negative 20 ms spike counts over the session's
     own M1 units, ``behavior`` is [T, 2] cursor velocity at bin centers, and

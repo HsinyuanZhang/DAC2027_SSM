@@ -681,9 +681,9 @@
   "tar_member_prefix": "dandi_000688/sub-C/",
   "primary_files": 30,
   "primary_bytes": 3568531938,
-  "all_files": 36,
-  "all_bytes": 5105070092,
-  "note": "ships ONLY allowed sessions; the six APST held-out sessions are never listed"
+  "optional_2016_files_not_shipped": 6,
+  "optional_2016_bytes_not_shipped": 1536538154,
+  "note": "ships ONLY allowed primary sessions; the six APST held-out sessions and the optional 2016 sessions are never listed in the member file"
  },
  "subM_needed_in_existing_bundle": [
   "sub-M_ses-CO-20140203_behavior+ecephys.nwb",
@@ -704,5 +704,34 @@
   "sub-M_ses-CO-20150615_behavior+ecephys.nwb",
   "sub-M_ses-CO-20150616_behavior+ecephys.nwb",
   "sub-M_ses-CO-20150617_behavior+ecephys.nwb"
- ]
+ ],
+ "code_files": {
+  "n_files": 22,
+  "total_bytes": 325778,
+  "files": [
+   "scripts/run_expansion.py",
+   "scripts/run_expansion_queue.sh",
+   "scripts/analyze_expansion.py",
+   "scripts/expansion_cost.py",
+   "scripts/smoke_expansion_cpu.py",
+   "scripts/run_population_calib.py",
+   "scripts/run_pc3_refine.py",
+   "scripts/run_labeled_calibration.py",
+   "ssm_decode/expansion_protocol.py",
+   "ssm_decode/expansion_rules.py",
+   "ssm_decode/atomic_jsonl.py",
+   "ssm_decode/dandi688_data.py",
+   "ssm_decode/fwd_refine.py",
+   "results/analysis/expansion_20261016/session_inventory.json",
+   "results/analysis/expansion_20261016/protocol.json",
+   "results/analysis/expansion_20261016/colab_bundle_subC_primary.txt",
+   "tests/test_dandi688_subc.py",
+   "tests/test_expansion_protocol.py",
+   "tests/test_run_expansion.py",
+   "tests/test_atomic_jsonl.py",
+   "tests/test_expansion_rules.py",
+   "tests/test_analyze_expansion.py"
+  ],
+  "note": "re-pack the SSM repo at the commit that contains these files (they are all tracked)"
+ }
 }

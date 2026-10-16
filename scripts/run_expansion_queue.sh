@@ -10,16 +10,22 @@
 #                --work /content/expansion_work --jobs 4 --deadline-hours 10
 #
 # Options: --out DIR (persistent root, default results/expansion_20261016)  --work DIR (local scratch)
-#          --bids a,b|all  --stages backbone,p0,select,eval  --jobs N  --tier primary|all
+#          --bids a,b|all  --stages backbone,p0,jacobian,select,eval  --jobs N  --tier primary|all
+#          --include-2016-optional (required by --tier all; logs a warning)
 #          --exclude-apst-dev  --device cuda:0  --deadline-hours H  --dry-run
+#
+# Exit status: 0 = every chain finished; 3 = at least one chain stopped at the --deadline-hours check and none
+# failed (re-run the same command to resume); otherwise the return code of the first failed stage (1 for a
+# pre-flight failure or an unexplained xargs failure).  A failed chain does not stop the other chains.
+# EXPANSION_DRIVER overrides the driver script (used by the exit-status tests with a fake stage).
 set -u
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 PY=${PY:-/home/xinyuan/miniconda3/envs/spint/bin/python}
 export PYTHONNOUSERSITE=1
 export PYTHONPATH="$ROOT/.tools/mamba_deps:$ROOT${PYTHONPATH:+:$PYTHONPATH}"
 
-OUT="$ROOT/results/expansion_20261016"; WORK=""; BIDS=all; STAGES=backbone,p0,select,eval
-JOBS=1; TIER=primary; DEV_FLAG=""; DEVICE=cuda:0; DEADLINE_H=10.5; DRY=0
+OUT="$ROOT/results/expansion_20261016"; WORK=""; BIDS=all; STAGES=backbone,p0,jacobian,select,eval
+JOBS=1; TIER=primary; DEV_FLAG=""; OPT_FLAG=""; DEVICE=cuda:0; DEADLINE_H=10.5; DRY=0
 while [ $# -gt 0 ]; do
   case $1 in
     --out) OUT=$2; shift 2;;
@@ -28,6 +34,7 @@ while [ $# -gt 0 ]; do
     --stages) STAGES=$2; shift 2;;
     --jobs) JOBS=$2; shift 2;;
     --tier) TIER=$2; shift 2;;
+    --include-2016-optional) OPT_FLAG="--include-2016-optional"; shift;;
     --exclude-apst-dev) DEV_FLAG="--exclude-apst-dev"; shift;;
     --device) DEVICE=$2; shift 2;;
     --deadline-hours) DEADLINE_H=$2; shift 2;;
@@ -38,8 +45,9 @@ done
 START=$(date +%s)
 DEADLINE=$(awk -v s="$START" -v h="$DEADLINE_H" 'BEGIN{printf "%d", s + h * 3600}')
 mkdir -p "$OUT/logs"
-COMMON="--out $OUT ${WORK:+--work $WORK} --tier $TIER $DEV_FLAG --device $DEVICE"
-RX="$PY $ROOT/scripts/run_expansion.py"
+COMMON="--out $OUT ${WORK:+--work $WORK} --tier $TIER $OPT_FLAG $DEV_FLAG --device $DEVICE"
+DRIVER=${EXPANSION_DRIVER:-$ROOT/scripts/run_expansion.py}
+RX="$PY $DRIVER"
 
 # pre-flight: protocol and forbidden-session audit (fails loudly), then the status table
 $RX check $COMMON --bid "$BIDS" > "$OUT/logs/preflight.log" 2>&1 || { echo "[queue] preflight FAILED"; tail -5 "$OUT/logs/preflight.log"; exit 1; }
@@ -63,15 +71,35 @@ echo "[queue] $(date '+%T') backbones: $BID_LIST | stages: $STAGES | jobs: $JOBS
 chain() {
   local bid=$1 log="$OUT/logs/$1.log" st rc
   for st in ${STAGES//,/ }; do
-    if [ "$(date +%s)" -ge "$DEADLINE" ]; then echo "[queue] $bid: deadline reached before $st; re-run to resume" | tee -a "$log"; return 3; fi
+    if [ "$(date +%s)" -ge "$DEADLINE" ]; then
+      echo "[queue] $bid: deadline reached before $st; re-run to resume" | tee -a "$log"
+      echo 3 > "$OUT/logs/.rc_$bid"; return 3
+    fi
     echo "[queue] $(date '+%T') $bid stage=$st" >> "$log"
     $RX "$st" $COMMON --bid "$bid" >> "$log" 2>&1; rc=$?
-    if [ $rc -ne 0 ]; then echo "[queue] $bid stage=$st FAILED rc=$rc (see $log)"; return $rc; fi
+    if [ $rc -ne 0 ]; then
+      echo "[queue] $bid stage=$st FAILED rc=$rc (see $log)"
+      echo "$rc" > "$OUT/logs/.rc_$bid"; return $rc
+    fi
   done
   echo "[queue] $(date '+%T') $bid chain done"
+  echo 0 > "$OUT/logs/.rc_$bid"
 }
 export -f chain
 export OUT WORK STAGES DEADLINE COMMON RX
+for b in $BID_LIST; do rm -f "$OUT/logs/.rc_$b"; done
+# xargs only says "some invocation failed" (123); the per-chain return codes are collected from the .rc files
 printf '%s\n' $BID_LIST | xargs -P "$JOBS" -I{} bash -c 'chain {}'
-echo "[queue] $(date '+%T') finished; status:"
+XRC=$?
+EXIT=0; DEADLINE_HIT=0
+for b in $BID_LIST; do
+  if [ -f "$OUT/logs/.rc_$b" ]; then rc=$(cat "$OUT/logs/.rc_$b"); else rc=1; echo "[queue] $b: no return code recorded (chain crashed)"; fi
+  if [ "$rc" = 3 ]; then DEADLINE_HIT=1
+  elif [ "$rc" != 0 ] && [ "$EXIT" = 0 ]; then EXIT=$rc; fi
+done
+if [ "$EXIT" = 0 ] && [ "$XRC" != 0 ] && [ "$DEADLINE_HIT" = 0 ]; then EXIT=1; fi    # xargs failed without a recorded chain rc
+FINAL=$EXIT
+[ "$FINAL" = 0 ] && [ "$DEADLINE_HIT" = 1 ] && FINAL=3
+echo "[queue] $(date '+%T') finished (exit $FINAL); status:"
 $RX status $COMMON --bid "$BIDS" 2>&1 | grep -v -i warn
+exit "$FINAL"

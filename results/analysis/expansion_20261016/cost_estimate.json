@@ -1,0 +1,148 @@
+{
+ "l4_factor": 2.0,
+ "sel_draws": 4,
+ "backbones": {
+  "sm_0307": {
+   "expected": {
+    "gpu_3090_s": 1036.0,
+    "gpu_l4_s": 2072.0,
+    "cpu_s": 133.0,
+    "wall_s": 2295.0
+   },
+   "upper": {
+    "gpu_3090_s": 1492.0,
+    "gpu_l4_s": 2984.0,
+    "cpu_s": 133.0,
+    "wall_s": 3207.0
+   }
+  },
+  "sm_0627": {
+   "expected": {
+    "gpu_3090_s": 1431.0,
+    "gpu_l4_s": 2862.0,
+    "cpu_s": 345.0,
+    "wall_s": 3417.0
+   },
+   "upper": {
+    "gpu_3090_s": 2227.0,
+    "gpu_l4_s": 4454.0,
+    "cpu_s": 415.0,
+    "wall_s": 5139.0
+   }
+  },
+  "sm_0512": {
+   "expected": {
+    "gpu_3090_s": 1431.0,
+    "gpu_l4_s": 2862.0,
+    "cpu_s": 618.0,
+    "wall_s": 3690.0
+   },
+   "upper": {
+    "gpu_3090_s": 2227.0,
+    "gpu_l4_s": 4454.0,
+    "cpu_s": 766.0,
+    "wall_s": 5490.0
+   }
+  },
+  "sm_0611": {
+   "expected": {
+    "gpu_3090_s": 1815.0,
+    "gpu_l4_s": 3630.0,
+    "cpu_s": 763.0,
+    "wall_s": 4603.0
+   },
+   "upper": {
+    "gpu_3090_s": 2995.0,
+    "gpu_l4_s": 5990.0,
+    "cpu_s": 963.0,
+    "wall_s": 7223.0
+   }
+  },
+  "sc_0708": {
+   "expected": {
+    "gpu_3090_s": 2511.0,
+    "gpu_l4_s": 5022.0,
+    "cpu_s": 350.0,
+    "wall_s": 5582.0
+   },
+   "upper": {
+    "gpu_3090_s": 4323.0,
+    "gpu_l4_s": 8646.0,
+    "cpu_s": 420.0,
+    "wall_s": 9336.0
+   }
+  },
+  "sc_0713": {
+   "expected": {
+    "gpu_3090_s": 1839.0,
+    "gpu_l4_s": 3678.0,
+    "cpu_s": 301.0,
+    "wall_s": 4189.0
+   },
+   "upper": {
+    "gpu_3090_s": 2979.0,
+    "gpu_l4_s": 5958.0,
+    "cpu_s": 371.0,
+    "wall_s": 6599.0
+   }
+  },
+  "sc_0629": {
+   "expected": {
+    "gpu_3090_s": 2031.0,
+    "gpu_l4_s": 4062.0,
+    "cpu_s": 731.0,
+    "wall_s": 5003.0
+   },
+   "upper": {
+    "gpu_3090_s": 3363.0,
+    "gpu_l4_s": 6726.0,
+    "cpu_s": 905.0,
+    "wall_s": 7901.0
+   }
+  },
+  "sc_0309": {
+   "expected": {
+    "gpu_3090_s": 2031.0,
+    "gpu_l4_s": 4062.0,
+    "cpu_s": 354.0,
+    "wall_s": 4626.0
+   },
+   "upper": {
+    "gpu_3090_s": 3363.0,
+    "gpu_l4_s": 6726.0,
+    "cpu_s": 424.0,
+    "wall_s": 7420.0
+   }
+  }
+ },
+ "rounds": {
+  "round1": {
+   "backbones": [
+    "sc_0708",
+    "sc_0713",
+    "sc_0629"
+   ],
+   "expected_h": 4.1,
+   "upper_h": 6.62,
+   "expected_cu": 6.3,
+   "upper_cu": 10.2
+  },
+  "round2": {
+   "backbones": [
+    "sc_0309",
+    "sm_0307",
+    "sm_0627",
+    "sm_0512",
+    "sm_0611"
+   ],
+   "expected_h": 5.18,
+   "upper_h": 7.91,
+   "expected_cu": 8.0,
+   "upper_cu": 12.2
+  }
+ },
+ "total_expected_h": 9.28,
+ "total_expected_cu": 14.3,
+ "total_upper_h": 14.53,
+ "total_upper_cu": 22.4
+}

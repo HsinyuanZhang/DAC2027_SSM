@@ -57,7 +57,9 @@ def sessions_for(stratum: str, pool: str):
     spec = D1_POOLS[stratum]
     orig = spec["sources"].split(",")
     if pool == "O":
-        return orig
+        # optional trunk-unseen sessions (expansion backbones): appended LAST, so ids[-1] is the P0
+        # validation session while ids[:-1] are exactly the trunk's source sessions.  Absent for P1 strata.
+        return orig + list(spec.get("heldout", []))
     inv = json.loads(INVENTORY.read_text())
     target_date = min(t.split("-")[-1] for t in spec["targets"])
     banned = set(DEV_SESSIONS) | set(FINAL_SESSIONS) | set(spec["targets"])
