@@ -1,0 +1,22 @@
+{
+ "n_rows": 7560,
+ "n_backbones": 3,
+ "n_backbone_target_pairs": 21,
+ "n_distinct_target_sessions": 16,
+ "h2_zero_backward_all": true,
+ "h4_query_disjoint_all": true,
+ "h1_trunk_unchanged_all": true,
+ "h1_one_hash_per_backbone": true,
+ "unit_check_passed_all": true,
+ "unit_check_failures": 0,
+ "h5_within_32kb_all": true,
+ "selection_scopes": [
+  "OOS: pool[-1] held out of trunk training (trunk-unseen, causal)"
+ ],
+ "oos_backbones": [
+  "sc_0629",
+  "sc_0708",
+  "sc_0713"
+ ],
+ "is_backbones": []
+}
