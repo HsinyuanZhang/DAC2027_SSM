@@ -1,0 +1,708 @@
+{
+ "primary": {
+  "n_files": 48,
+  "total_bytes": 5648825170,
+  "files": [
+   {
+    "session": "sub-C_ses-CO-20131031",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20131031_behavior+ecephys.nwb",
+    "size_bytes": 56314756
+   },
+   {
+    "session": "sub-C_ses-CO-20131101",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20131101_behavior+ecephys.nwb",
+    "size_bytes": 34324240
+   },
+   {
+    "session": "sub-C_ses-CO-20131203",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20131203_behavior+ecephys.nwb",
+    "size_bytes": 61591484
+   },
+   {
+    "session": "sub-C_ses-CO-20131204",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20131204_behavior+ecephys.nwb",
+    "size_bytes": 30927920
+   },
+   {
+    "session": "sub-C_ses-CO-20131219",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20131219_behavior+ecephys.nwb",
+    "size_bytes": 39938748
+   },
+   {
+    "session": "sub-C_ses-CO-20131220",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20131220_behavior+ecephys.nwb",
+    "size_bytes": 43346728
+   },
+   {
+    "session": "sub-C_ses-CO-20150309",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150309_behavior+ecephys.nwb",
+    "size_bytes": 267801628
+   },
+   {
+    "session": "sub-C_ses-CO-20150311",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150311_behavior+ecephys.nwb",
+    "size_bytes": 339557316
+   },
+   {
+    "session": "sub-C_ses-CO-20150312",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150312_behavior+ecephys.nwb",
+    "size_bytes": 407514328
+   },
+   {
+    "session": "sub-C_ses-CO-20150313",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150313_behavior+ecephys.nwb",
+    "size_bytes": 404514456
+   },
+   {
+    "session": "sub-C_ses-CO-20150319",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150319_behavior+ecephys.nwb",
+    "size_bytes": 398628568
+   },
+   {
+    "session": "sub-C_ses-CO-20150629",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150629_behavior+ecephys.nwb",
+    "size_bytes": 87171521
+   },
+   {
+    "session": "sub-C_ses-CO-20150630",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150630_behavior+ecephys.nwb",
+    "size_bytes": 55050244
+   },
+   {
+    "session": "sub-C_ses-CO-20150701",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150701_behavior+ecephys.nwb",
+    "size_bytes": 82788273
+   },
+   {
+    "session": "sub-C_ses-CO-20150703",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150703_behavior+ecephys.nwb",
+    "size_bytes": 85807408
+   },
+   {
+    "session": "sub-C_ses-CO-20150706",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150706_behavior+ecephys.nwb",
+    "size_bytes": 69291692
+   },
+   {
+    "session": "sub-C_ses-CO-20150707",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150707_behavior+ecephys.nwb",
+    "size_bytes": 59110988
+   },
+   {
+    "session": "sub-C_ses-CO-20150708",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150708_behavior+ecephys.nwb",
+    "size_bytes": 80276004
+   },
+   {
+    "session": "sub-C_ses-CO-20150709",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150709_behavior+ecephys.nwb",
+    "size_bytes": 81392804
+   },
+   {
+    "session": "sub-C_ses-CO-20150710",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150710_behavior+ecephys.nwb",
+    "size_bytes": 78977528
+   },
+   {
+    "session": "sub-C_ses-CO-20150713",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150713_behavior+ecephys.nwb",
+    "size_bytes": 75468040
+   },
+   {
+    "session": "sub-C_ses-CO-20150714",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150714_behavior+ecephys.nwb",
+    "size_bytes": 78581724
+   },
+   {
+    "session": "sub-C_ses-CO-20150715",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150715_behavior+ecephys.nwb",
+    "size_bytes": 72083552
+   },
+   {
+    "session": "sub-C_ses-CO-20150716",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150716_behavior+ecephys.nwb",
+    "size_bytes": 64380064
+   },
+   {
+    "session": "sub-C_ses-CO-20151103",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20151103_behavior+ecephys.nwb",
+    "size_bytes": 62145872
+   },
+   {
+    "session": "sub-C_ses-CO-20151104",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20151104_behavior+ecephys.nwb",
+    "size_bytes": 125164148
+   },
+   {
+    "session": "sub-C_ses-CO-20151106",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20151106_behavior+ecephys.nwb",
+    "size_bytes": 119065400
+   },
+   {
+    "session": "sub-C_ses-CO-20151109",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20151109_behavior+ecephys.nwb",
+    "size_bytes": 88439880
+   },
+   {
+    "session": "sub-C_ses-CO-20151110",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20151110_behavior+ecephys.nwb",
+    "size_bytes": 73550120
+   },
+   {
+    "session": "sub-C_ses-CO-20151112",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20151112_behavior+ecephys.nwb",
+    "size_bytes": 45326504
+   },
+   {
+    "session": "sub-M_ses-CO-20140203",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20140203_behavior+ecephys.nwb",
+    "size_bytes": 65394068
+   },
+   {
+    "session": "sub-M_ses-CO-20140217",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20140217_behavior+ecephys.nwb",
+    "size_bytes": 85730748
+   },
+   {
+    "session": "sub-M_ses-CO-20140218",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20140218_behavior+ecephys.nwb",
+    "size_bytes": 93470576
+   },
+   {
+    "session": "sub-M_ses-CO-20140303",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20140303_behavior+ecephys.nwb",
+    "size_bytes": 73095968
+   },
+   {
+    "session": "sub-M_ses-CO-20140304",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20140304_behavior+ecephys.nwb",
+    "size_bytes": 109669436
+   },
+   {
+    "session": "sub-M_ses-CO-20140306",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20140306_behavior+ecephys.nwb",
+    "size_bytes": 101093472
+   },
+   {
+    "session": "sub-M_ses-CO-20140307",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20140307_behavior+ecephys.nwb",
+    "size_bytes": 74037256
+   },
+   {
+    "session": "sub-M_ses-CO-20140626",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20140626_behavior+ecephys.nwb",
+    "size_bytes": 165550228
+   },
+   {
+    "session": "sub-M_ses-CO-20140627",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20140627_behavior+ecephys.nwb",
+    "size_bytes": 171769384
+   },
+   {
+    "session": "sub-M_ses-CO-20140929",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20140929_behavior+ecephys.nwb",
+    "size_bytes": 298961440
+   },
+   {
+    "session": "sub-M_ses-CO-20150511",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20150511_behavior+ecephys.nwb",
+    "size_bytes": 225980460
+   },
+   {
+    "session": "sub-M_ses-CO-20150512",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20150512_behavior+ecephys.nwb",
+    "size_bytes": 361586408
+   },
+   {
+    "session": "sub-M_ses-CO-20150610",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20150610_behavior+ecephys.nwb",
+    "size_bytes": 38387200
+   },
+   {
+    "session": "sub-M_ses-CO-20150611",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20150611_behavior+ecephys.nwb",
+    "size_bytes": 44541220
+   },
+   {
+    "session": "sub-M_ses-CO-20150612",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20150612_behavior+ecephys.nwb",
+    "size_bytes": 36421880
+   },
+   {
+    "session": "sub-M_ses-CO-20150615",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20150615_behavior+ecephys.nwb",
+    "size_bytes": 40806584
+   },
+   {
+    "session": "sub-M_ses-CO-20150616",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20150616_behavior+ecephys.nwb",
+    "size_bytes": 46198744
+   },
+   {
+    "session": "sub-M_ses-CO-20150617",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20150617_behavior+ecephys.nwb",
+    "size_bytes": 47598160
+   }
+  ]
+ },
+ "all": {
+  "n_files": 54,
+  "total_bytes": 7185363324,
+  "files": [
+   {
+    "session": "sub-C_ses-CO-20131031",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20131031_behavior+ecephys.nwb",
+    "size_bytes": 56314756
+   },
+   {
+    "session": "sub-C_ses-CO-20131101",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20131101_behavior+ecephys.nwb",
+    "size_bytes": 34324240
+   },
+   {
+    "session": "sub-C_ses-CO-20131203",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20131203_behavior+ecephys.nwb",
+    "size_bytes": 61591484
+   },
+   {
+    "session": "sub-C_ses-CO-20131204",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20131204_behavior+ecephys.nwb",
+    "size_bytes": 30927920
+   },
+   {
+    "session": "sub-C_ses-CO-20131219",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20131219_behavior+ecephys.nwb",
+    "size_bytes": 39938748
+   },
+   {
+    "session": "sub-C_ses-CO-20131220",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20131220_behavior+ecephys.nwb",
+    "size_bytes": 43346728
+   },
+   {
+    "session": "sub-C_ses-CO-20150309",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150309_behavior+ecephys.nwb",
+    "size_bytes": 267801628
+   },
+   {
+    "session": "sub-C_ses-CO-20150311",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150311_behavior+ecephys.nwb",
+    "size_bytes": 339557316
+   },
+   {
+    "session": "sub-C_ses-CO-20150312",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150312_behavior+ecephys.nwb",
+    "size_bytes": 407514328
+   },
+   {
+    "session": "sub-C_ses-CO-20150313",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150313_behavior+ecephys.nwb",
+    "size_bytes": 404514456
+   },
+   {
+    "session": "sub-C_ses-CO-20150319",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150319_behavior+ecephys.nwb",
+    "size_bytes": 398628568
+   },
+   {
+    "session": "sub-C_ses-CO-20150629",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150629_behavior+ecephys.nwb",
+    "size_bytes": 87171521
+   },
+   {
+    "session": "sub-C_ses-CO-20150630",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150630_behavior+ecephys.nwb",
+    "size_bytes": 55050244
+   },
+   {
+    "session": "sub-C_ses-CO-20150701",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150701_behavior+ecephys.nwb",
+    "size_bytes": 82788273
+   },
+   {
+    "session": "sub-C_ses-CO-20150703",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150703_behavior+ecephys.nwb",
+    "size_bytes": 85807408
+   },
+   {
+    "session": "sub-C_ses-CO-20150706",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150706_behavior+ecephys.nwb",
+    "size_bytes": 69291692
+   },
+   {
+    "session": "sub-C_ses-CO-20150707",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150707_behavior+ecephys.nwb",
+    "size_bytes": 59110988
+   },
+   {
+    "session": "sub-C_ses-CO-20150708",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150708_behavior+ecephys.nwb",
+    "size_bytes": 80276004
+   },
+   {
+    "session": "sub-C_ses-CO-20150709",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150709_behavior+ecephys.nwb",
+    "size_bytes": 81392804
+   },
+   {
+    "session": "sub-C_ses-CO-20150710",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150710_behavior+ecephys.nwb",
+    "size_bytes": 78977528
+   },
+   {
+    "session": "sub-C_ses-CO-20150713",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150713_behavior+ecephys.nwb",
+    "size_bytes": 75468040
+   },
+   {
+    "session": "sub-C_ses-CO-20150714",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150714_behavior+ecephys.nwb",
+    "size_bytes": 78581724
+   },
+   {
+    "session": "sub-C_ses-CO-20150715",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150715_behavior+ecephys.nwb",
+    "size_bytes": 72083552
+   },
+   {
+    "session": "sub-C_ses-CO-20150716",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20150716_behavior+ecephys.nwb",
+    "size_bytes": 64380064
+   },
+   {
+    "session": "sub-C_ses-CO-20151103",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20151103_behavior+ecephys.nwb",
+    "size_bytes": 62145872
+   },
+   {
+    "session": "sub-C_ses-CO-20151104",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20151104_behavior+ecephys.nwb",
+    "size_bytes": 125164148
+   },
+   {
+    "session": "sub-C_ses-CO-20151106",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20151106_behavior+ecephys.nwb",
+    "size_bytes": 119065400
+   },
+   {
+    "session": "sub-C_ses-CO-20151109",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20151109_behavior+ecephys.nwb",
+    "size_bytes": 88439880
+   },
+   {
+    "session": "sub-C_ses-CO-20151110",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20151110_behavior+ecephys.nwb",
+    "size_bytes": 73550120
+   },
+   {
+    "session": "sub-C_ses-CO-20151112",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20151112_behavior+ecephys.nwb",
+    "size_bytes": 45326504
+   },
+   {
+    "session": "sub-C_ses-CO-20160909",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20160909_behavior+ecephys.nwb",
+    "size_bytes": 211658016
+   },
+   {
+    "session": "sub-C_ses-CO-20160914",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20160914_behavior+ecephys.nwb",
+    "size_bytes": 377023130
+   },
+   {
+    "session": "sub-C_ses-CO-20160919",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20160919_behavior+ecephys.nwb",
+    "size_bytes": 291896782
+   },
+   {
+    "session": "sub-C_ses-CO-20160923",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20160923_behavior+ecephys.nwb",
+    "size_bytes": 267786526
+   },
+   {
+    "session": "sub-C_ses-CO-20160929",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20160929_behavior+ecephys.nwb",
+    "size_bytes": 164551868
+   },
+   {
+    "session": "sub-C_ses-CO-20161006",
+    "subject": "sub-C",
+    "file": "sub-C_ses-CO-20161006_behavior+ecephys.nwb",
+    "size_bytes": 223621832
+   },
+   {
+    "session": "sub-M_ses-CO-20140203",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20140203_behavior+ecephys.nwb",
+    "size_bytes": 65394068
+   },
+   {
+    "session": "sub-M_ses-CO-20140217",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20140217_behavior+ecephys.nwb",
+    "size_bytes": 85730748
+   },
+   {
+    "session": "sub-M_ses-CO-20140218",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20140218_behavior+ecephys.nwb",
+    "size_bytes": 93470576
+   },
+   {
+    "session": "sub-M_ses-CO-20140303",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20140303_behavior+ecephys.nwb",
+    "size_bytes": 73095968
+   },
+   {
+    "session": "sub-M_ses-CO-20140304",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20140304_behavior+ecephys.nwb",
+    "size_bytes": 109669436
+   },
+   {
+    "session": "sub-M_ses-CO-20140306",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20140306_behavior+ecephys.nwb",
+    "size_bytes": 101093472
+   },
+   {
+    "session": "sub-M_ses-CO-20140307",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20140307_behavior+ecephys.nwb",
+    "size_bytes": 74037256
+   },
+   {
+    "session": "sub-M_ses-CO-20140626",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20140626_behavior+ecephys.nwb",
+    "size_bytes": 165550228
+   },
+   {
+    "session": "sub-M_ses-CO-20140627",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20140627_behavior+ecephys.nwb",
+    "size_bytes": 171769384
+   },
+   {
+    "session": "sub-M_ses-CO-20140929",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20140929_behavior+ecephys.nwb",
+    "size_bytes": 298961440
+   },
+   {
+    "session": "sub-M_ses-CO-20150511",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20150511_behavior+ecephys.nwb",
+    "size_bytes": 225980460
+   },
+   {
+    "session": "sub-M_ses-CO-20150512",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20150512_behavior+ecephys.nwb",
+    "size_bytes": 361586408
+   },
+   {
+    "session": "sub-M_ses-CO-20150610",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20150610_behavior+ecephys.nwb",
+    "size_bytes": 38387200
+   },
+   {
+    "session": "sub-M_ses-CO-20150611",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20150611_behavior+ecephys.nwb",
+    "size_bytes": 44541220
+   },
+   {
+    "session": "sub-M_ses-CO-20150612",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20150612_behavior+ecephys.nwb",
+    "size_bytes": 36421880
+   },
+   {
+    "session": "sub-M_ses-CO-20150615",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20150615_behavior+ecephys.nwb",
+    "size_bytes": 40806584
+   },
+   {
+    "session": "sub-M_ses-CO-20150616",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20150616_behavior+ecephys.nwb",
+    "size_bytes": 46198744
+   },
+   {
+    "session": "sub-M_ses-CO-20150617",
+    "subject": "sub-M",
+    "file": "sub-M_ses-CO-20150617_behavior+ecephys.nwb",
+    "size_bytes": 47598160
+   }
+  ]
+ },
+ "optional_extra": [
+  {
+   "session": "sub-C_ses-CO-20160909",
+   "subject": "sub-C",
+   "file": "sub-C_ses-CO-20160909_behavior+ecephys.nwb",
+   "size_bytes": 211658016
+  },
+  {
+   "session": "sub-C_ses-CO-20160914",
+   "subject": "sub-C",
+   "file": "sub-C_ses-CO-20160914_behavior+ecephys.nwb",
+   "size_bytes": 377023130
+  },
+  {
+   "session": "sub-C_ses-CO-20160919",
+   "subject": "sub-C",
+   "file": "sub-C_ses-CO-20160919_behavior+ecephys.nwb",
+   "size_bytes": 291896782
+  },
+  {
+   "session": "sub-C_ses-CO-20160923",
+   "subject": "sub-C",
+   "file": "sub-C_ses-CO-20160923_behavior+ecephys.nwb",
+   "size_bytes": 267786526
+  },
+  {
+   "session": "sub-C_ses-CO-20160929",
+   "subject": "sub-C",
+   "file": "sub-C_ses-CO-20160929_behavior+ecephys.nwb",
+   "size_bytes": 164551868
+  },
+  {
+   "session": "sub-C_ses-CO-20161006",
+   "subject": "sub-C",
+   "file": "sub-C_ses-CO-20161006_behavior+ecephys.nwb",
+   "size_bytes": 223621832
+  }
+ ],
+ "reused_artefacts": [
+  {
+   "path": "results/stage2_intervals_20261006/month_pool_k10_x8/best.pt",
+   "bytes": 1470582
+  },
+  {
+   "path": "results/population_calib_20261015/runs/month_O/p0/seed0",
+   "bytes": 109970
+  },
+  {
+   "path": "results/population_calib_20261015/runs/month_O/p0/seed1",
+   "bytes": 110823
+  }
+ ],
+ "layout": "files live under <SSM_DANDI688_ROOT>/sub-M/ and <SSM_DANDI688_ROOT>/sub-C/ (host: /home/xinyuan/Work_host/SPINT/sua_exploration/data/dandi_000688)",
+ "new_bundle_subC": {
+  "tar_name": "data_000688_subC.tar.zst",
+  "tar_member_prefix": "dandi_000688/sub-C/",
+  "primary_files": 30,
+  "primary_bytes": 3568531938,
+  "all_files": 36,
+  "all_bytes": 5105070092,
+  "note": "ships ONLY allowed sessions; the six APST held-out sessions are never listed"
+ },
+ "subM_needed_in_existing_bundle": [
+  "sub-M_ses-CO-20140203_behavior+ecephys.nwb",
+  "sub-M_ses-CO-20140217_behavior+ecephys.nwb",
+  "sub-M_ses-CO-20140218_behavior+ecephys.nwb",
+  "sub-M_ses-CO-20140303_behavior+ecephys.nwb",
+  "sub-M_ses-CO-20140304_behavior+ecephys.nwb",
+  "sub-M_ses-CO-20140306_behavior+ecephys.nwb",
+  "sub-M_ses-CO-20140307_behavior+ecephys.nwb",
+  "sub-M_ses-CO-20140626_behavior+ecephys.nwb",
+  "sub-M_ses-CO-20140627_behavior+ecephys.nwb",
+  "sub-M_ses-CO-20140929_behavior+ecephys.nwb",
+  "sub-M_ses-CO-20150511_behavior+ecephys.nwb",
+  "sub-M_ses-CO-20150512_behavior+ecephys.nwb",
+  "sub-M_ses-CO-20150610_behavior+ecephys.nwb",
+  "sub-M_ses-CO-20150611_behavior+ecephys.nwb",
+  "sub-M_ses-CO-20150612_behavior+ecephys.nwb",
+  "sub-M_ses-CO-20150615_behavior+ecephys.nwb",
+  "sub-M_ses-CO-20150616_behavior+ecephys.nwb",
+  "sub-M_ses-CO-20150617_behavior+ecephys.nwb"
+ ]
+}

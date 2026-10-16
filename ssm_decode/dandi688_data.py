@@ -39,7 +39,21 @@ from ssm_decode.data import Recording
 APST_SRC = Path(__file__).resolve().parents[2] / "APST" / "src"
 if str(APST_SRC) not in sys.path:
     sys.path.insert(0, str(APST_SRC))
-from apst.data.dandi688 import list_dandi688_sessions  # noqa: E402
+try:
+    from apst.data.dandi688 import list_dandi688_sessions  # noqa: E402
+except ImportError:  # e.g. a Colab VM without the APST repo: same enumeration, no APST dependency
+    def list_dandi688_sessions(subject=None, *, root=None):
+        base = Path(root).expanduser().resolve()
+        rows = []
+        for sub in ((subject,) if subject else SUBJECTS):
+            folder = base / sub
+            if folder.is_dir():
+                for path in sorted(folder.glob("*.nwb")):
+                    rows.append({"dataset": "dandi688", "subject": sub,
+                                 "session": path.stem.removesuffix("_behavior+ecephys"), "path": path})
+        if not rows:
+            raise FileNotFoundError(f"no DANDI 000688 NWB files under {base}")
+        return rows
 
 ROOT_ENV = "SSM_DANDI688_ROOT"
 DEFAULT_ROOT = Path("/home/xinyuan/Work_host/SPINT/sua_exploration/data/dandi_000688")
@@ -62,6 +76,26 @@ TRAIN_SESSIONS = (
 DEV_SESSIONS = ("sub-M_ses-CO-20150616", "sub-M_ses-CO-20150617")
 FINAL_SESSIONS = ("sub-M_ses-CO-20150623", "sub-M_ses-CO-20150625", "sub-M_ses-CO-20150626")
 
+# --- second subject (sub-C), added for the 2026-10-16 expansion -------------------------------
+# sub-C was used by the APST project.  Its frozen split lives in
+#   APST/src/apst/legacy_dandi/protocol.json  (source_sessions / development_sessions / final_sessions)
+#   SPINT/sua_exploration/configs/subc_co_27_6_strict_train_val_manifest.json  (train 27 / val 6 / test 6)
+# The six "final"/"test" sessions below are the APST held-out sessions.  They are FORBIDDEN here: the
+# loader and the inventory raise PermissionError for them, and there is no override flag.
+SUBJECT_C = "sub-C"
+SUBC_FINAL_SESSIONS = (
+    "sub-C_ses-CO-20151113", "sub-C_ses-CO-20151116", "sub-C_ses-CO-20151117",
+    "sub-C_ses-CO-20151119", "sub-C_ses-CO-20151120", "sub-C_ses-CO-20151201",
+)
+# APST development (selection) sessions: not held out, allowed here as ordinary sessions, but listed so
+# callers can tell them apart.
+SUBC_APST_DEV_SESSIONS = (
+    "sub-C_ses-CO-20151103", "sub-C_ses-CO-20151104", "sub-C_ses-CO-20151106",
+    "sub-C_ses-CO-20151109", "sub-C_ses-CO-20151110", "sub-C_ses-CO-20151112",
+)
+SUBJECTS = (SUBJECT, SUBJECT_C)
+FORBIDDEN_SESSIONS = frozenset(SUBC_FINAL_SESSIONS)
+
 
 @dataclass(frozen=True)
 class Dandi688Recording(Recording):
@@ -78,17 +112,38 @@ class Dandi688Recording(Recording):
     bin_edges: np.ndarray
 
 
-def dandi688_subm_root(root: str | Path | None = None) -> Path:
-    """Resolve the tree holding ``sub-M`` NWB files (env overridable)."""
+def dandi688_subject_root(subject: str, root: str | Path | None = None) -> Path:
+    """Resolve the tree holding one subject's NWB files (env overridable)."""
+    if subject not in SUBJECTS:
+        raise ValueError(f"unsupported subject {subject!r}; expected one of {SUBJECTS}")
     base = Path(root or os.environ.get(ROOT_ENV) or DEFAULT_ROOT).expanduser().resolve()
-    if base.name == SUBJECT and base.is_dir():
+    if base.name == subject and base.is_dir():
         return base
     for candidate in (base, base / "000688", base / "dandi_000688"):
-        if (candidate / SUBJECT).is_dir():
-            return candidate / SUBJECT
+        if (candidate / subject).is_dir():
+            return candidate / subject
     raise FileNotFoundError(
-        f"no {SUBJECT} directory under {base}; set {ROOT_ENV} or pass root="
+        f"no {subject} directory under {base}; set {ROOT_ENV} or pass root="
     )
+
+
+def dandi688_subm_root(root: str | Path | None = None) -> Path:
+    """Resolve the tree holding ``sub-M`` NWB files (env overridable)."""
+    return dandi688_subject_root(SUBJECT, root)
+
+
+def assert_session_allowed(session: str) -> None:
+    """Raise PermissionError for APST held-out (final) sub-C sessions.  No override exists."""
+    if session in FORBIDDEN_SESSIONS:
+        raise PermissionError(f"{session} is an APST held-out (final) sub-C session; never load it")
+
+
+def session_subject(session: str) -> str:
+    """Subject of a ``sub-X_ses-CO-YYYYMMDD`` id (CO only); ValueError for anything else."""
+    for subject in SUBJECTS:
+        if session.startswith(f"{subject}_ses-{TASK_SURFACE}-"):
+            return subject
+    raise ValueError(f"this adapter serves sub-M CO and sub-C CO sessions only (RT trees are out of scope), got {session!r}")
 
 
 def _scan_session(path: Path) -> dict:
@@ -153,23 +208,29 @@ def _scan_session(path: Path) -> dict:
     }
 
 
-def list_dandi688_subm_co_sessions(*, root: str | Path | None = None,
-                                   sessions: Iterable[str] | None = None) -> list[dict]:
-    """Inventory the sub-M CO sessions with per-session load metadata.
+def list_dandi688_co_sessions(subject: str = SUBJECT, *, root: str | Path | None = None,
+                              sessions: Iterable[str] | None = None) -> list[dict]:
+    """Inventory one subject's CO sessions with per-session load metadata.
 
     Each row reports date, M1 unit count, bin count, trial counts and the
-    mean per-unit firing rate.  Pass ``sessions`` to scan a subset.
+    mean per-unit firing rate.  Pass ``sessions`` to scan a subset.  APST
+    held-out sub-C sessions are never opened: requested explicitly they raise
+    PermissionError, and they are skipped when the whole subject is scanned.
     """
-    subject_dir = dandi688_subm_root(root)
+    subject_dir = dandi688_subject_root(subject, root)
     surface = f"_ses-{TASK_SURFACE}-"
-    rows = [row for row in list_dandi688_sessions(SUBJECT, root=subject_dir.parent)
-            if row["subject"] == SUBJECT and surface in row["session"]]
+    rows = [row for row in list_dandi688_sessions(subject, root=subject_dir.parent)
+            if row["subject"] == subject and surface in row["session"]]
     if sessions is not None:
         wanted = {str(session) for session in sessions}
+        for session in sorted(wanted):
+            assert_session_allowed(session)
         rows = [row for row in rows if row["session"] in wanted]
         missing = sorted(wanted - {row["session"] for row in rows})
         if missing:
-            raise KeyError(f"sub-M CO session(s) not found under {subject_dir}: {missing}")
+            raise KeyError(f"{subject} CO session(s) not found under {subject_dir}: {missing}")
+    else:
+        rows = [row for row in rows if row["session"] not in FORBIDDEN_SESSIONS]
     result = []
     for row in rows:
         scan = _scan_session(Path(row["path"]))
@@ -178,7 +239,7 @@ def list_dandi688_subm_co_sessions(*, root: str | Path | None = None,
         n_units = len(scan["spikes"])
         total_spikes = sum(int(spike.size) for spike in scan["spikes"])
         result.append({
-            "dataset": "dandi688", "subject": SUBJECT, "task": TASK_SURFACE,
+            "dataset": "dandi688", "subject": subject, "task": TASK_SURFACE,
             "session": str(row["session"]), "date": str(row["session"]).split(surface)[1],
             "path": str(Path(row["path"]).resolve()),
             "n_units": n_units, "n_bins": int(edges.size - 1), "bin_size_ms": BIN_SIZE_MS,
@@ -191,18 +252,26 @@ def list_dandi688_subm_co_sessions(*, root: str | Path | None = None,
     return result
 
 
+def list_dandi688_subm_co_sessions(*, root: str | Path | None = None,
+                                   sessions: Iterable[str] | None = None) -> list[dict]:
+    """Inventory the sub-M CO sessions (see :func:`list_dandi688_co_sessions`)."""
+    return list_dandi688_co_sessions(SUBJECT, root=root, sessions=sessions)
+
+
 def load_dandi688_recording(session: str, *, root: str | Path | None = None) -> Dandi688Recording:
-    """Load one ``sub-M_ses-CO-YYYYMMDD`` session as a pilot ``Recording``.
+    """Load one ``sub-M_ses-CO-YYYYMMDD`` (or ``sub-C_ses-CO-YYYYMMDD``) session as a pilot ``Recording``.
+
+    sub-M behaviour is unchanged.  sub-C sessions are served by the same code path, except that the six
+    APST held-out (final) sessions raise PermissionError before any file is opened.
 
     ``neural`` is [T, N_s] non-negative 20 ms spike counts over the session's
     own M1 units, ``behavior`` is [T, 2] cursor velocity at bin centers, and
     ``trial_change`` marks the first bin of each trials-table interval.  See
     the module docstring for the derived ``eval_mask`` rule.
     """
-    prefix = f"{SUBJECT}_ses-{TASK_SURFACE}-"
-    if not session.startswith(prefix):
-        raise ValueError(f"this adapter serves sub-M CO sessions only (RT tree is HDD), got {session!r}")
-    subject_dir = dandi688_subm_root(root)
+    subject = session_subject(session)
+    assert_session_allowed(session)
+    subject_dir = dandi688_subject_root(subject, root)
     path = subject_dir / f"{session}{NWB_SUFFIX}"
     if not path.is_file():
         raise KeyError(f"{session}: no NWB under {subject_dir}")

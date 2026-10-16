@@ -1,0 +1,803 @@
+{
+ "schema": "expansion_20261016_v1",
+ "k": 10,
+ "b_list": [
+  1,
+  4,
+  8,
+  16,
+  33
+ ],
+ "n_draws": 8,
+ "seeds": [
+  0,
+  1
+ ],
+ "pool_size": 6,
+ "min_pool_units": 15,
+ "min_target_trials": 53,
+ "stratum_gap_days": {
+  "days": [
+   1,
+   7
+  ],
+  "month": [
+   90,
+   130
+  ],
+  "year": [
+   365,
+   10000
+  ]
+ },
+ "forbidden_sessions": [
+  "sub-C_ses-CO-20151113",
+  "sub-C_ses-CO-20151116",
+  "sub-C_ses-CO-20151117",
+  "sub-C_ses-CO-20151119",
+  "sub-C_ses-CO-20151120",
+  "sub-C_ses-CO-20151201",
+  "sub-M_ses-CO-20150623",
+  "sub-M_ses-CO-20150625",
+  "sub-M_ses-CO-20150626"
+ ],
+ "audits": [
+  {
+   "bid": "sm_0307",
+   "min_pool_units": 34,
+   "ledermann_limit": 26,
+   "n_targets": 1
+  },
+  {
+   "bid": "sm_0627",
+   "min_pool_units": 26,
+   "ledermann_limit": 19,
+   "n_targets": 1
+  },
+  {
+   "bid": "sm_0512",
+   "min_pool_units": 21,
+   "ledermann_limit": 15,
+   "n_targets": 1
+  },
+  {
+   "bid": "sm_0611",
+   "min_pool_units": 18,
+   "ledermann_limit": 12,
+   "n_targets": 5
+  },
+  {
+   "bid": "sc_0708",
+   "min_pool_units": 42,
+   "ledermann_limit": 33,
+   "n_targets": 17
+  },
+  {
+   "bid": "sc_0713",
+   "min_pool_units": 42,
+   "ledermann_limit": 33,
+   "n_targets": 4
+  },
+  {
+   "bid": "sc_0629",
+   "min_pool_units": 67,
+   "ledermann_limit": 55,
+   "n_targets": 6
+  },
+  {
+   "bid": "sc_0309",
+   "min_pool_units": 41,
+   "ledermann_limit": 32,
+   "n_targets": 6
+  }
+ ],
+ "sessions": {
+  "sub-C_ses-CO-20131031": {
+   "n_units": 49,
+   "n_usable_trials": 217,
+   "size_bytes": 56314756
+  },
+  "sub-C_ses-CO-20131101": {
+   "n_units": 41,
+   "n_usable_trials": 246,
+   "size_bytes": 34324240
+  },
+  "sub-C_ses-CO-20131203": {
+   "n_units": 48,
+   "n_usable_trials": 166,
+   "size_bytes": 61591484
+  },
+  "sub-C_ses-CO-20131204": {
+   "n_units": 52,
+   "n_usable_trials": 163,
+   "size_bytes": 30927920
+  },
+  "sub-C_ses-CO-20131219": {
+   "n_units": 65,
+   "n_usable_trials": 180,
+   "size_bytes": 39938748
+  },
+  "sub-C_ses-CO-20131220": {
+   "n_units": 67,
+   "n_usable_trials": 198,
+   "size_bytes": 43346728
+  },
+  "sub-C_ses-CO-20150309": {
+   "n_units": 74,
+   "n_usable_trials": 605,
+   "size_bytes": 267801628
+  },
+  "sub-C_ses-CO-20150311": {
+   "n_units": 88,
+   "n_usable_trials": 912,
+   "size_bytes": 339557316
+  },
+  "sub-C_ses-CO-20150312": {
+   "n_units": 91,
+   "n_usable_trials": 905,
+   "size_bytes": 407514328
+  },
+  "sub-C_ses-CO-20150313": {
+   "n_units": 86,
+   "n_usable_trials": 1038,
+   "size_bytes": 404514456
+  },
+  "sub-C_ses-CO-20150319": {
+   "n_units": 72,
+   "n_usable_trials": 1026,
+   "size_bytes": 398628568
+  },
+  "sub-C_ses-CO-20150629": {
+   "n_units": 49,
+   "n_usable_trials": 179,
+   "size_bytes": 87171521
+  },
+  "sub-C_ses-CO-20150630": {
+   "n_units": 44,
+   "n_usable_trials": 178,
+   "size_bytes": 55050244
+  },
+  "sub-C_ses-CO-20150701": {
+   "n_units": 49,
+   "n_usable_trials": 196,
+   "size_bytes": 82788273
+  },
+  "sub-C_ses-CO-20150703": {
+   "n_units": 52,
+   "n_usable_trials": 184,
+   "size_bytes": 85807408
+  },
+  "sub-C_ses-CO-20150706": {
+   "n_units": 46,
+   "n_usable_trials": 184,
+   "size_bytes": 69291692
+  },
+  "sub-C_ses-CO-20150707": {
+   "n_units": 42,
+   "n_usable_trials": 189,
+   "size_bytes": 59110988
+  },
+  "sub-C_ses-CO-20150708": {
+   "n_units": 64,
+   "n_usable_trials": 190,
+   "size_bytes": 80276004
+  },
+  "sub-C_ses-CO-20150709": {
+   "n_units": 61,
+   "n_usable_trials": 196,
+   "size_bytes": 81392804
+  },
+  "sub-C_ses-CO-20150710": {
+   "n_units": 55,
+   "n_usable_trials": 203,
+   "size_bytes": 78977528
+  },
+  "sub-C_ses-CO-20150713": {
+   "n_units": 58,
+   "n_usable_trials": 185,
+   "size_bytes": 75468040
+  },
+  "sub-C_ses-CO-20150714": {
+   "n_units": 66,
+   "n_usable_trials": 199,
+   "size_bytes": 78581724
+  },
+  "sub-C_ses-CO-20150715": {
+   "n_units": 60,
+   "n_usable_trials": 192,
+   "size_bytes": 72083552
+  },
+  "sub-C_ses-CO-20150716": {
+   "n_units": 61,
+   "n_usable_trials": 191,
+   "size_bytes": 64380064
+  },
+  "sub-C_ses-CO-20151103": {
+   "n_units": 38,
+   "n_usable_trials": 250,
+   "size_bytes": 62145872
+  },
+  "sub-C_ses-CO-20151104": {
+   "n_units": 59,
+   "n_usable_trials": 319,
+   "size_bytes": 125164148
+  },
+  "sub-C_ses-CO-20151106": {
+   "n_units": 60,
+   "n_usable_trials": 258,
+   "size_bytes": 119065400
+  },
+  "sub-C_ses-CO-20151109": {
+   "n_units": 65,
+   "n_usable_trials": 173,
+   "size_bytes": 88439880
+  },
+  "sub-C_ses-CO-20151110": {
+   "n_units": 61,
+   "n_usable_trials": 198,
+   "size_bytes": 73550120
+  },
+  "sub-C_ses-CO-20151112": {
+   "n_units": 42,
+   "n_usable_trials": 188,
+   "size_bytes": 45326504
+  },
+  "sub-C_ses-CO-20160909": {
+   "n_units": 55,
+   "n_usable_trials": 154,
+   "size_bytes": 211658016
+  },
+  "sub-C_ses-CO-20160914": {
+   "n_units": 95,
+   "n_usable_trials": 195,
+   "size_bytes": 377023130
+  },
+  "sub-C_ses-CO-20160919": {
+   "n_units": 60,
+   "n_usable_trials": 186,
+   "size_bytes": 291896782
+  },
+  "sub-C_ses-CO-20160923": {
+   "n_units": 76,
+   "n_usable_trials": 203,
+   "size_bytes": 267786526
+  },
+  "sub-C_ses-CO-20160929": {
+   "n_units": 74,
+   "n_usable_trials": 209,
+   "size_bytes": 164551868
+  },
+  "sub-C_ses-CO-20161006": {
+   "n_units": 63,
+   "n_usable_trials": 209,
+   "size_bytes": 223621832
+  },
+  "sub-M_ses-CO-20140203": {
+   "n_units": 34,
+   "n_usable_trials": 182,
+   "size_bytes": 65394068
+  },
+  "sub-M_ses-CO-20140217": {
+   "n_units": 44,
+   "n_usable_trials": 208,
+   "size_bytes": 85730748
+  },
+  "sub-M_ses-CO-20140218": {
+   "n_units": 38,
+   "n_usable_trials": 225,
+   "size_bytes": 93470576
+  },
+  "sub-M_ses-CO-20140303": {
+   "n_units": 52,
+   "n_usable_trials": 209,
+   "size_bytes": 73095968
+  },
+  "sub-M_ses-CO-20140304": {
+   "n_units": 39,
+   "n_usable_trials": 203,
+   "size_bytes": 109669436
+  },
+  "sub-M_ses-CO-20140306": {
+   "n_units": 43,
+   "n_usable_trials": 219,
+   "size_bytes": 101093472
+  },
+  "sub-M_ses-CO-20140307": {
+   "n_units": 26,
+   "n_usable_trials": 216,
+   "size_bytes": 74037256
+  },
+  "sub-M_ses-CO-20140626": {
+   "n_units": 26,
+   "n_usable_trials": 670,
+   "size_bytes": 165550228
+  },
+  "sub-M_ses-CO-20140627": {
+   "n_units": 25,
+   "n_usable_trials": 609,
+   "size_bytes": 171769384
+  },
+  "sub-M_ses-CO-20140929": {
+   "n_units": 21,
+   "n_usable_trials": 733,
+   "size_bytes": 298961440
+  },
+  "sub-M_ses-CO-20150511": {
+   "n_units": 24,
+   "n_usable_trials": 536,
+   "size_bytes": 225980460
+  },
+  "sub-M_ses-CO-20150512": {
+   "n_units": 30,
+   "n_usable_trials": 443,
+   "size_bytes": 361586408
+  },
+  "sub-M_ses-CO-20150610": {
+   "n_units": 18,
+   "n_usable_trials": 190,
+   "size_bytes": 38387200
+  },
+  "sub-M_ses-CO-20150611": {
+   "n_units": 16,
+   "n_usable_trials": 195,
+   "size_bytes": 44541220
+  },
+  "sub-M_ses-CO-20150612": {
+   "n_units": 15,
+   "n_usable_trials": 175,
+   "size_bytes": 36421880
+  },
+  "sub-M_ses-CO-20150615": {
+   "n_units": 17,
+   "n_usable_trials": 173,
+   "size_bytes": 40806584
+  },
+  "sub-M_ses-CO-20150616": {
+   "n_units": 17,
+   "n_usable_trials": 183,
+   "size_bytes": 46198744
+  },
+  "sub-M_ses-CO-20150617": {
+   "n_units": 17,
+   "n_usable_trials": 174,
+   "size_bytes": 47598160
+  }
+ },
+ "backbones": [
+  {
+   "bid": "sm_0307",
+   "subject": "sub-M",
+   "pool": [
+    "sub-M_ses-CO-20140203",
+    "sub-M_ses-CO-20140217",
+    "sub-M_ses-CO-20140218",
+    "sub-M_ses-CO-20140303",
+    "sub-M_ses-CO-20140304",
+    "sub-M_ses-CO-20140306"
+   ],
+   "targets": [
+    {
+     "session": "sub-M_ses-CO-20140307",
+     "stratum": "days",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 1
+    }
+   ],
+   "k": 10,
+   "reuse": {
+    "ap": "results/stage2_intervals_20261006/month_pool_k10_x8/best.pt",
+    "p0_root": "results/population_calib_20261015",
+    "p0_stratum": "month"
+   },
+   "note": "existing month/year trunk + P1 P0 calibrators (pool O); 20140307 is the causal selection session of the old month rules, here it is a TARGET and is never used for selection (selection = pool val 20140306)",
+   "val_session": "sub-M_ses-CO-20140306"
+  },
+  {
+   "bid": "sm_0627",
+   "subject": "sub-M",
+   "pool": [
+    "sub-M_ses-CO-20140218",
+    "sub-M_ses-CO-20140303",
+    "sub-M_ses-CO-20140304",
+    "sub-M_ses-CO-20140306",
+    "sub-M_ses-CO-20140307",
+    "sub-M_ses-CO-20140626"
+   ],
+   "targets": [
+    {
+     "session": "sub-M_ses-CO-20140627",
+     "stratum": "days",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 1
+    }
+   ],
+   "k": 10,
+   "reuse": {},
+   "note": "",
+   "val_session": "sub-M_ses-CO-20140626"
+  },
+  {
+   "bid": "sm_0512",
+   "subject": "sub-M",
+   "pool": [
+    "sub-M_ses-CO-20140306",
+    "sub-M_ses-CO-20140307",
+    "sub-M_ses-CO-20140626",
+    "sub-M_ses-CO-20140627",
+    "sub-M_ses-CO-20140929",
+    "sub-M_ses-CO-20150511"
+   ],
+   "targets": [
+    {
+     "session": "sub-M_ses-CO-20150512",
+     "stratum": "days",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 1
+    }
+   ],
+   "k": 10,
+   "reuse": {},
+   "note": "20141203 (10 units) is skipped: below the Ledermann minimum for K=10",
+   "val_session": "sub-M_ses-CO-20150511"
+  },
+  {
+   "bid": "sm_0611",
+   "subject": "sub-M",
+   "pool": [
+    "sub-M_ses-CO-20140626",
+    "sub-M_ses-CO-20140627",
+    "sub-M_ses-CO-20140929",
+    "sub-M_ses-CO-20150511",
+    "sub-M_ses-CO-20150512",
+    "sub-M_ses-CO-20150610"
+   ],
+   "targets": [
+    {
+     "session": "sub-M_ses-CO-20150611",
+     "stratum": "days",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 1
+    },
+    {
+     "session": "sub-M_ses-CO-20150612",
+     "stratum": "days",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 2
+    },
+    {
+     "session": "sub-M_ses-CO-20150615",
+     "stratum": "days",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 5
+    },
+    {
+     "session": "sub-M_ses-CO-20150616",
+     "stratum": "days",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 6
+    },
+    {
+     "session": "sub-M_ses-CO-20150617",
+     "stratum": "days",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 7
+    }
+   ],
+   "k": 10,
+   "reuse": {},
+   "note": "20150616/17 are the old sub-M dev targets; here with a different (rolling) pool",
+   "val_session": "sub-M_ses-CO-20150610"
+  },
+  {
+   "bid": "sc_0708",
+   "subject": "sub-C",
+   "pool": [
+    "sub-C_ses-CO-20150629",
+    "sub-C_ses-CO-20150630",
+    "sub-C_ses-CO-20150701",
+    "sub-C_ses-CO-20150703",
+    "sub-C_ses-CO-20150706",
+    "sub-C_ses-CO-20150707"
+   ],
+   "targets": [
+    {
+     "session": "sub-C_ses-CO-20150708",
+     "stratum": "days",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 1
+    },
+    {
+     "session": "sub-C_ses-CO-20150709",
+     "stratum": "days",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 2
+    },
+    {
+     "session": "sub-C_ses-CO-20150710",
+     "stratum": "days",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 3
+    },
+    {
+     "session": "sub-C_ses-CO-20150713",
+     "stratum": "days",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 6
+    },
+    {
+     "session": "sub-C_ses-CO-20150714",
+     "stratum": "days",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 7
+    },
+    {
+     "session": "sub-C_ses-CO-20151103",
+     "stratum": "month",
+     "tier": "primary",
+     "apst_dev": true,
+     "gap_days": 119
+    },
+    {
+     "session": "sub-C_ses-CO-20151104",
+     "stratum": "month",
+     "tier": "primary",
+     "apst_dev": true,
+     "gap_days": 120
+    },
+    {
+     "session": "sub-C_ses-CO-20151106",
+     "stratum": "month",
+     "tier": "primary",
+     "apst_dev": true,
+     "gap_days": 122
+    },
+    {
+     "session": "sub-C_ses-CO-20151109",
+     "stratum": "month",
+     "tier": "primary",
+     "apst_dev": true,
+     "gap_days": 125
+    },
+    {
+     "session": "sub-C_ses-CO-20151110",
+     "stratum": "month",
+     "tier": "primary",
+     "apst_dev": true,
+     "gap_days": 126
+    },
+    {
+     "session": "sub-C_ses-CO-20151112",
+     "stratum": "month",
+     "tier": "primary",
+     "apst_dev": true,
+     "gap_days": 128
+    },
+    {
+     "session": "sub-C_ses-CO-20160909",
+     "stratum": "year",
+     "tier": "optional",
+     "apst_dev": false,
+     "gap_days": 430
+    },
+    {
+     "session": "sub-C_ses-CO-20160914",
+     "stratum": "year",
+     "tier": "optional",
+     "apst_dev": false,
+     "gap_days": 435
+    },
+    {
+     "session": "sub-C_ses-CO-20160919",
+     "stratum": "year",
+     "tier": "optional",
+     "apst_dev": false,
+     "gap_days": 440
+    },
+    {
+     "session": "sub-C_ses-CO-20160923",
+     "stratum": "year",
+     "tier": "optional",
+     "apst_dev": false,
+     "gap_days": 444
+    },
+    {
+     "session": "sub-C_ses-CO-20160929",
+     "stratum": "year",
+     "tier": "optional",
+     "apst_dev": false,
+     "gap_days": 450
+    },
+    {
+     "session": "sub-C_ses-CO-20161006",
+     "stratum": "year",
+     "tier": "optional",
+     "apst_dev": false,
+     "gap_days": 457
+    }
+   ],
+   "k": 10,
+   "reuse": {},
+   "note": "days targets 0708-0714; month targets are the APST dev sessions (not held out); year targets (2016) are optional",
+   "val_session": "sub-C_ses-CO-20150707"
+  },
+  {
+   "bid": "sc_0713",
+   "subject": "sub-C",
+   "pool": [
+    "sub-C_ses-CO-20150703",
+    "sub-C_ses-CO-20150706",
+    "sub-C_ses-CO-20150707",
+    "sub-C_ses-CO-20150708",
+    "sub-C_ses-CO-20150709",
+    "sub-C_ses-CO-20150710"
+   ],
+   "targets": [
+    {
+     "session": "sub-C_ses-CO-20150713",
+     "stratum": "days",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 3
+    },
+    {
+     "session": "sub-C_ses-CO-20150714",
+     "stratum": "days",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 4
+    },
+    {
+     "session": "sub-C_ses-CO-20150715",
+     "stratum": "days",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 5
+    },
+    {
+     "session": "sub-C_ses-CO-20150716",
+     "stratum": "days",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 6
+    }
+   ],
+   "k": 10,
+   "reuse": {},
+   "note": "",
+   "val_session": "sub-C_ses-CO-20150710"
+  },
+  {
+   "bid": "sc_0629",
+   "subject": "sub-C",
+   "pool": [
+    "sub-C_ses-CO-20131220",
+    "sub-C_ses-CO-20150309",
+    "sub-C_ses-CO-20150311",
+    "sub-C_ses-CO-20150312",
+    "sub-C_ses-CO-20150313",
+    "sub-C_ses-CO-20150319"
+   ],
+   "targets": [
+    {
+     "session": "sub-C_ses-CO-20150629",
+     "stratum": "month",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 102
+    },
+    {
+     "session": "sub-C_ses-CO-20150701",
+     "stratum": "month",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 104
+    },
+    {
+     "session": "sub-C_ses-CO-20150706",
+     "stratum": "month",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 109
+    },
+    {
+     "session": "sub-C_ses-CO-20150709",
+     "stratum": "month",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 112
+    },
+    {
+     "session": "sub-C_ses-CO-20150713",
+     "stratum": "month",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 116
+    },
+    {
+     "session": "sub-C_ses-CO-20150716",
+     "stratum": "month",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 119
+    }
+   ],
+   "k": 10,
+   "reuse": {},
+   "note": "only 5 sessions exist in 2015-03; 20131220 completes the pool",
+   "val_session": "sub-C_ses-CO-20150319"
+  },
+  {
+   "bid": "sc_0309",
+   "subject": "sub-C",
+   "pool": [
+    "sub-C_ses-CO-20131031",
+    "sub-C_ses-CO-20131101",
+    "sub-C_ses-CO-20131203",
+    "sub-C_ses-CO-20131204",
+    "sub-C_ses-CO-20131219",
+    "sub-C_ses-CO-20131220"
+   ],
+   "targets": [
+    {
+     "session": "sub-C_ses-CO-20150309",
+     "stratum": "year",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 444
+    },
+    {
+     "session": "sub-C_ses-CO-20150312",
+     "stratum": "year",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 447
+    },
+    {
+     "session": "sub-C_ses-CO-20150319",
+     "stratum": "year",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 454
+    },
+    {
+     "session": "sub-C_ses-CO-20150629",
+     "stratum": "year",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 556
+    },
+    {
+     "session": "sub-C_ses-CO-20150706",
+     "stratum": "year",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 563
+    },
+    {
+     "session": "sub-C_ses-CO-20150716",
+     "stratum": "year",
+     "tier": "primary",
+     "apst_dev": false,
+     "gap_days": 573
+    }
+   ],
+   "k": 10,
+   "reuse": {},
+   "note": "",
+   "val_session": "sub-C_ses-CO-20131220"
+  }
+ ]
+}
