@@ -1,0 +1,7 @@
+{
+ "n_rows": 6336,
+ "n_targets": 12,
+ "all_candidate_rows_zero_backprop": true,
+ "all_query_disjoint": true,
+ "B_equals_budget": true
+}
