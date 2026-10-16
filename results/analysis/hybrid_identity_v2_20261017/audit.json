@@ -1,0 +1,5 @@
+{
+ "autograd_calls_max": 0,
+ "h4_query_disjoint_all": true,
+ "rows": 50400
+}

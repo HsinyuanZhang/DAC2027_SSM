@@ -8,7 +8,9 @@ import pytest
 import torch
 
 from ssm_decode.hybrid_calib import (KINDS, HybridCalibrator, covered_flags, electrode_counts,
-                                     mask_prior, match_width, simulate_uncovered)
+                                     mask_prior, match_width, norm_entropy, pair_corr,
+                                     simulate_uncovered)
+from ssm_decode.population_calib import corr_columns
 from ssm_decode.population_calib import (PopStats, SessionData, desc_dim, describe,
                                          electrode_mean_table)
 
@@ -53,6 +55,13 @@ def _inputs(seed=1, n=9):
     stats = PopStats.from_trials(sd.bank, np.array([0, 2, 3, 5, 7]))
     d, r, mean, std = describe(stats, prior)
     return sd, prior, cov, stats, d, r
+
+
+def _pair(stats, perm=None):
+    c, n = pair_corr(stats)
+    if perm is not None:
+        c = c[perm][:, perm]
+    return c, n
 
 
 # ------------------------------------------------------- covered flag ----
@@ -141,19 +150,23 @@ def test_permutation_equivariance(kind):
     sd, prior, cov, stats, d, r = _inputs()
     cal = _model(kind, desc_dim(K))
     perm = torch.randperm(d.shape[0], generator=torch.Generator().manual_seed(4))
-    t1 = cal(d, r, prior.float(), cov)
-    t2 = cal(d[perm], r[perm], prior[:, perm].float(), cov[perm.numpy()])
+    t1 = cal(d, r, prior.float(), cov, _pair(stats))
+    t2 = cal(d[perm], r[perm], prior[:, perm].float(), cov[perm.numpy()], _pair(stats, perm))
     torch.testing.assert_close(t1[:, perm], t2, atol=1e-5, rtol=1e-5)
 
 
 @pytest.mark.parametrize("kind", KINDS)
-def test_cross_unit_dependence_only_for_pooled_nonlocal(kind):
+def test_network_cross_unit_flow_only_for_pooled_nonlocal(kind):
+    """Network-level only: d is perturbed AFTER the descriptors exist, so descriptor-level coupling
+    (see test_descriptor_level_coupling_*) is invisible to this test.  Do not read it as 'the -loc /
+    wide controls carry no cross-unit information'."""
     sd, prior, cov, stats, d, r = _inputs()
     cal = _model(kind, desc_dim(K))
-    base = cal(d, r, prior.float(), cov)
+    pair = _pair(stats)
+    base = cal(d, r, prior.float(), cov, pair)
     d2 = d.clone()
     d2[0] += 3.0                                           # perturb unit 0 only
-    pert = cal(d2, r, prior.float(), cov)
+    pert = cal(d2, r, prior.float(), cov, pair)
     others = torch.arange(1, d.shape[0])
     leaks = not torch.allclose(base[:, others], pert[:, others], atol=1e-6)
     pooled_nonlocal = kind != "flat" and not kind.endswith("_loc")
@@ -190,7 +203,7 @@ def test_zero_init_means_untrained_table_equals_masked_prior():
     sd, prior, cov, stats, d, r = _inputs()
     for kind in KINDS:
         cal = HybridCalibrator(kind, K, desc_dim(K))
-        torch.testing.assert_close(cal(d, r, prior.float(), cov), prior.float())
+        torch.testing.assert_close(cal(d, r, prior.float(), cov, _pair(stats)), prior.float())
 
 
 def test_flag_changes_output_only_when_used():
@@ -255,3 +268,206 @@ def test_table_uses_only_the_supplied_trial_statistics():
     sd.bank.t["sx"][8] += 100.0                            # a trial outside the budget
     t2 = cal.calibrate(PopStats.from_trials(sd.bank, idx), prior, cov).table
     torch.testing.assert_close(t1, t2)
+
+
+# ============================================================ v2 additions ====
+
+def _perturb_gram(stats, i, j, delta=40.0):
+    """Copy of ``stats`` with the Gram entries (i, j) and (j, i) changed (diagonal untouched)."""
+    d = {k: v.clone() for k, v in stats.d.items()}
+    d["gram"][i, j] += delta
+    d["gram"][j, i] += delta
+    return PopStats(d, stats.n_trials)
+
+
+def _tables(cal, stats, prior, cov):
+    return cal.calibrate(stats, prior, cov).table
+
+
+def test_descriptor_level_coupling_exists_in_describe():
+    """describe(): correlating x_i with z = prior . x (a sum over covered units) couples an uncovered
+    unit's descriptor to covered units' second moments.  Perturbing a covered unit's Gram row must
+    change an uncovered unit's latent-correlation features (and nothing else about it)."""
+    sd, prior, cov, stats, d, r = _inputs()
+    iu = int(np.flatnonzero(~cov)[0])
+    jc = int(np.flatnonzero(cov)[0])
+    d2, r2, _, _ = describe(_perturb_gram(stats, iu, jc), prior)
+    cc = corr_columns(K)
+    assert (d2[iu, cc] - d[iu, cc]).abs().max() > 1e-3
+    other = [c for c in range(d.shape[1]) if c not in cc]
+    torch.testing.assert_close(d2[iu][other], d[iu][other])
+    # perturbing a COVERED-covered second moment also moves the uncovered unit's corr (through z)
+    jc2 = int(np.flatnonzero(cov)[1])
+    d3, _, _, _ = describe(_perturb_gram(stats, jc, jc2), prior)
+    assert (d3[iu, cc] - d[iu, cc]).abs().max() > 1e-4
+
+
+@pytest.mark.parametrize("kind", ("flat", "hyb_ds_loc", "hyb_pma_loc"))
+def test_loc_and_flat_controls_receive_descriptor_coupling_unless_cut(kind):
+    """End to end (stats -> table): without ``cut_coupling`` the uncovered columns of the 'no cross-unit
+    flow' controls DO depend on covered units' Gram entries; with it they do not."""
+    sd, prior, cov, stats, d, r = _inputs()
+    iu = int(np.flatnonzero(~cov)[0])
+    jc = int(np.flatnonzero(cov)[0])
+    st2 = _perturb_gram(stats, iu, jc)
+    unc = torch.as_tensor(~cov)
+    for cut in (False, True):
+        cal = _model(kind, desc_dim(K), cut_coupling=cut)
+        t1, t2 = _tables(cal, stats, prior, cov), _tables(cal, st2, prior, cov)
+        changed = not torch.allclose(t1[:, unc], t2[:, unc], atol=1e-6)
+        assert changed == (not cut), (kind, cut)
+    # the in-network-only test cannot see it: perturbing d AFTER describe leaves the -loc columns alone
+    cal = _model(kind, desc_dim(K))
+    d2 = d.clone()
+    d2[int(np.flatnonzero(cov)[0])] += 3.0
+    others = [i for i in range(d.shape[0]) if i != int(np.flatnonzero(cov)[0])]
+    t1 = cal(d, r, prior.float(), cov)
+    t2 = cal(d2, r, prior.float(), cov)
+    assert torch.allclose(t1[:, others], t2[:, others], atol=1e-6)
+
+
+def test_cut_coupling_zeroes_exactly_the_uncovered_corr_features():
+    sd, prior, cov, stats, d, r = _inputs()
+    cal = _model("flat", desc_dim(K), cut_coupling=True)
+    cc = corr_columns(K)
+    _, dtf, _ = cal._features(d, r, cov)
+    unc = torch.as_tensor(~cov)
+    assert (dtf[unc][:, cc] == 0).all()                     # uncovered: corr features exactly zero
+    assert (dtf[~unc][:, cc] != 0).any()                    # covered: untouched
+    other = [c for c in range(d.shape[1]) if c not in cc]
+    nocut = _model("flat", desc_dim(K), cut_coupling=False)
+    _, dtf0, _ = nocut._features(d, r, cov)
+    torch.testing.assert_close(dtf[:, other], dtf0[:, other])          # all other columns identical
+    torch.testing.assert_close(dtf[~unc], dtf0[~unc])                   # covered rows identical
+    # the output of an uncovered unit is invariant to its own raw corr features
+    d2 = d.clone()
+    d2[np.flatnonzero(~cov)[0], cc[0]] += 5.0
+    torch.testing.assert_close(cal(d, r, prior.float(), cov), cal(d2, r, prior.float(), cov))
+    # prior column of uncovered units is already 0 (zero column) -> the cut leaves no population channel
+    assert (prior[:, unc] == 0).all()
+
+
+def test_set_normalizers_uses_covered_rows_for_corr_columns_when_cut():
+    sd, prior, cov, stats, d, r = _inputs()
+    cal = HybridCalibrator("flat", K, desc_dim(K), cut_coupling=True)
+    dz = d.clone()
+    dz[torch.as_tensor(~cov)[:, None] & cal.corr_mask[None, :]] = 0.0
+    cal.set_normalizers(dz, r, cov)
+    cc = corr_columns(K)
+    torch.testing.assert_close(cal.d_mu[cc], dz[torch.as_tensor(cov)][:, cc].mean(0))
+
+
+def test_xatt_permutation_equivariance_over_covered_units():
+    """Permuting only the covered units permutes their columns and leaves every uncovered column
+    unchanged (softmax over covered keys is a set operation)."""
+    sd, prior, cov, stats, d, r = _inputs()
+    for kind in ("hyb_xatt", "hyb_xatt_np"):
+        cal = _model(kind, desc_dim(K), cut_coupling=True)
+        ic = np.flatnonzero(cov)
+        perm = np.arange(len(cov))
+        perm[ic] = ic[::-1]
+        perm_t = torch.as_tensor(perm)
+        t1 = cal(d, r, prior.float(), cov, _pair(stats))
+        t2 = cal(d[perm_t], r[perm_t], prior[:, perm_t].float(), cov[perm], _pair(stats, perm_t))
+        torch.testing.assert_close(t1[:, perm_t], t2, atol=1e-5, rtol=1e-5)
+        unc = torch.as_tensor(~cov)
+        torch.testing.assert_close(t1[:, unc], t2[:, unc], atol=1e-5, rtol=1e-5)
+
+
+def test_xatt_control_has_no_pairwise_term_and_xatt_does():
+    """Perturb ONLY the (uncovered i, covered j) Gram entries: hyb_xatt_np (cut) is unchanged,
+    hyb_xatt changes.  Without cut, the np control would change through the descriptor corr features
+    (checked for completeness)."""
+    sd, prior, cov, stats, d, r = _inputs()
+    iu = int(np.flatnonzero(~cov)[0])
+    jc = int(np.flatnonzero(cov)[0])
+    st2 = _perturb_gram(stats, iu, jc, delta=60.0)
+    assert HybridCalibrator("hyb_xatt", K, desc_dim(K)).n_params == \
+        HybridCalibrator("hyb_xatt_np", K, desc_dim(K)).n_params
+    for kind, expect_change in (("hyb_xatt", True), ("hyb_xatt_np", False)):
+        cal = _model(kind, desc_dim(K), cut_coupling=True)
+        t1, t2 = _tables(cal, stats, prior, cov), _tables(cal, st2, prior, cov)
+        assert (not torch.allclose(t1, t2, atol=1e-6)) == expect_change, kind
+    cal = _model("hyb_xatt_np", desc_dim(K), cut_coupling=False)
+    assert not torch.allclose(_tables(cal, stats, prior, cov), _tables(cal, st2, prior, cov), atol=1e-6)
+    # the attention input is exactly the key scalar in the control: changing corr_uk is a no-op
+    cal = _model("hyb_xatt_np", desc_dim(K), cut_coupling=True)
+    c, n = pair_corr(stats)
+    c2 = c.clone()
+    c2[iu, :] = 0.9
+    t1 = cal(d, r, prior.float(), cov, (c, n))
+    t2 = cal(d, r, prior.float(), cov, (c2, n))
+    torch.testing.assert_close(t1, t2)
+
+
+def test_xatt_softmax_is_over_covered_units_and_matches_online_softmax():
+    from ssm_decode.population_calib import online_softmax_pool
+    sd, prior, cov, stats, d, r = _inputs()
+    cal = _model("hyb_xatt", desc_dim(K), cut_coupling=True)
+    _, dtf, _ = cal._features(d, r, cov)
+    iu, ic = torch.nonzero(torch.as_tensor(~cov)).squeeze(-1), torch.nonzero(torch.as_tensor(cov)).squeeze(-1)
+    c, n = pair_corr(stats)
+    ctx, abar, attn = cal.attn(dtf[iu], dtf[ic], prior.T[ic].float(), c[iu][:, ic], torch.zeros(len(ic)), n)
+    torch.testing.assert_close(attn.sum(1), torch.ones(len(iu), cal.attn.heads))
+    # chunked online softmax over covered keys reproduces the weighted prior average for head 0, unit 0
+    pri = prior.T[ic].float()
+    sc = torch.log(attn[0, :, 0])[:, None]                  # log weights as scores
+    pooled = online_softmax_pool(sc, pri, chunk=2)[0]
+    torch.testing.assert_close(pooled, (attn[0, :, 0][:, None] * pri).sum(0), atol=1e-5, rtol=1e-5)
+
+
+def test_norm_entropy_and_pma_collapse_monitor():
+    uni = torch.full((5, 8), 1 / 8)
+    one = torch.zeros(5, 8)
+    one[:, 0] = 1.0
+    assert abs(float(norm_entropy(uni, 1).mean()) - 1.0) < 1e-6
+    assert float(norm_entropy(one, 1).mean()) < 1e-3
+    sd, prior, cov, stats, d, r = _inputs()
+    n = d.shape[0]
+    # collapsed PMA (u = a = 0): uniform pooling and routing -> entropies 1, max weight x N = 1
+    cal = _model("hyb_pma", desc_dim(K), pma_fix=True, cut_coupling=True)
+    with torch.no_grad():
+        cal.u.zero_(), cal.a.zero_()
+        cal.rel[-1].bias.fill_(50.0)                         # lam -> 1 so the log-lam score is flat
+    dg = cal.diagnostics(d, r, prior.float(), cov)
+    assert dg["beta_entropy"] > 0.999 and dg["pool_entropy"] > 0.999
+    assert abs(dg["pool_maxN"] - 1.0) < 1e-2
+    # sharp seeds: low entropy and a max weight well above uniform
+    with torch.no_grad():
+        cal.u.copy_(torch.randn_like(cal.u) * 40.0)
+        cal.a.copy_(torch.randn_like(cal.a) * 40.0)
+    dg2 = cal.diagnostics(d, r, prior.float(), cov)
+    assert dg2["beta_entropy"] < 0.9 and dg2["pool_maxN"] > 1.5 and dg2["ctx_std"] >= 0
+    # local control and non-PMA kinds report nothing for PMA; xatt reports attention statistics
+    assert _model("hyb_pma_loc", desc_dim(K), pma_fix=True).diagnostics(d, r, prior.float(), cov) == {}
+    dx = _model("hyb_xatt", desc_dim(K), cut_coupling=True).diagnostics(d, r, prior.float(), cov, _pair(stats))
+    assert 0.0 < dx["attn_entropy"] <= 1.0 and dx["attn_maxN"] >= 1.0 - 1e-6
+
+
+def test_pma_fix_changes_init_scale_and_adds_temperatures_only():
+    a = HybridCalibrator("hyb_pma", K, desc_dim(K), pma_fix=False)
+    b = HybridCalibrator("hyb_pma", K, desc_dim(K), pma_fix=True)
+    assert b.n_params == a.n_params + 2
+    assert HybridCalibrator("hyb_pma_loc", K, desc_dim(K), pma_fix=True).n_params == b.n_params
+    assert b.u.std() > 5 * a.u.std() * 0.5                   # unit-scale seeds vs 0.1-scale seeds
+    from ssm_decode.hybrid_calib import no_decay_names
+    names = [n for n, _ in b.named_parameters() if n in no_decay_names()]
+    assert sorted(names) == ["a", "log_tb", "log_ts", "u"]
+
+
+def test_pair_norm_variants_keep_the_control_property_and_equivariance():
+    sd, prior, cov, stats, d, r = _inputs()
+    iu = int(np.flatnonzero(~cov)[0])
+    jc = int(np.flatnonzero(cov)[0])
+    st2 = _perturb_gram(stats, iu, jc, delta=60.0)
+    assert HybridCalibrator("hyb_xatt", K, desc_dim(K), pair_norm=True).n_params == \
+        HybridCalibrator("hyb_xatt_np", K, desc_dim(K), pair_norm=True).n_params == \
+        HybridCalibrator("hyb_xatt", K, desc_dim(K)).n_params
+    for kind, expect_change in (("hyb_xatt", True), ("hyb_xatt_np", False)):
+        cal = _model(kind, desc_dim(K), cut_coupling=True, pair_norm=True)
+        t1, t2 = _tables(cal, stats, prior, cov), _tables(cal, st2, prior, cov)
+        assert (not torch.allclose(t1, t2, atol=1e-6)) == expect_change, kind
+        perm = torch.randperm(d.shape[0], generator=torch.Generator().manual_seed(7))
+        a = cal(d, r, prior.float(), cov, _pair(stats))
+        b = cal(d[perm], r[perm], prior[:, perm].float(), cov[perm.numpy()], _pair(stats, perm))
+        torch.testing.assert_close(a[:, perm], b, atol=1e-5, rtol=1e-5)
