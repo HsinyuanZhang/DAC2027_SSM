@@ -5,23 +5,31 @@ R1_stream,"P0 + R1-stream (readout ridge, level 2)",ours,B trials: neural + beha
 R3,"P0 + R3 (F7-J local update + readout ridge, optional level 3)",ours,B trials: neural + behaviour labels (forward replay),no (forward-only replay),True,True
 p_prior_native_eval,"P-prior (re-evaluated, native-query subset)",ours,B trials: neural only (input mean/std),no,True,True
 p0_native_eval,"P0 (re-evaluated, native-query subset)",ours,B trials: neural + behaviour labels,no,True,True
-stab_a,"Stabilizer (a): FA + Procrustes on stable channels, B-trial data",published,B trials: neural only (no labels),no,True,True
-stab_a_noalign,"Stabilizer control: target FA, no rotation",published-control,B trials: neural only (no labels),no,True,True
-stab_b,"Stabilizer (b): FA + Procrustes, all target-session trials",published,ALL target usable trials: neural only (incl. query bins),no,False,False
-cca_sqrt_a,"Gallego-style PCA+CCA (a): sqrt counts, plain CCA, B-trial data",published,B trials: neural + reach-direction labels,no,True,True
-cca_sqrt_a_ridge,"PCA+CCA (a), sqrt counts, ridge CCA (source-selected)",published-variant,B trials: neural + reach-direction labels,no,True,True
-cca_a,"PCA+CCA (a), raw counts, plain CCA, B-trial data",published-variant,B trials: neural + reach-direction labels,no,True,True
-cca_a_ridge,"PCA+CCA (a), raw counts, ridge CCA (source-selected)",published-variant,B trials: neural + reach-direction labels,no,True,True
-cca_sqrt_b,"Gallego-style PCA+CCA (b): sqrt counts, plain CCA, all target trials",published,ALL target usable trials: neural + reach-direction labels (incl. query trials),no,False,False
-cca_sqrt_b_ridge,"PCA+CCA (b), sqrt counts, ridge CCA, all target trials",published-variant,ALL target usable trials: neural + reach-direction labels (incl. query trials),no,False,False
-cca_b,"PCA+CCA (b), raw counts, plain CCA, all target trials",published-variant,ALL target usable trials: neural + reach-direction labels (incl. query trials),no,False,False
-cca_b_ridge,"PCA+CCA (b), raw counts, ridge CCA, all target trials",published-variant,ALL target usable trials: neural + reach-direction labels (incl. query trials),no,False,False
-apst_full_last,"APST-FULL (last segment, source-only rule)",published,B trials: neural + reach-direction labels (MOVE-T4 profile),no,True,True
-apst_act_last,"APST ACT-only (last segment, source-only rule)",published,B trials: neural only (no labels),no,True,True
-apst_full_devsel,"APST-FULL (authors' dev-selected segment_09; dev = our days targets, so optimistic)",published,B trials: neural + reach-direction labels (MOVE-T4 profile),no,True,True
-apst_act_devsel,"APST ACT-only (authors' dev-selected segment_08; dev = our days targets, so optimistic)",published,B trials: neural only (no labels),no,True,True
-apst_full_sel0307,"APST-FULL (2014 retrain; segment_08 chosen on source-OOS session 20140307, source-only)",published,B trials: neural + reach-direction labels (MOVE-T4 profile),no,True,True
-nomad,NoMAD (LFADS + alignment network; mean over targets and 3 seeds),published,"ALL target-session neural data, unlabeled","YES (alignment net, target gradients)",False,False
+stab_pool_a,"Stabilizer (a), electrode-pooled 96-ch input: FA + Procrustes on stable channels, B-trial data",published,B trials: neural only (no labels),no,True,True
+stab_pool_a_noalign,"Stabilizer control (pooled): target FA, no rotation",published-control,B trials: neural only (no labels),no,True,True
+stab_pool_b,"Stabilizer (b), pooled: FA + Procrustes on stable channels, all target-session trials",published,ALL target usable trials: neural only (incl. query bins),no,False,False
+stab_a,"Stabilizer (a), sorted units + ad-hoc same-electrode unit matching: FA + Procrustes on stable channels, B-trial data",published-variant,B trials: neural only (no labels),no,True,True
+stab_a_noalign,"Stabilizer control (sorted units): target FA, no rotation",published-control,B trials: neural only (no labels),no,True,True
+stab_b,"Stabilizer (b), sorted units: FA + Procrustes on stable channels, all target-session trials",published-variant,ALL target usable trials: neural only (incl. query bins),no,False,False
+cca_pool_sqrt_a,"Gallego-style PCA+CCA (a): sqrt, plain CCA, electrode-pooled input",published,B trials: neural + reach-direction labels,no,True,True
+cca_pool_sqrt_a_ridge,"PCA+CCA (a), pooled input: sqrt, ridge CCA [our variant, source-selected]",published-variant,B trials: neural + reach-direction labels,no,True,True
+cca_sqrt_a,"Gallego-style PCA+CCA (a): sqrt, plain CCA, sorted-unit input",published,B trials: neural + reach-direction labels,no,True,True
+cca_sqrt_a_ridge,"PCA+CCA (a), sorted units: sqrt, ridge CCA [our variant, source-selected]",published-variant,B trials: neural + reach-direction labels,no,True,True
+cca_a,"PCA+CCA (a), sorted units: raw counts, plain CCA [our variant]",published-variant,B trials: neural + reach-direction labels,no,True,True
+cca_a_ridge,"PCA+CCA (a), sorted units: raw counts, ridge CCA [our variant, source-selected]",published-variant,B trials: neural + reach-direction labels,no,True,True
+cca_pool_sqrt_b,"Gallego-style PCA+CCA (b): sqrt, plain CCA, pooled input, all target trials",published,ALL target usable trials: neural + reach-direction labels (incl. query trials),no,False,False
+cca_pool_sqrt_b_ridge,"PCA+CCA (b), pooled: sqrt, ridge CCA [our variant], all target trials",published-variant,ALL target usable trials: neural + reach-direction labels (incl. query trials),no,False,False
+cca_sqrt_b,"Gallego-style PCA+CCA (b): sqrt, plain CCA, sorted units, all target trials",published,ALL target usable trials: neural + reach-direction labels (incl. query trials),no,False,False
+cca_sqrt_b_ridge,"PCA+CCA (b), sorted units: sqrt, ridge CCA [our variant], all target trials",published-variant,ALL target usable trials: neural + reach-direction labels (incl. query trials),no,False,False
+cca_b,"PCA+CCA (b), sorted units: raw counts, plain CCA [our variant], all target trials",published-variant,ALL target usable trials: neural + reach-direction labels (incl. query trials),no,False,False
+cca_b_ridge,"PCA+CCA (b), sorted units: raw counts, ridge CCA [our variant], all target trials",published-variant,ALL target usable trials: neural + reach-direction labels (incl. query trials),no,False,False
+apst_full_last,"APST-FULL (last segment, source-only rule; single training seed 42)",published,B trials: neural + reach-direction labels (MOVE-T4 profile),no,True,True
+apst_act_last,"APST ACT-only (last segment, source-only rule; seed 42)",published,B trials: neural only (no labels),no,True,True
+apst_full_devsel,"APST-FULL (authors' dev-selected segment_09; days targets ARE APST's dev sessions, so optimistic)",published,B trials: neural + reach-direction labels (MOVE-T4 profile),no,True,True
+apst_act_devsel,"APST ACT-only (authors' dev-selected segment_08; days targets are APST dev sessions, optimistic)",published,B trials: neural only (no labels),no,True,True
+apst_full_sel0307,"APST-FULL (2014 retrain, seed 42; segment_08 chosen on source-OOS session 20140307, source-only)",published,B trials: neural + reach-direction labels (MOVE-T4 profile),no,True,True
+nomad_pooled,"NoMAD, electrode-pooled 96-ch input (mean over 3 seeds)",published,"ALL target-session neural data, unlabeled","YES (alignment net, target gradients)",False,False
+nomad_units_elec,"NoMAD, sorted units re-ordered to day-0 columns by electrode (mean over 3 seeds)",published-variant,"ALL target-session neural data, unlabeled","YES (alignment net, target gradients)",False,False
 ui_reg,ui_reg: L2-to-prior table fine-tune through trunk (from prior),reference,B trials: neural + behaviour labels,YES (through frozen trunk),True,False
 ref_p2,P0 + ui_reg (P2 rule),reference,B trials: neural + behaviour labels,YES (through frozen trunk),True,False
 ref_like,P0 + ui_reg (like-for-like: month oosc / year oos),reference,B trials: neural + behaviour labels,YES (through frozen trunk),True,False

@@ -58,3 +58,51 @@ def test_match_units_by_electrode_rank_order():
     ia, ib = pb.match_units_by_electrode(ea, np.array([3.0, 1.0, 2.0]), eb, np.array([4.0, 5.0]))
     pairs = dict(zip(ia.tolist(), ib.tolist()))
     assert pairs == {0: 1, 2: 0}      # highest-rate unit on electrode 5 pairs with the only unit there
+
+
+def test_fa_fit_silent_columns_have_zero_loadings():
+    rng = np.random.default_rng(7)
+    z = rng.standard_normal((2000, 3))
+    c = rng.standard_normal((6, 3))
+    x = np.zeros((2000, 10))
+    x[:, [1, 2, 4, 5, 8, 9]] = z @ c.T + 0.3 * rng.standard_normal((2000, 6))
+    fa = pb.fa_fit(x, 3, min_priv=0.01, restarts=2)
+    assert fa["C"].shape == (10, 3)
+    assert np.abs(fa["C"][[0, 3, 6, 7]]).max() == 0.0
+    beta, o = pb.fa_beta(fa)
+    assert beta.shape == (3, 10) and np.isfinite(beta).all() and np.isfinite(o).all()
+
+
+def test_latent_dim_is_free_and_bridge_exact_when_d_equals_n():
+    """K x d bridge: with d = N (full-rank input) the bridge reproduces the known AP latent exactly."""
+    rng = np.random.default_rng(8)
+    n, k, m = 7, 3, 3000
+    x = rng.poisson(3.0, size=(m, n)).astype(float) * rng.uniform(0.5, 2.0, n)
+    w = rng.standard_normal((k, n))
+    z = (x - x.mean(0)) / x.std(0) @ w.T
+    ref = pb.build_ref_day(name="r", x_fit=x, z_ref=z, electrodes=np.arange(n), ref_mean=x.mean(0), ref_std=x.std(0),
+                           x_ref_trials=[], ref_conds=[], k=n, fa_min_priv=0.01)
+    xz = (x - ref.zmean) / ref.zstd
+    lat_p = (xz - xz.mean(0)) @ ref.pca_p
+    assert ref.a_pca.shape == (k, n)
+    assert np.abs(lat_p @ ref.a_pca.T + ref.c_pca - z).max() < 1e-6
+    ref3 = pb.build_ref_day(name="r", x_fit=x, z_ref=z, electrodes=np.arange(n), ref_mean=x.mean(0), ref_std=x.std(0),
+                            x_ref_trials=[], ref_conds=[], k=3, fa_min_priv=0.01)
+    assert ref3.a_fa.shape == (k, 3)
+
+
+def test_stabilizer_on_pooled_channels_ignores_silent_channels():
+    """Electrode-pooled input: channel c is electrode c in every session; silent channels form no stable pair."""
+    rng = np.random.default_rng(9)
+    n, k, m = 20, 3, 4000
+    active = np.array([2, 3, 5, 8, 9, 12, 13, 17])
+    c = rng.standard_normal((len(active), k))
+    x_ref = np.zeros((m, n))
+    x_ref[:, active] = 5 + np.abs(rng.standard_normal((m, k)) @ c.T + 0.3 * rng.standard_normal((m, len(active))))
+    ref = pb.build_ref_day(name="r", x_fit=x_ref, z_ref=rng.standard_normal((m, 2)), electrodes=np.arange(n),
+                           ref_mean=x_ref.mean(0), ref_std=x_ref.std(0) + 1e-9, x_ref_trials=[], ref_conds=[],
+                           k=k, fa_min_priv=0.01)
+    x_new = x_ref.copy()
+    t, cvec, mean, std, info = pb.stabilizer_readin(ref, x_new, np.arange(n), k=k, align_frac=1.0, fa_min_priv=0.01)
+    assert info["n_matched"] == len(active)               # silent channels dropped from the pairing
+    assert t.shape == (2, n) and np.abs(t[:, [0, 1, 4, 6]]).max() < 1e-9

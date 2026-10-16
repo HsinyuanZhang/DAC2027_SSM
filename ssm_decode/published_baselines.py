@@ -19,7 +19,11 @@ are scored on exactly the same contiguous causal decode as P-prior / P0.
    through the canonical transforms.  Uses reach-direction labels of the
    calibration trials (not behaviour).
 
-The baseline-day latent -> AP-latent bridge ``A`` (a K x K least-squares map fitted
+The latent dimension ``d`` of FA / PCA is a free parameter (selected on source pseudo-targets; ``k`` in the
+function signatures): the bridge is then a K x d least-squares map, exact when ``d`` equals the number of
+input dimensions.  The input can be sorted units or electrode-pooled channels (``ssm_decode.electrode_align``).
+
+The baseline-day latent -> AP-latent bridge ``A`` (a K x d least-squares map fitted
 on the baseline *source* session, where the AP latent ``z_ref = W_ref x`` is known)
 stands in for the decoder of the original papers: the frozen trunk plays the role
 of the day-1 decoder.
@@ -80,6 +84,26 @@ def fa_em(x: np.ndarray, k: int, *, iters: int = 400, tol: float = 1e-5,
         if ll > best_ll:
             best_ll, best = ll, {"d": d, "C": c.copy(), "psi": psi.copy(), "ll": float(ll)}
     return best
+
+
+def fa_fit(xz: np.ndarray, k: int, **kw) -> dict:
+    """``fa_em`` restricted to the columns that vary in ``xz`` (silent channels of an electrode-pooled input
+    carry no information); loadings of silent columns are zero, latent dimensions beyond the number of active
+    columns get zero loadings, so shapes stay ``C [N, k]``."""
+    xz = np.asarray(xz, dtype=np.float64)
+    act = xz.std(0) > 1e-8
+    n_act = int(act.sum())
+    if n_act == 0:
+        raise ValueError("no active column")
+    k_eff = min(k, n_act)
+    fa = fa_em(xz[:, act], k_eff, **kw)
+    c = np.zeros((xz.shape[1], k))
+    c[np.flatnonzero(act), :k_eff] = fa["C"]
+    psi = np.full(xz.shape[1], kw.get("min_priv", 0.1))
+    psi[act] = fa["psi"]
+    d = np.zeros(xz.shape[1])
+    d[act] = fa["d"]
+    return {"d": d, "C": c, "psi": psi, "ll": fa["ll"]}
 
 
 def fa_beta(fa: dict) -> tuple[np.ndarray, np.ndarray]:
@@ -165,7 +189,10 @@ def _lstsq_affine(src: np.ndarray, dst: np.ndarray):
 def pca_basis(xz: np.ndarray, k: int) -> np.ndarray:
     xc = xz - xz.mean(0)
     _, _, vt = np.linalg.svd(xc, full_matrices=False)
-    return vt[:k].T                                      # [N, k]
+    basis = vt[:k].T                                     # [N, <=k]
+    if basis.shape[1] < k:                               # fewer directions than requested: zero-pad
+        basis = np.concatenate([basis, np.zeros((basis.shape[0], k - basis.shape[1]))], 1)
+    return basis                                         # [N, k]
 
 
 def phase_average(x: np.ndarray, t_phase: int) -> np.ndarray:
@@ -190,7 +217,7 @@ def apply_transform(x, kind: str):
 
 
 def build_ref_day(*, name, x_fit, z_ref, electrodes, ref_mean, ref_std, x_ref_trials, ref_conds,
-                  k, fa_min_priv, fa_seed=0, t_phase=20, transform="raw"):
+                  k, fa_min_priv, fa_seed=0, t_phase=20, transform="raw", with_fa=True, with_pca=True):
     """Fit FA / PCA on the baseline session and the latent -> AP-latent bridges.
 
     x_fit [M, N] raw counts of valid bins of the baseline session, z_ref [M, K] the
@@ -204,10 +231,13 @@ def build_ref_day(*, name, x_fit, z_ref, electrodes, ref_mean, ref_std, x_ref_tr
     xz = (x_fit - zmean) / zstd
     ref = RefDay(name=name, electrodes=np.asarray(electrodes), rate=x_fit.mean(0),
                  mean=ref_mean, std=ref_std, zmean=zmean, zstd=zstd)
-    ref.fa = fa_em(xz, k, min_priv=fa_min_priv, seed=fa_seed)
-    ref.beta, ref.o = fa_beta(ref.fa)
-    lat = xz @ ref.beta.T + ref.o
-    ref.a_fa, ref.c_fa = _lstsq_affine(lat, z_ref)
+    if with_fa:
+        ref.fa = fa_fit(xz, k, min_priv=fa_min_priv, seed=fa_seed)
+        ref.beta, ref.o = fa_beta(ref.fa)
+        lat = xz @ ref.beta.T + ref.o
+        ref.a_fa, ref.c_fa = _lstsq_affine(lat, z_ref)
+    if not with_pca:
+        return ref
     ref.pca_p = pca_basis(xz, k)
     lat_p = (xz - xz.mean(0)) @ ref.pca_p
     ref.a_pca, ref.c_pca = _lstsq_affine(lat_p, z_ref)
@@ -233,8 +263,10 @@ def stabilizer_readin(ref: RefDay, x_fit: np.ndarray, electrodes: np.ndarray, *,
     mean = x_fit.mean(0)
     std = np.where(x_fit.std(0) < 1e-6, 1.0, x_fit.std(0))
     xz = (x_fit - mean) / std
-    fa = fa_em(xz, k, min_priv=fa_min_priv, seed=seed, restarts=restarts)
+    fa = fa_fit(xz, k, min_priv=fa_min_priv, seed=seed, restarts=restarts)
     ia, ib = match_units_by_electrode(ref.electrodes, ref.rate, electrodes, x_fit.mean(0))
+    live = (ref.rate[ia] > 0) & (x_fit.mean(0)[ib] > 0)      # silent channels (electrode-pooled input) are no pairs
+    ia, ib = ia[live], ib[live]
     info = {"n_matched": int(len(ia)), "n_units": int(xz.shape[1])}
     if align and len(ia) >= 2:
         n_stable = max(int(round(align_frac * len(ia))), min(len(ia), k))

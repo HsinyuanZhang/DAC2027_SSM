@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """NoMAD (Karpowicz et al. 2025; github.com/snel-repo/nomad, unchanged code) on 000688 sub-M.
 
-Runs in the TF env (/mnt/data/work_host/envs/nomad_tf; TF 2.15, the repo pins TF 2.0).  Stages
+Runs in the TF 2.6 CPU env (/mnt/data/work_host/envs/nomad_tf26; the repo pins TF 2.0).  Stages
   day0     train BehaviorLFADS on the baseline day (spikes + standardised velocity, the repo's demo config)
   decoder  causal gen_states of the baseline day -> 3-lag ridge decoder (demo's ``fit_and_eval_decoder``)
   align    NoMAD alignment network on ALL unlabeled target-session spikes (frozen LFADS, KL on generator
@@ -11,9 +11,21 @@ Scoring on the shared (target, B, draw) query masks is done by scripts/run_basel
 (spint env).  Target data used: the full unlabeled spike recording (query bins included) and target-side
 gradient training of the alignment network: a non-deployable, H4-violating reference.
 
-Deviations from the authors' demo (documented in the README): DATA_DIM = baseline-day unit count with the
-target zero-padded; spikes are the sorted-unit 20 ms counts of our loader; per-unit z-score normalisation
-(diag matrix + bias) replaces the demo's pre-computed normalization.h5; eager mode is not forced.
+Input layouts (``--input``), because 000688 sub-M re-sorts units every day and NoMAD initialises the target
+read-in from the day-0 read-in (INIT_READIN_FROM_DAY0), i.e. column c of the target must be the same channel as
+column c of day 0:
+  pooled      counts summed per electrode into the fixed 96 M1 channels (primary variant; uses unit_to_electrode)
+  units_elec  sorted units re-ordered into the baseline-day columns by shared electrode (rate-rank within an
+              electrode, left-over units fill left-over columns arbitrarily); uses unit_to_electrode
+  units       sorted units in their own column order, zero-padded: NOT electrode-aligned; refused by the column
+              order guard unless ``--legacy-unsafe`` (this was the first, invalid version of the comparison)
+The guard (ssm_decode.electrode_align.assert_columns_electrode_aligned) raises when target columns are not
+electrode-aligned to the day-0 columns (the day-k model always inherits the day-0 read-in weights; the yaml key
+INIT_READIN_FROM_DAY0 is not read anywhere in the authors' code).
+
+Deviations from the authors' demo (documented in the README): DATA_DIM = baseline-day column count; spikes are
+the 20 ms counts of our loader; per-column z-score normalisation (diag matrix + bias) replaces the demo's
+pre-computed normalization.h5; eager mode is not forced.
 """
 from __future__ import annotations
 
@@ -30,6 +42,13 @@ ROOT = Path("/home/xinyuan/Work_host/SSM")
 NOMAD = Path("/home/xinyuan/Work_host/nomad")
 sys.path[:0] = [str(NOMAD / "lfads_tf2"), str(NOMAD / "nomad"), str(NOMAD / "demo")]
 BASE = ROOT / "results/baselines_20261016/nomad"
+
+import importlib.util
+
+_spec = importlib.util.spec_from_file_location("electrode_align", ROOT / "ssm_decode/electrode_align.py")
+EA = importlib.util.module_from_spec(_spec)             # numpy-only module, loaded by path (the TF env has no torch)
+sys.modules["electrode_align"] = EA
+_spec.loader.exec_module(EA)
 
 import git as _git                                   # the local nomad checkout is not a git repository
 
@@ -114,6 +133,29 @@ def load_npz(stratum, name):
     return np.load(BASE / "data" / stratum / f"{name}.npz", allow_pickle=True)
 
 
+def load_session(stratum, name, mode, ref=None):
+    """Session counts in the column layout of ``mode`` -> (x [T, d], per-column electrode label [d], z).
+
+    ``ref``: the baseline-day npz (needed for ``units_elec``).  Column labels are -1 for zero padding / arbitrary
+    fill; ``units`` keeps the session's own column order (zero-padded to the baseline width by the caller).
+    """
+    z = load_npz(stratum, name)
+    x = z["neural"].astype(np.float32)
+    el = np.asarray(z["electrodes"], dtype=np.int64)
+    if mode == "pooled":
+        return EA.pool_counts(x, el).astype(np.float32), np.arange(EA.N_ELECTRODES), z
+    if mode == "units":
+        return x, el, z
+    if mode == "units_elec":
+        ref_el = np.asarray(ref["electrodes"], dtype=np.int64)
+        order, col = EA.electrode_matched_order(ref_el, ref["neural"].mean(0), el, x.mean(0))
+        out = np.zeros((x.shape[0], len(ref_el)), dtype=np.float32)
+        ok = order >= 0
+        out[:, ok] = x[:, order[ok]]
+        return out, col, z
+    raise ValueError(mode)
+
+
 def lfads_yaml(d, data_dir, model_dir, max_epochs):
     return f"""MODEL:
   DATA_DIM: {d}
@@ -165,7 +207,7 @@ TRAIN:
 """
 
 
-def nomad_yaml(d, model_dir, align_dir, max_epochs):
+def nomad_yaml(d, model_dir, align_dir, max_epochs, init_readin=True):
     return f"""MODEL:
   DATA_DIM: {d}
   SEQ_LEN: {SEQ}
@@ -180,7 +222,7 @@ def nomad_yaml(d, model_dir, align_dir, max_epochs):
     - rate_linear
     - decoder.rnn.cell.fac_linear
   SAMPLE_POSTERIORS: True
-  INIT_READIN_FROM_DAY0: True
+  INIT_READIN_FROM_DAY0: {init_readin}
 TRAIN:
   EARLY_STOPPING_COST: 'NLL-KL'
   ALIGN_LOSS_WEIGHT:
@@ -301,12 +343,13 @@ def cmd_day0(a):
     _patch_keras_compat()
     _patch_autograph_df()
     from lfads_tf2.subclasses.behavior.models import BehaviorLFADS
-    ref = load_npz(a.stratum, ref_name(a.stratum))
-    x, y = ref["neural"].astype(np.float32), ref["y_norm"]
+    x, ref_col, ref = load_session(a.stratum, ref_name(a.stratum), a.input)
+    y = ref["y_norm"]
     d = x.shape[1]
     root = BASE / "models" / a.tag
     data_dir = root / "data_day0"
     data_dir.mkdir(parents=True, exist_ok=True)
+    (root / "input.json").write_text(json.dumps({"input": a.input, "d": int(d)}))
     xs, ys, _ = chop(x, y)
     write_h5(data_dir / "lfads_day0.h5", xs, ys)
     write_norm(data_dir / "normalization.h5", x)
@@ -352,10 +395,11 @@ def cmd_decoder(a):
     from lfads_tf2.subclasses.behavior.models import BehaviorLFADS
     from sklearn.linear_model import Ridge
     from sklearn.model_selection import GridSearchCV
-    ref = load_npz(a.stratum, ref_name(a.stratum))
-    x, y = ref["neural"].astype(np.float32), ref["y_norm"].astype(np.float64)
+    x, ref_col, ref = load_session(a.stratum, ref_name(a.stratum), a.input)
+    y = ref["y_norm"].astype(np.float64)
     d = x.shape[1]
     root = BASE / "models" / a.tag
+    _check_tag_input(root, a.input)
     model = BehaviorLFADS(model_dir=str(root / "day0_model"))
     g = causal_states(model, x, d)
     lg = lag_stack(g)
@@ -376,6 +420,14 @@ def cmd_decoder(a):
     print("decoder", r2, dec.best_params_)
 
 
+def _check_tag_input(root, mode):
+    """The day-0 model was trained on one input layout; align/decoder must use the same family."""
+    info = json.loads((root / "input.json").read_text()) if (root / "input.json").exists() else {"input": "units"}
+    fam = lambda m: "pooled" if m == "pooled" else "units"
+    if fam(info["input"]) != fam(mode):
+        raise SystemExit(f"day-0 model {root.name} was trained on input={info['input']}, got --input {mode}")
+
+
 def cmd_align(a):
     import h5py, pickle
     import tensorflow as tf
@@ -386,21 +438,47 @@ def cmd_align(a):
     from nomad.tuples import AlignInput
     from nomad.defaults import get_cfg_defaults
     root = BASE / "models" / a.tag
-    ref = load_npz(a.stratum, ref_name(a.stratum))
-    tgt = load_npz(a.stratum, a.target)
-    d = ref["neural"].shape[1]
-    xt = pad_units(tgt["neural"].astype(np.float32), d)
-    xs0, ys0, _ = chop(ref["neural"].astype(np.float32), ref["y_norm"])
+    _check_tag_input(root, a.input)
+    ref_npz = load_npz(a.stratum, ref_name(a.stratum))
+    x0, ref_col, ref = load_session(a.stratum, ref_name(a.stratum), a.input, ref=ref_npz)
+    d = x0.shape[1]
+    is_ref = a.target == ref_name(a.stratum)
+    xt, tgt_col, tgt = load_session(a.stratum, a.target, a.input, ref=ref_npz)
+    if a.input == "units":                                   # legacy layout: own column order, zero-padded
+        xt = pad_units(xt, d)
+        tgt_col = np.concatenate([tgt_col, -np.ones(d - len(tgt_col), dtype=np.int64)])
+    shuffled = False
+    if a.shuffle_control:                                    # sensitivity control: the day-0 recording with its active
+        if not is_ref:                                       # columns randomly permuted (a simulated re-sort)
+            raise SystemExit("--shuffle-control is defined for the baseline day only")
+        rng = np.random.default_rng(0)
+        act = np.flatnonzero(xt.std(0) > 0)
+        perm = np.arange(d)
+        perm[act] = rng.permutation(act)
+        xt = xt[:, perm]
+        tgt_col = tgt_col[perm]
+        shuffled = True
+    guard_info = {"guard_bypassed": bool(a.legacy_unsafe or a.shuffle_control)}
+    if not (a.legacy_unsafe or a.shuffle_control):
+        # the day-k LFADS is always built from a copy of the day-0 model directory (lowd_readin weights inherited), so the
+        # guard applies whatever the (unused) INIT_READIN_FROM_DAY0 key says
+        guard_info.update(EA.assert_columns_electrode_aligned(ref_col, tgt_col, init_from_day0=True))
+    else:
+        mism = (tgt_col >= 0) & (tgt_col[:len(ref_col)] != ref_col[:len(tgt_col)]) if len(tgt_col) == len(ref_col) else None
+        guard_info["n_mismatch_columns"] = None if mism is None else int(mism.sum())
+    print("column guard", guard_info, flush=True)
+    xs0, ys0, _ = chop(x0, ref["y_norm"])
     xsk, ysk, _ = chop(xt, tgt["y_norm"])             # target behaviour is NOT used by NoMAD (unlabeled)
-    if a.seed > 0:                                       # seed 0 = the first (unseeded) run of each target
-        tf.random.set_seed(a.seed)
-        np.random.seed(a.seed)
+    tf.random.set_seed(a.seed)                           # every run is explicitly seeded
+    np.random.seed(a.seed)
     sfx = f"_s{a.seed}"
-    align_dir = root / "align" / (a.target + sfx)
+    tname = a.target + ("_shuffled" if shuffled else "")
+    variant = a.input + ("" if a.init_readin else "_noinit")
+    align_dir = root / "align" / variant / (tname + sfx)
     if align_dir.exists():
         shutil.rmtree(align_dir)
-    cfg_path = root / f"nomad_{a.target}{sfx}.yaml"
-    cfg_path.write_text(nomad_yaml(d, root / "day0_model", align_dir, a.max_epochs))
+    cfg_path = root / f"nomad_{variant}_{tname}{sfx}.yaml"
+    cfg_path.write_text(nomad_yaml(d, root / "day0_model", align_dir, a.max_epochs, bool(a.init_readin)))
     cfg = get_cfg_defaults()
     cfg.merge_from_file(str(cfg_path))
     _patch_align_call()
@@ -424,13 +502,14 @@ def cmd_align(a):
             print("epoch", epochs, {k: (float(v) if np.isscalar(v) else v) for k, v in res.items() if k != "done"}, flush=True)
     print("aligned after", epochs, "epochs")
     dec = pickle.load(open(root / "decoder.pkl", "rb"))
-    g = causal_states(model.lfads_dayk, tgt["neural"].astype(np.float32), d)
+    g = causal_states(model.lfads_dayk, xt.astype(np.float32), d)
     lg = lag_stack(g)
     yhat_norm = lg @ dec["coef"].T + dec["intercept"]
     ym, ys = tgt["y_mean"], tgt["y_std"]
     pred = yhat_norm * ys + ym                          # physical units, NaN for the first lag bins
-    (BASE / "preds").mkdir(exist_ok=True)
-    np.savez_compressed(BASE / "preds" / f"{a.target}{sfx}.npz", pred=pred, epochs=epochs)
+    pdir = BASE / ("preds_" + variant)
+    pdir.mkdir(exist_ok=True)
+    np.savez_compressed(pdir / f"{tname}{sfx}.npz", pred=pred, epochs=epochs, guard=json.dumps(guard_info))
     print("saved preds", a.target)
 
 
@@ -442,7 +521,19 @@ def main():
     p.add_argument("--target")
     p.add_argument("--max-epochs", type=int, default=10000)
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--input", choices=["pooled", "units_elec", "units"], default="pooled")
+    p.add_argument("--init-readin", type=int, choices=[0, 1], default=1,
+                   help="writes MODEL.INIT_READIN_FROM_DAY0 into the yaml; NOTE: this key is never read by the authors' code "
+                        "(nomad/nomad/models.py builds the day-k LFADS from a copy of the day-0 model), so 0 and 1 give "
+                        "bit-identical runs for the same seed")
+    p.add_argument("--shuffle-control", action="store_true", help="baseline day with its active columns permuted")
+    p.add_argument("--legacy-unsafe", action="store_true", help="bypass the column-order guard (invalid legacy layout)")
     a = p.parse_args()
+    n_thr = int(os.environ.get("NOMAD_THREADS", "0"))
+    if n_thr:
+        import tensorflow as tf
+        tf.config.threading.set_intra_op_parallelism_threads(n_thr)
+        tf.config.threading.set_inter_op_parallelism_threads(2)
     {"day0": cmd_day0, "decoder": cmd_decoder, "align": cmd_align}[a.cmd](a)
 
 

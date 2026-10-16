@@ -3,7 +3,8 @@
 
 Writes results/baselines_20261016/nomad/data/<stratum>/<session>.npz with the binned counts,
 standardised velocity (source label statistics of the stratum's AP backbone) and the usable-trial bounds.
-Day 0 = the most recent source session of the backbone (same baseline day as the Stabilizer / CCA rows).
+``electrodes`` = unit_to_electrode (needed for the electrode-pooled / electrode-matched inputs of the
+reviewed NoMAD pipeline).  Day 0 = the most recent source session of the backbone (same baseline day as the Stabilizer / CCA rows).
 """
 import json, sys
 from pathlib import Path
@@ -30,7 +31,7 @@ def main(stratum):
         np.savez_compressed(d / f"{name}.npz", neural=rec.neural.astype(np.float32),
                             y_norm=((y - ym) / ys).astype(np.float32), y_mean=ym, y_std=ys,
                             eval_mask=np.asarray(rec.eval_mask), usable=np.asarray(usable_trials(rec)),
-                            role=role)
+                            role=role, electrodes=np.asarray(rec.unit_to_electrode, np.int64))
         print(stratum, role, name, rec.neural.shape)
     (d / "meta.json").write_text(json.dumps({"ref": ref, "targets": spec["targets"]}))
 

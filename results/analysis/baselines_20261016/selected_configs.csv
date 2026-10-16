@@ -1,0 +1,25 @@
+stratum,family,selected_cfg,mean_pseudo_target_r2
+days,stab/units,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",0.46119253392782555
+days,cca/units/raw/plain,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""raw""}",0.39548937121118677
+days,cca/units/raw/ridge,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 10, ""ridge"": 3.0, ""transform"": ""raw""}",0.4376649113610586
+days,cca/units/sqrt/plain,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3599411202803759
+days,cca/units/sqrt/ridge,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 10, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.4004550442063035
+days,stab/pooled,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""pooled""}",0.49597627150997525
+days,cca/pooled/sqrt/plain,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.35133584991156325
+days,cca/pooled/sqrt/ridge,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 10, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.3816680438645219
+month,stab/units,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",0.5577312920943276
+month,cca/units/raw/plain,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""raw""}",0.3537623617041449
+month,cca/units/raw/ridge,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",0.4719013730647177
+month,cca/units/sqrt/plain,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.32516207780478606
+month,cca/units/sqrt/ridge,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.447109070285587
+month,stab/pooled,"{""d"": 10, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""pooled""}",0.5775303397798676
+month,cca/pooled/sqrt/plain,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3299250623774053
+month,cca/pooled/sqrt/ridge,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 10, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.42269285239391585
+year,stab/units,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",0.5577312920943276
+year,cca/units/raw/plain,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""raw""}",0.3537623617041449
+year,cca/units/raw/ridge,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",0.4719013730647177
+year,cca/units/sqrt/plain,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.32516207780478606
+year,cca/units/sqrt/ridge,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.447109070285587
+year,stab/pooled,"{""d"": 10, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""pooled""}",0.5775303397798676
+year,cca/pooled/sqrt/plain,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3299250623774053
+year,cca/pooled/sqrt/ridge,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 10, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.42269285239391585

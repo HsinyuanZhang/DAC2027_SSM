@@ -1,73 +1,631 @@
-stratum,method,cfg,mean_pseudo_target_r2,n_evals
-days,stab_a,"{""floor"": 0.01, ""frac"": 0.5, ""transform"": ""raw""}",0.3258222936375609,20
-days,stab_a,"{""floor"": 0.01, ""frac"": 0.75, ""transform"": ""raw""}",0.32896488743909,20
-days,stab_a,"{""floor"": 0.01, ""frac"": 1.0, ""transform"": ""raw""}",0.3662815022881273,20
-days,stab_a,"{""floor"": 0.1, ""frac"": 0.5, ""transform"": ""raw""}",0.29684970075624595,20
-days,stab_a,"{""floor"": 0.1, ""frac"": 0.75, ""transform"": ""raw""}",0.29821082650444664,20
-days,stab_a,"{""floor"": 0.1, ""frac"": 1.0, ""transform"": ""raw""}",0.34715803153151736,20
-days,stab_a_noalign,"{""floor"": 0.1, ""frac"": 1.0, ""transform"": ""raw""}",-0.10581841536956627,20
-days,cca_a,"{""floor"": 0.1, ""ridge"": 0.0, ""transform"": ""raw""}",0.3028231620665585,20
-days,cca_a,"{""floor"": 0.1, ""ridge"": 0.01, ""transform"": ""raw""}",0.3056791579771169,20
-days,cca_a,"{""floor"": 0.1, ""ridge"": 0.1, ""transform"": ""raw""}",0.32124911784731797,20
-days,cca_a,"{""floor"": 0.1, ""ridge"": 1.0, ""transform"": ""raw""}",0.3466038843379834,20
-days,cca_a,"{""floor"": 0.1, ""ridge"": 3.0, ""transform"": ""raw""}",0.3493347633948193,20
-days,cca_a,"{""floor"": 0.1, ""ridge"": 10.0, ""transform"": ""raw""}",0.3462490185663829,20
-days,cca_a,"{""floor"": 0.1, ""ridge"": 30.0, ""transform"": ""raw""}",0.3431298017528536,20
-days,cca_a_plain,"{""floor"": 0.1, ""ridge"": 0.0, ""transform"": ""raw""}",0.3028231620665585,20
-days,cca_a,"{""floor"": 0.1, ""ridge"": 100.0, ""transform"": ""raw""}",0.3414154574339968,20
-days,cca_a_plain,"{""floor"": 0.1, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.28612898325603525,20
-days,cca_a,"{""floor"": 0.1, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.28827536435756274,20
-days,cca_a,"{""floor"": 0.1, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.29996127637400954,20
-days,cca_a,"{""floor"": 0.1, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.31781514585407217,20
-days,cca_a,"{""floor"": 0.1, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.3177536720036694,20
-days,cca_a,"{""floor"": 0.1, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.31293273657012,20
-days,cca_a,"{""floor"": 0.1, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.30898620458138387,20
-days,cca_a,"{""floor"": 0.1, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.30693395771121695,20
-month,stab_a,"{""floor"": 0.01, ""frac"": 0.5, ""transform"": ""raw""}",0.5414662978881887,20
-month,stab_a,"{""floor"": 0.01, ""frac"": 0.75, ""transform"": ""raw""}",0.5575070228996905,20
-month,stab_a,"{""floor"": 0.01, ""frac"": 1.0, ""transform"": ""raw""}",0.5551256523727488,20
-month,stab_a,"{""floor"": 0.1, ""frac"": 0.5, ""transform"": ""raw""}",0.5305488509546276,20
-month,stab_a,"{""floor"": 0.1, ""frac"": 0.75, ""transform"": ""raw""}",0.5567228641913999,20
-month,stab_a,"{""floor"": 0.1, ""frac"": 1.0, ""transform"": ""raw""}",0.5559298759274393,20
-month,stab_a_noalign,"{""floor"": 0.1, ""frac"": 1.0, ""transform"": ""raw""}",-0.2716730889204517,20
-month,cca_a,"{""floor"": 0.1, ""ridge"": 0.0, ""transform"": ""raw""}",0.3431207684023859,20
-month,cca_a,"{""floor"": 0.1, ""ridge"": 0.01, ""transform"": ""raw""}",0.35053646157427565,20
-month,cca_a,"{""floor"": 0.1, ""ridge"": 0.1, ""transform"": ""raw""}",0.386552085517388,20
-month,cca_a,"{""floor"": 0.1, ""ridge"": 1.0, ""transform"": ""raw""}",0.4441837086434569,20
-month,cca_a,"{""floor"": 0.1, ""ridge"": 3.0, ""transform"": ""raw""}",0.45543015578751633,20
-month,cca_a,"{""floor"": 0.1, ""ridge"": 10.0, ""transform"": ""raw""}",0.4576554755309111,20
-month,cca_a,"{""floor"": 0.1, ""ridge"": 30.0, ""transform"": ""raw""}",0.4571114734464083,20
-month,cca_a_plain,"{""floor"": 0.1, ""ridge"": 0.0, ""transform"": ""raw""}",0.3431207684023859,20
-month,cca_a,"{""floor"": 0.1, ""ridge"": 100.0, ""transform"": ""raw""}",0.45665380373090747,20
-month,cca_a_plain,"{""floor"": 0.1, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.31993730541015997,20
-month,cca_a,"{""floor"": 0.1, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.3270705800491963,20
-month,cca_a,"{""floor"": 0.1, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.3634098399924167,20
-month,cca_a,"{""floor"": 0.1, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.42465444590630846,20
-month,cca_a,"{""floor"": 0.1, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.43625686325212687,20
-month,cca_a,"{""floor"": 0.1, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.43833767519891104,20
-month,cca_a,"{""floor"": 0.1, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.43761568295857456,20
-month,cca_a,"{""floor"": 0.1, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.4369982069603692,20
-year,stab_a,"{""floor"": 0.01, ""frac"": 0.5, ""transform"": ""raw""}",0.5414662978881887,20
-year,stab_a,"{""floor"": 0.01, ""frac"": 0.75, ""transform"": ""raw""}",0.5575070228996905,20
-year,stab_a,"{""floor"": 0.01, ""frac"": 1.0, ""transform"": ""raw""}",0.5551256523727488,20
-year,stab_a,"{""floor"": 0.1, ""frac"": 0.5, ""transform"": ""raw""}",0.5305488509546276,20
-year,stab_a,"{""floor"": 0.1, ""frac"": 0.75, ""transform"": ""raw""}",0.5567228641913999,20
-year,stab_a,"{""floor"": 0.1, ""frac"": 1.0, ""transform"": ""raw""}",0.5559298759274393,20
-year,stab_a_noalign,"{""floor"": 0.1, ""frac"": 1.0, ""transform"": ""raw""}",-0.2716730889204517,20
-year,cca_a,"{""floor"": 0.1, ""ridge"": 0.0, ""transform"": ""raw""}",0.3431207684023859,20
-year,cca_a,"{""floor"": 0.1, ""ridge"": 0.01, ""transform"": ""raw""}",0.35053646157427565,20
-year,cca_a,"{""floor"": 0.1, ""ridge"": 0.1, ""transform"": ""raw""}",0.386552085517388,20
-year,cca_a,"{""floor"": 0.1, ""ridge"": 1.0, ""transform"": ""raw""}",0.4441837086434569,20
-year,cca_a,"{""floor"": 0.1, ""ridge"": 3.0, ""transform"": ""raw""}",0.45543015578751633,20
-year,cca_a,"{""floor"": 0.1, ""ridge"": 10.0, ""transform"": ""raw""}",0.4576554755309111,20
-year,cca_a,"{""floor"": 0.1, ""ridge"": 30.0, ""transform"": ""raw""}",0.4571114734464083,20
-year,cca_a_plain,"{""floor"": 0.1, ""ridge"": 0.0, ""transform"": ""raw""}",0.3431207684023859,20
-year,cca_a,"{""floor"": 0.1, ""ridge"": 100.0, ""transform"": ""raw""}",0.45665380373090747,20
-year,cca_a_plain,"{""floor"": 0.1, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.31993730541015997,20
-year,cca_a,"{""floor"": 0.1, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.3270705800491963,20
-year,cca_a,"{""floor"": 0.1, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.3634098399924167,20
-year,cca_a,"{""floor"": 0.1, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.42465444590630846,20
-year,cca_a,"{""floor"": 0.1, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.43625686325212687,20
-year,cca_a,"{""floor"": 0.1, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.43833767519891104,20
-year,cca_a,"{""floor"": 0.1, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.43761568295857456,20
-year,cca_a,"{""floor"": 0.1, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.4369982069603692,20
+stratum,family,stage,cfg,mean_pseudo_target_r2,n_evals
+days,stab/units,1,"{""d"": 3, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""units""}",0.05420927282867942,20
+days,stab/units,1,"{""d"": 3, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""units""}",0.037757774615865804,20
+days,stab/units,1,"{""d"": 3, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""units""}",0.17033482153580795,20
+days,stab/units,1,"{""d"": 3, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",0.061689805648073824,20
+days,stab/units,1,"{""d"": 3, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""units""}",0.042111554772310156,20
+days,stab/units,1,"{""d"": 3, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""units""}",0.17466265357478394,20
+days,stab/units,1,"{""d"": 5, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""units""}",0.2500267913693907,20
+days,stab/units,1,"{""d"": 5, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""units""}",0.3015168335206715,20
+days,stab/units,1,"{""d"": 5, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""units""}",0.3528503665861893,20
+days,stab/units,1,"{""d"": 5, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",0.26005403511367176,20
+days,stab/units,1,"{""d"": 5, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""units""}",0.30140747063789375,20
+days,stab/units,1,"{""d"": 5, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""units""}",0.35492637590219317,20
+days,stab/units,1,"{""d"": 8, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""units""}",0.24588401924733477,20
+days,stab/units,1,"{""d"": 8, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""units""}",0.3061942000910917,20
+days,stab/units,1,"{""d"": 8, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""units""}",0.282836158404635,20
+days,stab/units,1,"{""d"": 8, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",0.27751450573603276,20
+days,stab/units,1,"{""d"": 8, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""units""}",0.3108363771772902,20
+days,stab/units,1,"{""d"": 8, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""units""}",0.30042991150442777,20
+days,stab/units,1,"{""d"": 10, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""units""}",0.32582735792974027,20
+days,stab/units,1,"{""d"": 10, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""units""}",0.3289675768589537,20
+days,stab/units,1,"{""d"": 10, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""units""}",0.3662905848789898,20
+days,stab/units,1,"{""d"": 10, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",0.2968468833627436,20
+days,stab/units,1,"{""d"": 10, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""units""}",0.29820752115351234,20
+days,stab/units,1,"{""d"": 10, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""units""}",0.347151483181403,20
+days,stab/units,1,"{""d"": ""N"", ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""units""}",0.46061474038777883,20
+days,stab/units,1,"{""d"": ""N"", ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""units""}",0.46061474038777883,20
+days,stab/units,1,"{""d"": ""N"", ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""units""}",0.46061474038777883,20
+days,stab/units,1,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",0.46119253392782555,20
+days,stab/units,1,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""units""}",0.46119253392782555,20
+days,stab/units,1,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""units""}",0.46119253392782555,20
+days,cca/units/raw/plain,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""raw""}",0.20159431101647854,20
+days,cca/units/raw/plain,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""raw""}",0.2895875078567041,20
+days,cca/units/raw/plain,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""raw""}",0.31395569622346997,20
+days,cca/units/raw/plain,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""raw""}",0.30282238455129185,20
+days,cca/units/raw/plain,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""raw""}",0.35934679682696513,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""raw""}",0.20240774754898147,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""raw""}",0.2077026526462618,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""raw""}",0.2184894011390245,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""raw""}",0.22040316483199457,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",0.22063302343897462,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""raw""}",0.2205256120451716,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""raw""}",0.22043106048822286,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""raw""}",0.29120422124143414,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""raw""}",0.30018357086551417,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""raw""}",0.3141340493495739,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""raw""}",0.3149909155148201,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",0.31355720360566675,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""raw""}",0.31247447326256217,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""raw""}",0.3119540756472188,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""raw""}",0.31595700311785363,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""raw""}",0.3260605422427333,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""raw""}",0.3385905182888841,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""raw""}",0.33866199388266394,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",0.33584504738138743,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""raw""}",0.3336118965049757,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""raw""}",0.33245853822719673,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""raw""}",0.30568386641196266,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""raw""}",0.32124216543673817,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""raw""}",0.34658764388762664,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""raw""}",0.3493327424828892,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",0.3462529056569008,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""raw""}",0.34313193392090524,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""raw""}",0.341419411516798,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""raw""}",0.3635132009284855,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""raw""}",0.3865863321808093,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""raw""}",0.42371875829827144,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""raw""}",0.4263726460418332,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",0.42020146610979997,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""raw""}",0.4139733412210119,20
+days,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""raw""}",0.41026371019864794,20
+days,cca/units/sqrt/plain,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.18202443759669537,20
+days,cca/units/sqrt/plain,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.25689042783128613,20
+days,cca/units/sqrt/plain,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.2832952594703413,20
+days,cca/units/sqrt/plain,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.28614356252917567,20
+days,cca/units/sqrt/plain,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3204878496992971,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.18275358602682196,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.18716939660429074,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.19498488641124528,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.19560668709081352,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.19504568201817524,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.19462973466557798,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.19442523059923575,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.2579329368545628,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.2635812380318095,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.27295984784963756,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.2732175132403253,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.2713842914865273,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.27013794468804486,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.2695531458201388,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.2849149354654779,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.29303874417916287,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.30284283795284156,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.30149714905506153,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.2970717714291243,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.29391638542920023,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.2923702592859689,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.2882822242138791,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.2999592992390987,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.3178133539515489,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.317751582831478,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.3129283365815949,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.308983339478734,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.306927118163704,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.32473596387562653,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.3480977688546537,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.3800420227388248,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.37851456158499663,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.3690472103661232,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.3611645755486935,20
+days,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.3567441543871262,20
+days,stab/pooled,1,"{""d"": 3, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""pooled""}",0.11610323408362322,20
+days,stab/pooled,1,"{""d"": 3, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""pooled""}",0.13493040415161453,20
+days,stab/pooled,1,"{""d"": 3, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""pooled""}",0.17511856850429597,20
+days,stab/pooled,1,"{""d"": 3, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""pooled""}",0.11171010956960989,20
+days,stab/pooled,1,"{""d"": 3, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""pooled""}",0.1404265136772608,20
+days,stab/pooled,1,"{""d"": 3, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""pooled""}",0.17018482371990046,20
+days,stab/pooled,1,"{""d"": 5, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""pooled""}",0.1658331547183964,20
+days,stab/pooled,1,"{""d"": 5, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""pooled""}",0.23557527754169677,20
+days,stab/pooled,1,"{""d"": 5, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""pooled""}",0.2563552797672593,20
+days,stab/pooled,1,"{""d"": 5, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""pooled""}",0.11661849352762185,20
+days,stab/pooled,1,"{""d"": 5, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""pooled""}",0.18493948804049457,20
+days,stab/pooled,1,"{""d"": 5, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""pooled""}",0.2311283538634855,20
+days,stab/pooled,1,"{""d"": 8, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""pooled""}",0.26189838578812275,20
+days,stab/pooled,1,"{""d"": 8, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""pooled""}",0.2826606427209671,20
+days,stab/pooled,1,"{""d"": 8, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""pooled""}",0.2904449047321639,20
+days,stab/pooled,1,"{""d"": 8, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""pooled""}",0.22825302142954995,20
+days,stab/pooled,1,"{""d"": 8, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""pooled""}",0.23652999677346437,20
+days,stab/pooled,1,"{""d"": 8, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""pooled""}",0.26814169602678084,20
+days,stab/pooled,1,"{""d"": 10, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""pooled""}",0.25140072340170116,20
+days,stab/pooled,1,"{""d"": 10, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""pooled""}",0.25140072340170116,20
+days,stab/pooled,1,"{""d"": 10, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""pooled""}",0.25967798646629014,20
+days,stab/pooled,1,"{""d"": 10, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""pooled""}",0.26614804640956946,20
+days,stab/pooled,1,"{""d"": 10, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""pooled""}",0.26614804640956946,20
+days,stab/pooled,1,"{""d"": 10, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""pooled""}",0.2869868456641924,20
+days,stab/pooled,1,"{""d"": ""N"", ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""pooled""}",0.4876734241143764,20
+days,stab/pooled,1,"{""d"": ""N"", ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""pooled""}",0.4876734241143764,20
+days,stab/pooled,1,"{""d"": ""N"", ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""pooled""}",0.4876734241143764,20
+days,stab/pooled,1,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""pooled""}",0.49597627150997525,20
+days,stab/pooled,1,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""pooled""}",0.49597627150997525,20
+days,stab/pooled,1,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""pooled""}",0.49597627150997525,20
+days,cca/pooled/sqrt/plain,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.10611686705613291,20
+days,cca/pooled/sqrt/plain,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.2195479302966739,20
+days,cca/pooled/sqrt/plain,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.266431002583997,20
+days,cca/pooled/sqrt/plain,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.302296819090793,20
+days,cca/pooled/sqrt/plain,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3200736107455884,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.10661389039411857,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.10982732365931717,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.11673354606515676,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.11793137821309736,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.1178044803452241,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.11755379973524763,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.11743803594962225,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.2203672866628288,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.22497150675055044,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.2327156330871687,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.23241722457428668,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.2301960117565046,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.22876980945598388,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.22813056931978948,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.2680625904157524,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.27690947789423015,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.29016511723110433,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.2897367478065849,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.28556714936786204,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.282527808733431,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.28102239316699124,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.3044537004892405,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.3160416521431744,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.33254164428453825,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.3315595310992327,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.32624028365969615,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.32217293939530595,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.3201488592918854,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.3230944078504193,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.33952131488227827,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.36181959073734193,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.3614239297144192,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.3559409274432003,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.3515356109307998,20
+days,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.3492065618081929,20
+days,cca/units/raw/plain,2,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 10, ""ridge"": 0.0, ""transform"": ""raw""}",0.2727123585840205,20
+days,cca/units/raw/plain,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 10, ""ridge"": 0.0, ""transform"": ""raw""}",0.31916671310300426,20
+days,cca/units/raw/plain,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""raw""}",0.39548937121118677,20
+days,cca/units/raw/plain,2,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""raw""}",0.38843718024084883,20
+days,cca/units/raw/plain,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""raw""}",0.33900704176638363,20
+days,cca/units/raw/ridge,2,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 10, ""ridge"": 3.0, ""transform"": ""raw""}",0.41955198667417337,20
+days,cca/units/raw/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 10, ""ridge"": 3.0, ""transform"": ""raw""}",0.4376649113610586,20
+days,cca/units/raw/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""raw""}",0.40155283420025345,20
+days,cca/units/raw/ridge,2,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 40, ""ridge"": 3.0, ""transform"": ""raw""}",0.39784551903581583,20
+days,cca/units/raw/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 40, ""ridge"": 3.0, ""transform"": ""raw""}",0.3085599977454119,20
+days,cca/units/sqrt/plain,2,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 10, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.2579516101919463,20
+days,cca/units/sqrt/plain,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 10, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.2829519980560554,20
+days,cca/units/sqrt/plain,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3599411202803759,20
+days,cca/units/sqrt/plain,2,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3584787091132362,20
+days,cca/units/sqrt/plain,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3023978595649196,20
+days,cca/units/sqrt/ridge,2,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 10, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.3770804678347426,20
+days,cca/units/sqrt/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 10, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.4004550442063035,20
+days,cca/units/sqrt/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.3698591463626616,20
+days,cca/units/sqrt/ridge,2,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 40, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.36615982585011336,20
+days,cca/units/sqrt/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 40, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.28847236927552206,20
+days,cca/pooled/sqrt/plain,2,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 10, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.2660992201693805,20
+days,cca/pooled/sqrt/plain,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 10, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3371638069535404,20
+days,cca/pooled/sqrt/plain,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.35133584991156325,20
+days,cca/pooled/sqrt/plain,2,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.33062686220702486,20
+days,cca/pooled/sqrt/plain,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.2853085310820086,20
+days,cca/pooled/sqrt/ridge,2,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 10, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.36427381540951975,20
+days,cca/pooled/sqrt/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 10, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.3816680438645219,20
+days,cca/pooled/sqrt/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.35008828391714786,20
+days,cca/pooled/sqrt/ridge,2,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 40, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.34463098596408726,20
+days,cca/pooled/sqrt/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 40, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.2672367120416413,20
+month,stab/units,1,"{""d"": 3, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""units""}",0.3936871440050441,20
+month,stab/units,1,"{""d"": 3, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""units""}",0.40758555211770436,20
+month,stab/units,1,"{""d"": 3, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""units""}",0.41575490366592793,20
+month,stab/units,1,"{""d"": 3, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",0.3811656272071444,20
+month,stab/units,1,"{""d"": 3, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""units""}",0.4197883880629483,20
+month,stab/units,1,"{""d"": 3, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""units""}",0.42420903846161717,20
+month,stab/units,1,"{""d"": 5, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""units""}",0.4568329824522504,20
+month,stab/units,1,"{""d"": 5, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""units""}",0.49251167890897884,20
+month,stab/units,1,"{""d"": 5, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""units""}",0.5016173692103884,20
+month,stab/units,1,"{""d"": 5, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",0.45379942367823256,20
+month,stab/units,1,"{""d"": 5, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""units""}",0.49395108465305154,20
+month,stab/units,1,"{""d"": 5, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""units""}",0.4960526141870555,20
+month,stab/units,1,"{""d"": 8, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""units""}",0.47776729684122515,20
+month,stab/units,1,"{""d"": 8, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""units""}",0.5123762080124741,20
+month,stab/units,1,"{""d"": 8, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""units""}",0.5360582105454088,20
+month,stab/units,1,"{""d"": 8, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",0.4771371825568746,20
+month,stab/units,1,"{""d"": 8, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""units""}",0.5343833461001283,20
+month,stab/units,1,"{""d"": 8, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""units""}",0.531775891690947,20
+month,stab/units,1,"{""d"": 10, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""units""}",0.5414662978881887,20
+month,stab/units,1,"{""d"": 10, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""units""}",0.5575070228996905,20
+month,stab/units,1,"{""d"": 10, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""units""}",0.5551255399630672,20
+month,stab/units,1,"{""d"": 10, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",0.5305488509546276,20
+month,stab/units,1,"{""d"": 10, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""units""}",0.5567228641913999,20
+month,stab/units,1,"{""d"": 10, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""units""}",0.5559297635177577,20
+month,stab/units,1,"{""d"": ""N"", ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""units""}",0.5411974666580511,20
+month,stab/units,1,"{""d"": ""N"", ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""units""}",0.5411974666580511,20
+month,stab/units,1,"{""d"": ""N"", ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""units""}",0.5411974666580511,20
+month,stab/units,1,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",0.5577312920943276,20
+month,stab/units,1,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""units""}",0.5577312920943276,20
+month,stab/units,1,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""units""}",0.5577312920943276,20
+month,cca/units/raw/plain,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""raw""}",0.31492016602924316,20
+month,cca/units/raw/plain,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""raw""}",0.3515894636339428,20
+month,cca/units/raw/plain,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""raw""}",0.351890237857167,20
+month,cca/units/raw/plain,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""raw""}",0.3431207684023859,20
+month,cca/units/raw/plain,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""raw""}",0.17728965873637637,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""raw""}",0.3160692390187666,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""raw""}",0.32318917881357934,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""raw""}",0.3383902856322779,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""raw""}",0.3418580241416752,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",0.3429431769728419,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""raw""}",0.3431684882360106,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""raw""}",0.3432400971780757,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""raw""}",0.3550063198971426,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""raw""}",0.37337190946499743,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""raw""}",0.40037851789023415,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""raw""}",0.4035104789414775,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",0.4034945717975065,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""raw""}",0.4031329514460144,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""raw""}",0.402948789904052,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""raw""}",0.3582912502649527,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""raw""}",0.38700553438947394,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""raw""}",0.43215235286193054,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""raw""}",0.440811324963577,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",0.44219861292186186,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""raw""}",0.44179470683487665,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""raw""}",0.441472637603762,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""raw""}",0.35053646157427565,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""raw""}",0.386552085517388,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""raw""}",0.4441837086434569,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""raw""}",0.45543015578751633,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",0.4576554755309111,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""raw""}",0.4571114734464083,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""raw""}",0.45665380373090747,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""raw""}",0.20168365827419069,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""raw""}",0.295274200465676,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""raw""}",0.43374402044694094,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""raw""}",0.46377623340901286,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",0.4719013730647177,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""raw""}",0.46763994799652575,20
+month,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""raw""}",0.4624648861398487,20
+month,cca/units/sqrt/plain,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.279120988355209,20
+month,cca/units/sqrt/plain,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.32516207780478606,20
+month,cca/units/sqrt/plain,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.32409243629375534,20
+month,cca/units/sqrt/plain,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.31993730541015997,20
+month,cca/units/sqrt/plain,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.1699022152867426,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.28010280928252806,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.28626189278995734,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.300337145143693,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.3041533446625405,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.3055872839795626,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.30595147117216326,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.30604583355035925,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.32811147639680394,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.34437691284443833,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.3682313836764058,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.3711649597915021,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.3711403752897823,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.37083240865666955,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.3706549502546775,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.330371823744629,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.35869134166059663,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.40125835594409665,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.4072904959983986,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.4071329184334777,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.4061172092096406,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.40558230047208044,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.3270705800491963,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.3634098399924167,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.42465444590630846,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.43625686325212687,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.43833767519891104,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.43761568295857456,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.4369982069603692,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.18995889466665966,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.27301692310604897,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.4096563888670846,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.44061628065304176,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.447109070285587,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.4390852082845019,20
+month,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.43330833390681106,20
+month,stab/pooled,1,"{""d"": 3, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""pooled""}",0.3921602128382441,20
+month,stab/pooled,1,"{""d"": 3, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""pooled""}",0.4022254968661132,20
+month,stab/pooled,1,"{""d"": 3, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""pooled""}",0.4117409733221045,20
+month,stab/pooled,1,"{""d"": 3, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""pooled""}",0.38366939219081964,20
+month,stab/pooled,1,"{""d"": 3, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""pooled""}",0.38784231991646867,20
+month,stab/pooled,1,"{""d"": 3, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""pooled""}",0.4137335345043026,20
+month,stab/pooled,1,"{""d"": 5, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""pooled""}",0.47979402648199204,20
+month,stab/pooled,1,"{""d"": 5, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""pooled""}",0.5083711131652217,20
+month,stab/pooled,1,"{""d"": 5, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""pooled""}",0.5262500884104175,20
+month,stab/pooled,1,"{""d"": 5, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""pooled""}",0.4605221257978206,20
+month,stab/pooled,1,"{""d"": 5, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""pooled""}",0.490886330392751,20
+month,stab/pooled,1,"{""d"": 5, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""pooled""}",0.5174693569677259,20
+month,stab/pooled,1,"{""d"": 8, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""pooled""}",0.4638963684523839,20
+month,stab/pooled,1,"{""d"": 8, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""pooled""}",0.5235822340952506,20
+month,stab/pooled,1,"{""d"": 8, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""pooled""}",0.5657934929834172,20
+month,stab/pooled,1,"{""d"": 8, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""pooled""}",0.488690221023926,20
+month,stab/pooled,1,"{""d"": 8, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""pooled""}",0.5310084320413961,20
+month,stab/pooled,1,"{""d"": 8, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""pooled""}",0.5657089840377874,20
+month,stab/pooled,1,"{""d"": 10, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""pooled""}",0.5052943264548581,20
+month,stab/pooled,1,"{""d"": 10, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""pooled""}",0.5472837949711353,20
+month,stab/pooled,1,"{""d"": 10, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""pooled""}",0.5775303397798676,20
+month,stab/pooled,1,"{""d"": 10, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""pooled""}",0.4998808940269518,20
+month,stab/pooled,1,"{""d"": 10, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""pooled""}",0.5481987125463443,20
+month,stab/pooled,1,"{""d"": 10, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""pooled""}",0.5759250924748722,20
+month,stab/pooled,1,"{""d"": ""N"", ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""pooled""}",0.5401026576420264,20
+month,stab/pooled,1,"{""d"": ""N"", ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""pooled""}",0.5401026576420264,20
+month,stab/pooled,1,"{""d"": ""N"", ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""pooled""}",0.5401026576420264,20
+month,stab/pooled,1,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""pooled""}",0.560560781514815,20
+month,stab/pooled,1,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""pooled""}",0.560560781514815,20
+month,stab/pooled,1,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""pooled""}",0.560560781514815,20
+month,cca/pooled/sqrt/plain,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.23163009898863055,20
+month,cca/pooled/sqrt/plain,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3299250623774053,20
+month,cca/pooled/sqrt/plain,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3027431044042816,20
+month,cca/pooled/sqrt/plain,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3005461271814506,20
+month,cca/pooled/sqrt/plain,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.18673861294852073,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.23311574542536562,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.2428366577887652,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.2651869006143742,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.27123916958178407,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.2737486174640914,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.27447458805599256,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.2746971676921267,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.3320542380999246,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.3434715107533484,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.36393078806824813,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.36829122206763887,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.3691110595082748,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.36902828743624433,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.36890957273380154,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.30769250696021483,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.333005888288476,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.3796641119016901,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.389335913178706,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.3907532359450361,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.39001943152849894,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.38950711396877197,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.305321120482858,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.33250667742269296,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.38591741341028246,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.3961806521371815,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.3969262079445445,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.39536835582297414,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.39435542422380865,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.19733017734119368,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.2557739661999366,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.37056389117142124,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.39547818712376387,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.3947290574370217,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.3856101077806593,20
+month,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.37890758520835477,20
+month,cca/units/raw/plain,2,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 10, ""ridge"": 0.0, ""transform"": ""raw""}",0.32076260015576075,20
+month,cca/units/raw/plain,2,"{""align"": ""go"", ""d"": 8, ""inp"": ""units"", ""phases"": 10, ""ridge"": 0.0, ""transform"": ""raw""}",0.28587233190312367,20
+month,cca/units/raw/plain,2,"{""align"": ""go"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""raw""}",0.30548883913826813,20
+month,cca/units/raw/plain,2,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""raw""}",0.3537623617041449,20
+month,cca/units/raw/plain,2,"{""align"": ""go"", ""d"": 8, ""inp"": ""units"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""raw""}",0.2980932651901741,20
+month,cca/units/raw/ridge,2,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 10, ""ridge"": 10.0, ""transform"": ""raw""}",0.4543753476068789,20
+month,cca/units/raw/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 10, ""ridge"": 10.0, ""transform"": ""raw""}",0.36897068367781244,20
+month,cca/units/raw/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",0.3264996838611553,20
+month,cca/units/raw/ridge,2,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 40, ""ridge"": 10.0, ""transform"": ""raw""}",0.42717940185283876,20
+month,cca/units/raw/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 40, ""ridge"": 10.0, ""transform"": ""raw""}",0.1945597511599168,20
+month,cca/units/sqrt/plain,2,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 10, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.31610327189020526,20
+month,cca/units/sqrt/plain,2,"{""align"": ""go"", ""d"": 5, ""inp"": ""units"", ""phases"": 10, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3035751383710334,20
+month,cca/units/sqrt/plain,2,"{""align"": ""go"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.2927378227497307,20
+month,cca/units/sqrt/plain,2,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.32138631886797253,20
+month,cca/units/sqrt/plain,2,"{""align"": ""go"", ""d"": 5, ""inp"": ""units"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.25293400798355165,20
+month,cca/units/sqrt/ridge,2,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 10, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.44687611969278196,20
+month,cca/units/sqrt/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 10, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.366354501930254,20
+month,cca/units/sqrt/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.3000350305603584,20
+month,cca/units/sqrt/ridge,2,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 40, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.39657781359290006,20
+month,cca/units/sqrt/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 40, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.15710253191996446,20
+month,cca/pooled/sqrt/plain,2,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 10, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3222109868099109,20
+month,cca/pooled/sqrt/plain,2,"{""align"": ""go"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 10, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.30336104854834317,20
+month,cca/pooled/sqrt/plain,2,"{""align"": ""go"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.2985928399075208,20
+month,cca/pooled/sqrt/plain,2,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3127618081706154,20
+month,cca/pooled/sqrt/plain,2,"{""align"": ""go"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.2528349993046964,20
+month,cca/pooled/sqrt/ridge,2,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 10, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.42269285239391585,20
+month,cca/pooled/sqrt/ridge,2,"{""align"": ""go"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 10, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.37085944176309604,20
+month,cca/pooled/sqrt/ridge,2,"{""align"": ""go"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.31782764694003623,20
+month,cca/pooled/sqrt/ridge,2,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 40, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.3414020196017983,20
+month,cca/pooled/sqrt/ridge,2,"{""align"": ""go"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 40, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.19375460471898828,20
+year,stab/units,1,"{""d"": 3, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""units""}",0.3936871440050441,20
+year,stab/units,1,"{""d"": 3, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""units""}",0.40758555211770436,20
+year,stab/units,1,"{""d"": 3, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""units""}",0.41575490366592793,20
+year,stab/units,1,"{""d"": 3, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",0.3811656272071444,20
+year,stab/units,1,"{""d"": 3, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""units""}",0.4197883880629483,20
+year,stab/units,1,"{""d"": 3, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""units""}",0.42420903846161717,20
+year,stab/units,1,"{""d"": 5, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""units""}",0.4568329824522504,20
+year,stab/units,1,"{""d"": 5, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""units""}",0.49251167890897884,20
+year,stab/units,1,"{""d"": 5, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""units""}",0.5016173692103884,20
+year,stab/units,1,"{""d"": 5, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",0.45379942367823256,20
+year,stab/units,1,"{""d"": 5, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""units""}",0.49395108465305154,20
+year,stab/units,1,"{""d"": 5, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""units""}",0.4960526141870555,20
+year,stab/units,1,"{""d"": 8, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""units""}",0.47776729684122515,20
+year,stab/units,1,"{""d"": 8, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""units""}",0.5123762080124741,20
+year,stab/units,1,"{""d"": 8, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""units""}",0.5360582105454088,20
+year,stab/units,1,"{""d"": 8, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",0.4771371825568746,20
+year,stab/units,1,"{""d"": 8, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""units""}",0.5343833461001283,20
+year,stab/units,1,"{""d"": 8, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""units""}",0.531775891690947,20
+year,stab/units,1,"{""d"": 10, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""units""}",0.5414662978881887,20
+year,stab/units,1,"{""d"": 10, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""units""}",0.5575070228996905,20
+year,stab/units,1,"{""d"": 10, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""units""}",0.5551255399630672,20
+year,stab/units,1,"{""d"": 10, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",0.5305488509546276,20
+year,stab/units,1,"{""d"": 10, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""units""}",0.5567228641913999,20
+year,stab/units,1,"{""d"": 10, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""units""}",0.5559297635177577,20
+year,stab/units,1,"{""d"": ""N"", ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""units""}",0.5411974666580511,20
+year,stab/units,1,"{""d"": ""N"", ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""units""}",0.5411974666580511,20
+year,stab/units,1,"{""d"": ""N"", ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""units""}",0.5411974666580511,20
+year,stab/units,1,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",0.5577312920943276,20
+year,stab/units,1,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""units""}",0.5577312920943276,20
+year,stab/units,1,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""units""}",0.5577312920943276,20
+year,cca/units/raw/plain,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""raw""}",0.31492016602924316,20
+year,cca/units/raw/plain,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""raw""}",0.3515894636339428,20
+year,cca/units/raw/plain,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""raw""}",0.351890237857167,20
+year,cca/units/raw/plain,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""raw""}",0.3431207684023859,20
+year,cca/units/raw/plain,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""raw""}",0.17728965873637637,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""raw""}",0.3160692390187666,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""raw""}",0.32318917881357934,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""raw""}",0.3383902856322779,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""raw""}",0.3418580241416752,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",0.3429431769728419,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""raw""}",0.3431684882360106,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""raw""}",0.3432400971780757,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""raw""}",0.3550063198971426,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""raw""}",0.37337190946499743,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""raw""}",0.40037851789023415,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""raw""}",0.4035104789414775,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",0.4034945717975065,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""raw""}",0.4031329514460144,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""raw""}",0.402948789904052,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""raw""}",0.3582912502649527,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""raw""}",0.38700553438947394,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""raw""}",0.43215235286193054,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""raw""}",0.440811324963577,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",0.44219861292186186,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""raw""}",0.44179470683487665,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""raw""}",0.441472637603762,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""raw""}",0.35053646157427565,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""raw""}",0.386552085517388,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""raw""}",0.4441837086434569,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""raw""}",0.45543015578751633,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",0.4576554755309111,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""raw""}",0.4571114734464083,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""raw""}",0.45665380373090747,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""raw""}",0.20168365827419069,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""raw""}",0.295274200465676,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""raw""}",0.43374402044694094,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""raw""}",0.46377623340901286,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",0.4719013730647177,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""raw""}",0.46763994799652575,20
+year,cca/units/raw/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""raw""}",0.4624648861398487,20
+year,cca/units/sqrt/plain,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.279120988355209,20
+year,cca/units/sqrt/plain,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.32516207780478606,20
+year,cca/units/sqrt/plain,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.32409243629375534,20
+year,cca/units/sqrt/plain,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.31993730541015997,20
+year,cca/units/sqrt/plain,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.1699022152867426,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.28010280928252806,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.28626189278995734,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.300337145143693,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.3041533446625405,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.3055872839795626,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.30595147117216326,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.30604583355035925,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.32811147639680394,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.34437691284443833,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.3682313836764058,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.3711649597915021,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.3711403752897823,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.37083240865666955,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.3706549502546775,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.330371823744629,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.35869134166059663,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.40125835594409665,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.4072904959983986,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.4071329184334777,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.4061172092096406,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.40558230047208044,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.3270705800491963,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.3634098399924167,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.42465444590630846,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.43625686325212687,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.43833767519891104,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.43761568295857456,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.4369982069603692,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.18995889466665966,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.27301692310604897,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.4096563888670846,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.44061628065304176,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.447109070285587,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.4390852082845019,20
+year,cca/units/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.43330833390681106,20
+year,stab/pooled,1,"{""d"": 3, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""pooled""}",0.3921602128382441,20
+year,stab/pooled,1,"{""d"": 3, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""pooled""}",0.4022254968661132,20
+year,stab/pooled,1,"{""d"": 3, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""pooled""}",0.4117409733221045,20
+year,stab/pooled,1,"{""d"": 3, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""pooled""}",0.38366939219081964,20
+year,stab/pooled,1,"{""d"": 3, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""pooled""}",0.38784231991646867,20
+year,stab/pooled,1,"{""d"": 3, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""pooled""}",0.4137335345043026,20
+year,stab/pooled,1,"{""d"": 5, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""pooled""}",0.47979402648199204,20
+year,stab/pooled,1,"{""d"": 5, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""pooled""}",0.5083711131652217,20
+year,stab/pooled,1,"{""d"": 5, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""pooled""}",0.5262500884104175,20
+year,stab/pooled,1,"{""d"": 5, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""pooled""}",0.4605221257978206,20
+year,stab/pooled,1,"{""d"": 5, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""pooled""}",0.490886330392751,20
+year,stab/pooled,1,"{""d"": 5, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""pooled""}",0.5174693569677259,20
+year,stab/pooled,1,"{""d"": 8, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""pooled""}",0.4638963684523839,20
+year,stab/pooled,1,"{""d"": 8, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""pooled""}",0.5235822340952506,20
+year,stab/pooled,1,"{""d"": 8, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""pooled""}",0.5657934929834172,20
+year,stab/pooled,1,"{""d"": 8, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""pooled""}",0.488690221023926,20
+year,stab/pooled,1,"{""d"": 8, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""pooled""}",0.5310084320413961,20
+year,stab/pooled,1,"{""d"": 8, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""pooled""}",0.5657089840377874,20
+year,stab/pooled,1,"{""d"": 10, ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""pooled""}",0.5052943264548581,20
+year,stab/pooled,1,"{""d"": 10, ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""pooled""}",0.5472837949711353,20
+year,stab/pooled,1,"{""d"": 10, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""pooled""}",0.5775303397798676,20
+year,stab/pooled,1,"{""d"": 10, ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""pooled""}",0.4998808940269518,20
+year,stab/pooled,1,"{""d"": 10, ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""pooled""}",0.5481987125463443,20
+year,stab/pooled,1,"{""d"": 10, ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""pooled""}",0.5759250924748722,20
+year,stab/pooled,1,"{""d"": ""N"", ""floor"": 0.01, ""frac"": 0.5, ""inp"": ""pooled""}",0.5401026576420264,20
+year,stab/pooled,1,"{""d"": ""N"", ""floor"": 0.01, ""frac"": 0.75, ""inp"": ""pooled""}",0.5401026576420264,20
+year,stab/pooled,1,"{""d"": ""N"", ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""pooled""}",0.5401026576420264,20
+year,stab/pooled,1,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""pooled""}",0.560560781514815,20
+year,stab/pooled,1,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 0.75, ""inp"": ""pooled""}",0.560560781514815,20
+year,stab/pooled,1,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 1.0, ""inp"": ""pooled""}",0.560560781514815,20
+year,cca/pooled/sqrt/plain,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.23163009898863055,20
+year,cca/pooled/sqrt/plain,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3299250623774053,20
+year,cca/pooled/sqrt/plain,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3027431044042816,20
+year,cca/pooled/sqrt/plain,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3005461271814506,20
+year,cca/pooled/sqrt/plain,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.18673861294852073,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.23311574542536562,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.2428366577887652,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.2651869006143742,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.27123916958178407,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.2737486174640914,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.27447458805599256,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 3, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.2746971676921267,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.3320542380999246,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.3434715107533484,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.36393078806824813,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.36829122206763887,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.3691110595082748,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.36902828743624433,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.36890957273380154,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.30769250696021483,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.333005888288476,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.3796641119016901,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.389335913178706,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.3907532359450361,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.39001943152849894,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 8, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.38950711396877197,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.305321120482858,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.33250667742269296,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.38591741341028246,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.3961806521371815,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.3969262079445445,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.39536835582297414,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.39435542422380865,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.01, ""transform"": ""sqrt""}",0.19733017734119368,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.1, ""transform"": ""sqrt""}",0.2557739661999366,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 1.0, ""transform"": ""sqrt""}",0.37056389117142124,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 3.0, ""transform"": ""sqrt""}",0.39547818712376387,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.3947290574370217,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 30.0, ""transform"": ""sqrt""}",0.3856101077806593,20
+year,cca/pooled/sqrt/ridge,1,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 100.0, ""transform"": ""sqrt""}",0.37890758520835477,20
+year,cca/units/raw/plain,2,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 10, ""ridge"": 0.0, ""transform"": ""raw""}",0.32076260015576075,20
+year,cca/units/raw/plain,2,"{""align"": ""go"", ""d"": 8, ""inp"": ""units"", ""phases"": 10, ""ridge"": 0.0, ""transform"": ""raw""}",0.28587233190312367,20
+year,cca/units/raw/plain,2,"{""align"": ""go"", ""d"": 8, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""raw""}",0.30548883913826813,20
+year,cca/units/raw/plain,2,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""raw""}",0.3537623617041449,20
+year,cca/units/raw/plain,2,"{""align"": ""go"", ""d"": 8, ""inp"": ""units"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""raw""}",0.2980932651901741,20
+year,cca/units/raw/ridge,2,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 10, ""ridge"": 10.0, ""transform"": ""raw""}",0.4543753476068789,20
+year,cca/units/raw/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 10, ""ridge"": 10.0, ""transform"": ""raw""}",0.36897068367781244,20
+year,cca/units/raw/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",0.3264996838611553,20
+year,cca/units/raw/ridge,2,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 40, ""ridge"": 10.0, ""transform"": ""raw""}",0.42717940185283876,20
+year,cca/units/raw/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 40, ""ridge"": 10.0, ""transform"": ""raw""}",0.1945597511599168,20
+year,cca/units/sqrt/plain,2,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 10, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.31610327189020526,20
+year,cca/units/sqrt/plain,2,"{""align"": ""go"", ""d"": 5, ""inp"": ""units"", ""phases"": 10, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3035751383710334,20
+year,cca/units/sqrt/plain,2,"{""align"": ""go"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.2927378227497307,20
+year,cca/units/sqrt/plain,2,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.32138631886797253,20
+year,cca/units/sqrt/plain,2,"{""align"": ""go"", ""d"": 5, ""inp"": ""units"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.25293400798355165,20
+year,cca/units/sqrt/ridge,2,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 10, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.44687611969278196,20
+year,cca/units/sqrt/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 10, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.366354501930254,20
+year,cca/units/sqrt/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.3000350305603584,20
+year,cca/units/sqrt/ridge,2,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 40, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.39657781359290006,20
+year,cca/units/sqrt/ridge,2,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 40, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.15710253191996446,20
+year,cca/pooled/sqrt/plain,2,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 10, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3222109868099109,20
+year,cca/pooled/sqrt/plain,2,"{""align"": ""go"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 10, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.30336104854834317,20
+year,cca/pooled/sqrt/plain,2,"{""align"": ""go"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.2985928399075208,20
+year,cca/pooled/sqrt/plain,2,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.3127618081706154,20
+year,cca/pooled/sqrt/plain,2,"{""align"": ""go"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""sqrt""}",0.2528349993046964,20
+year,cca/pooled/sqrt/ridge,2,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 10, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.42269285239391585,20
+year,cca/pooled/sqrt/ridge,2,"{""align"": ""go"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 10, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.37085944176309604,20
+year,cca/pooled/sqrt/ridge,2,"{""align"": ""go"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.31782764694003623,20
+year,cca/pooled/sqrt/ridge,2,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 40, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.3414020196017983,20
+year,cca/pooled/sqrt/ridge,2,"{""align"": ""go"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 40, ""ridge"": 10.0, ""transform"": ""sqrt""}",0.19375460471898828,20

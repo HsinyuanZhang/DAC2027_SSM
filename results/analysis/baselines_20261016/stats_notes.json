@@ -1,0 +1,11 @@
+{
+ "n_paired_cells_vs_p0_(method,stratum,B)": 449,
+ "n_cells_with_ci": 464,
+ "n_methods": 34,
+ "n_target_sessions": 4,
+ "targets_per_stratum": {
+  "days": 2,
+  "month": 1,
+  "year": 1
+ }
+}

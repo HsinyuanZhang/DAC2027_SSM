@@ -1,4 +1,25 @@
-stratum,ref_session,r2_source_table,r2_stabilizer_fa_bridge,r2_pca_bridge
-days,sub-M_ses-CO-20150615,0.8843172973703266,0.8074156238437123,0.8306690731061339
-month,sub-M_ses-CO-20140306,0.9182941858381769,0.8650144901078508,0.8670973352270455
-year,sub-M_ses-CO-20140306,0.9182941858381769,0.8650144901078508,0.8670973352270455
+stratum,ref_session,r2_source_table,method,cfg,d_eff,r2_bridge_ceiling,gap_to_source_table
+days,sub-M_ses-CO-20150615,0.8843147479589158,stab_b,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",17,0.8843005827460313,1.4165212884553746e-05
+days,sub-M_ses-CO-20150615,0.8843147479589158,cca_b,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""raw""}",17,0.8843005827460313,1.4165212884553746e-05
+days,sub-M_ses-CO-20150615,0.8843147479589158,cca_b_ridge,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 10, ""ridge"": 3.0, ""transform"": ""raw""}",17,0.8843005827460313,1.4165212884553746e-05
+days,sub-M_ses-CO-20150615,0.8843147479589158,cca_sqrt_b,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",17,0.8775633051548767,0.006751442804039165
+days,sub-M_ses-CO-20150615,0.8843147479589158,cca_sqrt_b_ridge,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 10, ""ridge"": 1.0, ""transform"": ""sqrt""}",17,0.8775633051548767,0.006751442804039165
+days,sub-M_ses-CO-20150615,0.8843147479589158,stab_pool_b,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""pooled""}",13,0.8643320199553215,0.019982728003594352
+days,sub-M_ses-CO-20150615,0.8843147479589158,cca_pool_sqrt_b,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",13,0.8531024306620111,0.031212317296904768
+days,sub-M_ses-CO-20150615,0.8843147479589158,cca_pool_sqrt_b_ridge,"{""align"": ""go"", ""d"": ""N"", ""inp"": ""pooled"", ""phases"": 10, ""ridge"": 1.0, ""transform"": ""sqrt""}",13,0.8531024306620111,0.031212317296904768
+month,sub-M_ses-CO-20140306,0.9182941858381769,stab_b,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",43,0.9182900670848045,4.118753372361894e-06
+month,sub-M_ses-CO-20140306,0.9182941858381769,cca_b,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""raw""}",8,0.8441689973012735,0.07412518853690342
+month,sub-M_ses-CO-20140306,0.9182941858381769,cca_b_ridge,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",43,0.9182900670848045,4.118753372361894e-06
+month,sub-M_ses-CO-20140306,0.9182941858381769,cca_sqrt_b,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",5,0.8041416083539288,0.11415257748424812
+month,sub-M_ses-CO-20140306,0.9182941858381769,cca_sqrt_b_ridge,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",43,0.9151825029469968,0.003111682891180134
+month,sub-M_ses-CO-20140306,0.9182941858381769,stab_pool_b,"{""d"": 10, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""pooled""}",10,0.8549758083386684,0.06331837749950853
+month,sub-M_ses-CO-20140306,0.9182941858381769,cca_pool_sqrt_b,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",5,0.7926331093015548,0.12566107653662206
+month,sub-M_ses-CO-20140306,0.9182941858381769,cca_pool_sqrt_b_ridge,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 10, ""ridge"": 10.0, ""transform"": ""sqrt""}",10,0.833660567055885,0.08463361878229192
+year,sub-M_ses-CO-20140306,0.9182941858381769,stab_b,"{""d"": ""N"", ""floor"": 0.1, ""frac"": 0.5, ""inp"": ""units""}",43,0.9182900670848045,4.118753372361894e-06
+year,sub-M_ses-CO-20140306,0.9182941858381769,cca_b,"{""align"": ""trial"", ""d"": 8, ""inp"": ""units"", ""phases"": 40, ""ridge"": 0.0, ""transform"": ""raw""}",8,0.8441689973012735,0.07412518853690342
+year,sub-M_ses-CO-20140306,0.9182941858381769,cca_b_ridge,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""raw""}",43,0.9182900670848045,4.118753372361894e-06
+year,sub-M_ses-CO-20140306,0.9182941858381769,cca_sqrt_b,"{""align"": ""trial"", ""d"": 5, ""inp"": ""units"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",5,0.8041416083539288,0.11415257748424812
+year,sub-M_ses-CO-20140306,0.9182941858381769,cca_sqrt_b_ridge,"{""align"": ""trial"", ""d"": ""N"", ""inp"": ""units"", ""phases"": 20, ""ridge"": 10.0, ""transform"": ""sqrt""}",43,0.9151825029469968,0.003111682891180134
+year,sub-M_ses-CO-20140306,0.9182941858381769,stab_pool_b,"{""d"": 10, ""floor"": 0.01, ""frac"": 1.0, ""inp"": ""pooled""}",10,0.8549758083386684,0.06331837749950853
+year,sub-M_ses-CO-20140306,0.9182941858381769,cca_pool_sqrt_b,"{""align"": ""trial"", ""d"": 5, ""inp"": ""pooled"", ""phases"": 20, ""ridge"": 0.0, ""transform"": ""sqrt""}",5,0.7926331093015548,0.12566107653662206
+year,sub-M_ses-CO-20140306,0.9182941858381769,cca_pool_sqrt_b_ridge,"{""align"": ""trial"", ""d"": 10, ""inp"": ""pooled"", ""phases"": 10, ""ridge"": 10.0, ""transform"": ""sqrt""}",10,0.833660567055885,0.08463361878229192
