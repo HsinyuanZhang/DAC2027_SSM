@@ -1,0 +1,36 @@
+{
+ "rows": 17280,
+ "max_autograd_calls_on_target_side": 0,
+ "all_query_disjoint": true,
+ "variants": [
+  "h0",
+  "h0m",
+  "h1",
+  "h1w113",
+  "h1w130",
+  "h1w138",
+  "h1w153",
+  "h2d",
+  "h2d_loc",
+  "h2p",
+  "h2p_loc",
+  "h3d",
+  "h3d_loc",
+  "h3p",
+  "h3p_loc"
+ ],
+ "targets": [
+  "sub-M_ses-CO-20140626",
+  "sub-M_ses-CO-20140627",
+  "sub-M_ses-CO-20140929",
+  "sub-M_ses-CO-20141203",
+  "sub-M_ses-CO-20150511",
+  "sub-M_ses-CO-20150512",
+  "sub-M_ses-CO-20150610",
+  "sub-M_ses-CO-20150611",
+  "sub-M_ses-CO-20150612",
+  "sub-M_ses-CO-20150615",
+  "sub-M_ses-CO-20150616",
+  "sub-M_ses-CO-20150617"
+ ]
+}
