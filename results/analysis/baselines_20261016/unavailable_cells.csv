@@ -1,0 +1,15 @@
+stratum,method,B,status,n_cells
+days,apst_full_devsel,1,UNAVAILABLE_RANK_LT3,16
+days,apst_full_devsel,4,UNAVAILABLE_RANK_LT3,1
+days,apst_full_last,1,UNAVAILABLE_RANK_LT3,16
+days,apst_full_last,4,UNAVAILABLE_RANK_LT3,1
+month,apst_full_last,1,UNAVAILABLE_RANK_LT3,8
+month,apst_full_last,4,UNAVAILABLE_RANK_LT3,3
+month,apst_full_last,8,UNAVAILABLE_RANK_LT3,1
+month,apst_full_sel0307,1,UNAVAILABLE_RANK_LT3,8
+month,apst_full_sel0307,4,UNAVAILABLE_RANK_LT3,3
+month,apst_full_sel0307,8,UNAVAILABLE_RANK_LT3,1
+year,apst_full_last,1,UNAVAILABLE_RANK_LT3,8
+year,apst_full_last,4,UNAVAILABLE_RANK_LT3,1
+year,apst_full_sel0307,1,UNAVAILABLE_RANK_LT3,8
+year,apst_full_sel0307,4,UNAVAILABLE_RANK_LT3,1

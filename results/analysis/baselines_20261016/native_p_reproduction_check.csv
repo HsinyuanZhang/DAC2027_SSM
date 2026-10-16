@@ -1,0 +1,4 @@
+stratum,n_rows,max_abs_diff_vs_stored_p1,mean_abs_diff
+days,160,0.0,0.0
+month,80,5.849660406720414e-05,1.0945762806793824e-05
+year,80,0.0,0.0
