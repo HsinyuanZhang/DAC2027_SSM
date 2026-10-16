@@ -1,10 +1,16 @@
 #!/usr/bin/env python
 """Aggregate Q-D rows (sEMG calibrators + reused reference rows) into compact csv/json.
 
-Hyser: R2 per target (mean over draws and backbone seeds), t-CI over 20 targets.
-DB6 : balanced accuracy / macro-F1 per subject (draws -> sessions of a day -> seeds), t-CI over 10 subjects.
+Hyser: R2 per (target, backbone seed) (mean over draws).  PRIMARY CI = seed x fold cluster-robust (the 4 targets of a
+       subject fold share one calibrator per backbone seed; 10 clusters, t with 9 df).  Also reported: fold-only clusters
+       (5 clusters, t with 4 df; the two backbone seeds of a target share the target), two-way seed x fold + target
+       (Cameron-Gelbach-Miller, 9 df; ``*_ci95_2way``) and the legacy target-level t-CI
+       over 20 targets (anticonservative: ignores the shared calibrator), columns ``*_ci95_target``.
+DB6 : balanced accuracy / macro-F1 per subject (draws -> sessions of a day -> seeds), t-CI over 10 subjects
+       (one calibrator per backbone seed is shared by all subjects, see the per-seed tables for seed dependence).
 """
 import argparse
+import glob
 import gzip
 import json
 from pathlib import Path
@@ -36,6 +42,53 @@ def tci(v):
     return float(v.mean()), float(sps.t.ppf(0.975, n - 1) * v.std(ddof=1) / np.sqrt(n))
 
 
+def cluster_ci(vals, clusters):
+    """Mean and 95% half-width with cluster-robust (CR1) variance and t(G-1) quantile."""
+    v = np.asarray(vals, float)
+    c = np.asarray(clusters)
+    ids = np.unique(c)
+    g = len(ids)
+    mu = v.mean()
+    if g < 2:
+        return float(mu), float("nan")
+    score = np.array([(v[c == i] - mu).sum() for i in ids])
+    var = g / (g - 1) * (score ** 2).sum() / len(v) ** 2
+    return float(mu), float(sps.t.ppf(0.975, g - 1) * np.sqrt(var))
+
+
+def _cr_var(v, c):
+    ids = np.unique(c)
+    g = len(ids)
+    if g < 2:
+        return float("nan"), g
+    mu = v.mean()
+    score = np.array([(v[c == i] - mu).sum() for i in ids])
+    return g / (g - 1) * (score ** 2).sum() / len(v) ** 2, g
+
+
+def cluster_ci2(vals, c1, c2, c12):
+    """Two-way cluster-robust CI (Cameron-Gelbach-Miller): V = V(c1) + V(c2) - V(c1 x c2); df = min(G1, G2) - 1.
+
+    c1 = seed x fold (shared calibrator), c2 = target (the two backbone seeds see the same target),
+    c12 = the (seed, target) unit itself.  Falls back to V(c1) if the combination is not positive."""
+    v = np.asarray(vals, float)
+    v1, g1 = _cr_var(v, np.asarray(c1))
+    v2, g2 = _cr_var(v, np.asarray(c2))
+    v12, _ = _cr_var(v, np.asarray(c12))
+    var = v1 + v2 - v12
+    if not np.isfinite(var) or var <= 0:
+        var = v1
+    return float(v.mean()), float(sps.t.ppf(0.975, min(g1, g2) - 1) * np.sqrt(var))
+
+
+N_FOLDS = 5
+WEAK_VAL = 0.05          # descriptive flag only: source-val best below this (prior-only is about -0.04)
+
+
+def fold_of(t):
+    return (np.asarray(t) - 1) % N_FOLDS
+
+
 def load_hyser(seeds=(0, 1)):
     ref = []
     for s in seeds:
@@ -47,24 +100,51 @@ def load_hyser(seeds=(0, 1)):
                 ref.append({**r, "seed": s})
     cal = []
     for s in seeds:
-        p = RES / "hyser" / f"seed{s}" / "rows.jsonl"
-        if p.exists():
-            cal += [r for r in read_jsonl(p) if r["method"].startswith("cal_")]
+        for sub in ("", "fix"):                   # "fix" = post-review capacity controls (same protocol, same draws)
+            p = RES / sub / "hyser" / f"seed{s}" / "rows.jsonl"
+            if p.exists():
+                cal += [r for r in read_jsonl(p) if r["method"].startswith("cal_")]
     keep = ["target", "B", "draw", "seed", "method", "r2", "r2_pooled", "unit_ratio"]
     df = pd.DataFrame([{k: r.get(k) for k in keep} for r in ref + cal])
+    df["fold"] = fold_of(df["target"])
+    df["cluster"] = df["seed"] * N_FOLDS + df["fold"]
     return df
 
 
+def per_unit(df, metric):
+    """One value per (method, B, target, backbone seed): mean over the 8 draws."""
+    g = df.groupby(["method", "B", "target", "seed"])[metric].mean().reset_index()
+    g["fold"] = fold_of(g["target"])
+    g["cluster"] = g["seed"] * N_FOLDS + g["fold"]
+    return g
+
+
 def per_target(df, metric):
+    """Legacy: mean over draws AND seeds, one value per target."""
     return (df.groupby(["method", "B", "target"])[metric].mean().reset_index())
 
 
+def _cis(vals, seed_fold_cluster, fold_cluster, target_ids):
+    """(mean, seed x fold CI [primary], fold-only CI, legacy target-level CI, two-way seed x fold + target CI)."""
+    vals = np.asarray(vals, float)
+    tid = np.asarray(target_ids)
+    mu, ci = cluster_ci(vals, seed_fold_cluster)
+    _, ci_fold = cluster_ci(vals, fold_cluster)
+    tl = pd.Series(vals).groupby(tid).mean().values
+    _, ci_tgt = tci(tl)
+    unit = np.arange(len(vals))
+    _, ci_2 = cluster_ci2(vals, seed_fold_cluster, tid, unit)
+    return mu, ci, ci_fold, ci_tgt, ci_2
+
+
 def table(df, metric="r2"):
-    pt = per_target(df, metric)
+    pu = per_unit(df, metric)
     rows = []
-    for (m, b), g in pt.groupby(["method", "B"]):
-        mu, ci = tci(g[metric].values)
-        rows.append({"method": m, "B": b, "n_targets": len(g), f"{metric}_mean": mu, f"{metric}_ci95": ci})
+    for (m, b), g in pu.groupby(["method", "B"]):
+        mu, ci, cif, cit, ci2 = _cis(g[metric].values, g["cluster"].values, g["fold"].values, g["target"].values)
+        rows.append({"method": m, "B": b, "n_targets": g["target"].nunique(), "n_clusters": g["cluster"].nunique(),
+                     f"{metric}_mean": mu, f"{metric}_ci95": ci, f"{metric}_ci95_fold": cif,
+                     f"{metric}_ci95_2way": ci2, f"{metric}_ci95_target": cit})
     return pd.DataFrame(rows)
 
 
@@ -76,17 +156,100 @@ def seed_table(df, metric="r2"):
     return g.reset_index()
 
 
-def paired(df, a, b, metric="r2"):
-    pt = per_target(df, metric).pivot_table(index=["B", "target"], columns="method", values=metric)
+def _pivot_units(df, metric):
+    pu = per_unit(df, metric)
+    return pu.pivot_table(index=["B", "target", "seed", "fold", "cluster"], columns="method", values=metric)
+
+
+def paired_from_pivot(pt, a, b, drop_clusters=()):
+    """Paired differences a-b per (B, target, seed) with clustered CIs; rows of ``drop_clusters`` removed."""
     out = []
-    for B, g in pt.groupby(level=0):
-        if a not in g or b not in g:
+    if a not in pt or b not in pt:
+        return out
+    for B, g in pt.groupby(level="B"):
+        gg = g[[a, b]].dropna()
+        if len(drop_clusters):
+            gg = gg[~gg.index.get_level_values("cluster").isin(list(drop_clusters))]
+        if len(gg) == 0:
             continue
-        d = (g[a] - g[b]).dropna().values
-        mu, ci = tci(d)
-        out.append({"a": a, "b": b, "B": B, "diff_mean": mu, "diff_ci95": ci, "n": len(d),
-                    "frac_targets_a_better": float((d > 0).mean())})
+        d = (gg[a] - gg[b]).values
+        tid = gg.index.get_level_values("target").values
+        tgt = pd.Series(d, index=tid).groupby(level=0).mean().values
+        mu, ci, cif, cit, ci2 = _cis(d, gg.index.get_level_values("cluster").values,
+                                     gg.index.get_level_values("fold").values, tid)
+        out.append({"a": a, "b": b, "B": B, "diff_mean": mu, "diff_ci95": ci, "diff_ci95_fold": cif,
+                    "diff_ci95_2way": ci2, "diff_ci95_target": cit,
+                    "excludes_zero": bool(abs(mu) > ci) if np.isfinite(ci) else False,
+                    "excludes_zero_fold": bool(abs(mu) > cif) if np.isfinite(cif) else False,
+                    "excludes_zero_2way": bool(abs(mu) > ci2) if np.isfinite(ci2) else False,
+                    "n_clusters": int(gg.index.get_level_values("cluster").nunique()), "n": len(tgt),
+                    "frac_targets_a_better": float((tgt > 0).mean())})
     return out
+
+
+def paired(df, a, b, metric="r2"):
+    return paired_from_pivot(_pivot_units(df, metric), a, b)
+
+
+CONTROL_PAIRS = [("p2", "p0w"), ("p4", "p0w"), ("p4", "p0w4"), ("p2", "p2l"), ("p2", "p2c"), ("p4", "p2l"),
+                 ("p0w", "p0"), ("p2l", "p0"), ("p2c", "p0"), ("p2l", "p0w"), ("p2c", "p0w"), ("p0w4", "p0w")]
+BASE_PAIRS = [("p1", "p0"), ("p2", "p0"), ("p4", "p0"), ("p2", "p1"), ("p4", "p1"), ("p4", "p2")]
+
+
+def training_info(sources=("free",)):
+    """(seed, fold, variant) -> info for every identity-free Hyser calibrator (original + fix runs)."""
+    out = {}
+    for f in sorted(glob.glob(str(RES / "**" / "hyser" / "seed*" / "free_*_f*" / "info.json"), recursive=True)):
+        p = Path(f)
+        i = json.load(open(f))
+        out[(i["seed"], i["fold"], i["variant"])] = {"best_step": i["best_step"], "val_best": i["best_val"],
+                                                     "val0": i["val_step0"], "n_params": i["n_params"],
+                                                     "steps_run": i["steps_run"]}
+    return out
+
+
+def collapse_sensitivity(df, info):
+    """Free-mode comparisons with and without the cells that kept the step-0 table (ORIGINAL selection rule kept).
+
+    collapsed = best_step == 0 (the table never left its initialisation); weak = source-val best < WEAK_VAL.
+    A cluster (seed x fold) is dropped for a pair (a, b) when a or b is collapsed (resp. collapsed/weak) in it.
+    Numbers under the original rule are the reported ones; this is a disclosure/sensitivity analysis only.
+    """
+    pt = _pivot_units(df, "r2")
+    rows = []
+    cells = []
+    for (sd, fo, v), i in sorted(info.items()):
+        cells.append({"seed": sd, "fold": fo, "variant": v, **i, "collapsed": i["best_step"] == 0,
+                      "weak": (i["best_step"] > 0 and i["val_best"] < WEAK_VAL)})
+    cells = pd.DataFrame(cells)
+    pairs = BASE_PAIRS + CONTROL_PAIRS
+    for a_, b_ in pairs:
+        ma, mb = f"cal_{a_}_free", f"cal_{b_}_free"
+        if ma not in pt or mb not in pt:
+            continue
+        sub = cells[cells.variant.isin([a_, b_])]
+        col = set(sd * N_FOLDS + fo for sd, fo in sub[sub.collapsed][["seed", "fold"]].itertuples(index=False))
+        weak = col | set(sd * N_FOLDS + fo for sd, fo in sub[sub.weak][["seed", "fold"]].itertuples(index=False))
+        for tag, drop in (("all", ()), ("drop_collapsed", sorted(col)), ("drop_collapsed_or_weak", sorted(weak))):
+            for r in paired_from_pivot(pt, ma, mb, drop):
+                rows.append({**r, "subset": tag, "dropped_clusters": str(list(drop)), "pair": f"{a_}-{b_}"})
+    lev = []
+    for v in ("p0", "p1", "p2", "p4", "p0w", "p0w4", "p2l", "p2c"):
+        m = f"cal_{v}_free"
+        if m not in pt:
+            continue
+        sub = cells[cells.variant == v]
+        col = set(sd * N_FOLDS + fo for sd, fo in sub[sub.collapsed][["seed", "fold"]].itertuples(index=False))
+        weak = col | set(sd * N_FOLDS + fo for sd, fo in sub[sub.weak][["seed", "fold"]].itertuples(index=False))
+        for tag, drop in (("all", ()), ("drop_collapsed", sorted(col)), ("drop_collapsed_or_weak", sorted(weak))):
+            g = pt[m].dropna().reset_index()
+            g = g[~g.cluster.isin(list(drop))]
+            for B, gg in g.groupby("B"):
+                mu, ci, cif, cit, ci2 = _cis(gg[m].values, gg.cluster.values, gg.fold.values, gg.target.values)
+                lev.append({"variant": v, "subset": tag, "B": B, "r2_mean": mu, "r2_ci95": ci, "r2_ci95_fold": cif,
+                            "r2_ci95_2way": ci2,
+                            "n_clusters": gg.cluster.nunique(), "dropped_clusters": str(list(drop))})
+    return pd.DataFrame(rows), pd.DataFrame(lev), cells
 
 
 def hyser_main():
@@ -96,28 +259,48 @@ def hyser_main():
     st = seed_table(df)
     st.to_csv(RES / "hyser_seed_table.csv", index=False)
     methods = sorted(m for m in df.method.unique() if m.startswith("cal_"))
+    pt = _pivot_units(df, "r2")
     pr = []
     base = {B: max(tab[(tab.method.isin(HYSER_DEPLOYABLE)) & (tab.B == B)].set_index("method")["r2_mean"].items(),
                    key=lambda kv: kv[1]) for B in sorted(df.B.unique())}
     for m in methods:
         for ref in HYSER_DEPLOYABLE + ["ui_prior_s1_calnorm", "ui_prior_mean_calnorm"]:
-            pr += paired(df, m, ref)
+            pr += paired_from_pivot(pt, m, ref)
         # vs best deployable baseline per B (selected post hoc on target means: favours baselines)
-        pt = per_target(df, "r2").pivot_table(index=["B", "target"], columns="method", values="r2")
         for B in sorted(df.B.unique()):
             bn = base[B][0]
-            d = (pt.loc[B][m] - pt.loc[B][bn]).dropna().values
-            mu, ci = tci(d)
+            gg = pt.loc[B][[m, bn]].dropna()
+            d = (gg[m] - gg[bn]).values
+            tid = gg.index.get_level_values("target").values
+            tgt = pd.Series(d, index=tid).groupby(level=0).mean().values
+            mu, ci, cif, cit, ci2 = _cis(d, gg.index.get_level_values("cluster").values,
+                                         gg.index.get_level_values("fold").values, tid)
             pr.append({"a": m, "b": f"best_deployable({bn})", "B": B, "diff_mean": mu, "diff_ci95": ci,
-                       "n": len(d), "frac_targets_a_better": float((d > 0).mean())})
-    # variant-vs-variant paired differences inside each prior source (pooling question)
+                       "diff_ci95_fold": cif, "diff_ci95_2way": ci2, "diff_ci95_target": cit,
+                       "excludes_zero": bool(abs(mu) > ci), "excludes_zero_fold": bool(abs(mu) > cif),
+                       "excludes_zero_2way": bool(abs(mu) > ci2), "n_clusters": int(gg.index.get_level_values("cluster").nunique()),
+                       "n": len(tgt), "frac_targets_a_better": float((tgt > 0).mean())})
+    # variant-vs-variant paired differences inside each prior source (pooling question + capacity controls)
     vv = []
     for src in ("mean", "own", "free"):
-        for a_, b_ in [("p1", "p0"), ("p2", "p0"), ("p4", "p0"), ("p2", "p1"), ("p4", "p1"), ("p4", "p2")]:
-            if f"cal_{a_}_{src}" in methods and f"cal_{b_}_{src}" in methods:
-                vv += paired(df, f"cal_{a_}_{src}", f"cal_{b_}_{src}")
+        for a_, b_ in BASE_PAIRS + (CONTROL_PAIRS if src == "free" else []):
+            vv += paired_from_pivot(pt, f"cal_{a_}_{src}", f"cal_{b_}_{src}")
     pd.DataFrame(pr).to_csv(RES / "hyser_paired.csv", index=False)
     pd.DataFrame(vv).to_csv(RES / "hyser_variant_pairs.csv", index=False)
+    # per-backbone-seed variant differences (target-level CI inside one seed; one calibrator per fold)
+    bys = []
+    for sd in sorted(df.seed.unique()):
+        pts = _pivot_units(df[df.seed == sd], "r2")
+        for src in ("mean", "own", "free"):
+            for a_, b_ in BASE_PAIRS + (CONTROL_PAIRS if src == "free" else []):
+                for r in paired_from_pivot(pts, f"cal_{a_}_{src}", f"cal_{b_}_{src}"):
+                    bys.append({**r, "seed": sd, "src": src})
+    pd.DataFrame(bys).to_csv(RES / "hyser_variant_pairs_by_seed.csv", index=False)
+    info = training_info()
+    cs, lev, cells = collapse_sensitivity(df, info)
+    cs.to_csv(RES / "hyser_free_collapse_sensitivity.csv", index=False)
+    lev.to_csv(RES / "hyser_free_collapse_levels.csv", index=False)
+    cells.to_csv(RES / "hyser_free_cells.csv", index=False)
     return df, tab, st, pd.DataFrame(pr), base
 
 
@@ -169,6 +352,8 @@ DB6_REF = ["reuse_latest_srcnorm", "reuse_latest_calnorm", "mean_table_calnorm",
            "ui_prior_latest_calnorm", "ui_prior_mean_calnorm"]
 DB6_DEPLOYABLE = ["reuse_latest_calnorm", "mean_table_calnorm", "mean_loso_calnorm", "rownorm_ridge"]
 DB6_B = [1, 2, 4, 8, 16]
+DB6_PAIRS = [("p1", "p0"), ("p2", "p0"), ("p4", "p0"), ("p2", "p1"), ("p4", "p1"), ("p4", "p2"),
+             ("p2", "p0w"), ("p4", "p0w"), ("p0w", "p0"), ("p2", "p2l"), ("p2l", "p0w"), ("p2l", "p0")]   # last 6: capacity controls
 
 
 def load_db6(order="original", seeds=(0, 1), tag="db6v2"):
@@ -179,9 +364,10 @@ def load_db6(order="original", seeds=(0, 1), tag="db6v2"):
         p = ROOT / "results/db6_v2_20261016" / ref_dir.format(s=s) / "rows.jsonl"
         if p.exists():
             rows += [{k: r.get(k) for k in keep} for r in read_jsonl(p) if r["method"] in DB6_REF and r["B"] in DB6_B]
-        q = RES / tag / f"seed{s}" / f"rows_{order}.jsonl"
-        if q.exists():
-            rows += [{k: r.get(k) for k in keep} for r in read_jsonl(q) if r["method"].startswith("cal_")]
+        for sub in ("", "fix"):               # "fix" = post-review capacity controls (p0w / p2l, identity-free)
+            q = RES / sub / tag / f"seed{s}" / f"rows_{order}.jsonl"
+            if q.exists():
+                rows += [{k: r.get(k) for k in keep} for r in read_jsonl(q) if r["method"].startswith("cal_")]
     df = pd.DataFrame(rows)
     if order == "shuffled" and len(df):            # the shuffled diagnostic only covers B in {4,16}, draws 0-2
         df = df[df.B.isin([4, 16]) & (df.draw < 3)]
@@ -260,10 +446,20 @@ def db6_main(order="original", tag="db6v2", suffix=""):
     pd.DataFrame(pr).to_csv(RES / f"db6_{order}{suffix}_paired.csv", index=False)
     vv = []
     for src in ("mean", "own", "free"):
-        for a_, b_ in [("p1", "p0"), ("p2", "p0"), ("p4", "p0"), ("p2", "p1"), ("p4", "p1"), ("p4", "p2")]:
+        for a_, b_ in DB6_PAIRS:
             if f"cal_{a_}_{src}" in methods and f"cal_{b_}_{src}" in methods:
                 vv += db6_paired(df, f"cal_{a_}_{src}", f"cal_{b_}_{src}", "bal_acc")
     pd.DataFrame(vv).to_csv(RES / f"db6_{order}{suffix}_variant_pairs.csv", index=False)
+    # per backbone seed (one calibrator per seed, shared by all subjects): the 2-seed average hides seed dependence
+    bys = []
+    for sd in sorted(df.seed.unique()):
+        d1 = df[df.seed == sd]
+        for src in ("mean", "own", "free"):
+            for a_, b_ in DB6_PAIRS:
+                if f"cal_{a_}_{src}" in methods and f"cal_{b_}_{src}" in methods:
+                    for r in db6_paired(d1, f"cal_{a_}_{src}", f"cal_{b_}_{src}", "bal_acc"):
+                        bys.append({**r, "seed": sd, "src": src})
+    pd.DataFrame(bys).to_csv(RES / f"db6_{order}{suffix}_variant_pairs_by_seed.csv", index=False)
     return df, out, st, pd.DataFrame(pr), best
 
 
@@ -314,6 +510,29 @@ def db6_cpu_check(order="original", tag="db6v2"):
     return out
 
 
+def db6_own_vs_reuse(order="original", tag="db6v2"):
+    """Per backbone seed: how far the `own`-prior calibrators are from the identical-pipeline reuse row
+    (``chk_reuse_latest_calnorm``, same CPU decode, same draws).  Seed 0 has best_step 0 for all variants."""
+    out = {}
+    for sd in (0, 1):
+        q = RES / tag / f"seed{sd}" / f"rows_{order}.jsonl"
+        if not q.exists():
+            continue
+        rows = read_jsonl(q)
+        ref = {(r["target"], r["B"], r["draw"]): r["bal_acc"] for r in rows if r["method"] == "chk_reuse_latest_calnorm"}
+        for v in VARIANTS_4:
+            d = np.array([r["bal_acc"] - ref[(r["target"], r["B"], r["draw"])] for r in rows
+                          if r["method"] == f"cal_{v}_own" and (r["target"], r["B"], r["draw"]) in ref])
+            out[f"seed{sd}/cal_{v}_own"] = {"n": int(len(d)), "mean_diff": float(d.mean()) if len(d) else None,
+                                            "max_abs_diff": float(np.abs(d).max()) if len(d) else None,
+                                            "frac_abs_gt_1e-4": float((np.abs(d) > 1e-4).mean()) if len(d) else None}
+    (RES / f"db6_{order}_own_vs_reuse_check.json").write_text(json.dumps(out, indent=1))
+    return out
+
+
+VARIANTS_4 = ("p0", "p1", "p2", "p4")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("dataset", choices=["hyser", "db6"])
@@ -323,6 +542,8 @@ if __name__ == "__main__":
             df, out, st, pr, best = db6_main(order)
             print(order)
             print(out["bal_acc"].pivot_table(index="method", columns="B", values="bal_acc_mean").round(3).to_string())
+            if order == "original":
+                print(json.dumps(db6_own_vs_reuse(order), indent=1))
             try:
                 print(db6_cpu_check(order))
             except FileNotFoundError:

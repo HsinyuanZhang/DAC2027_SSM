@@ -31,6 +31,13 @@ from torch import nn
 
 AC_LAGS = (1, 3, 10)
 VARIANTS = ("p0", "p1", "p2", "p4")
+# Post-review controls (identity-free capacity question, not part of the original 4 variants):
+#   p0w  : P0 with the generator MLP widened so that the parameter count ~ P2 (no pooling, no reliability)
+#   p0w4 : same, matched to P4
+#   p2c  : P2 whose pooled context is replaced by one constant learned vector (no population information)
+#   p2l  : P2 whose pooled context is replaced by the per-channel psi(d~_i) (P2 parameters, no pooling)
+CONTROL_VARIANTS = ("p0w", "p0w4", "p2c", "p2l")
+ALL_VARIANTS = VARIANTS + CONTROL_VARIANTS
 PRIOR_MODES = ("aligned", "free")
 REL_DIM = 5
 STD_FLOOR_REL = 1e-3        # same rule as hyser_backbone.input_stats / db6_backbone.input_stats
@@ -129,23 +136,27 @@ _ADDITIVE_KEYS = ("n", "sx", "gram", "ac_xx", "ac_a", "ac_b", "ac_n", "sy", "syx
 
 
 class StreamAcc:
-    """Exact chunk-by-chunk accumulator for one calibration trial (on-chip contract).
+    """Exact chunk-by-chunk accumulator (on-chip contract), minimal per-trial state.
 
-    Keeps only the last ``max_lag`` bins as context.  ``end_trial`` adds the trial's totals to
-    the session accumulators and updates the per-trial energy terms used by the reliability
-    features; ``result`` returns the SemgStats.
+    Keeps only the last ``max_lag`` bins as context.  Every chunk is added DIRECTLY to the session
+    accumulators (one Gram, not a per-trial copy of it); the only per-trial state is the small set of
+    terms the reliability features need (n, sum x, sum y x at lag 0, sum y: N + D*N + D + 1 values,
+    ``trial_state_bytes``).  ``end_trial`` turns that small state into the per-trial energy terms and adds
+    them to the session totals; ``result`` returns the SemgStats.
+
+    (The first version of this class kept a full per-trial copy of every accumulator, i.e. ~2x the Gram;
+    the experiments themselves used ``TrialBank`` sums, which are numerically the same quantities.)
     """
 
     def __init__(self, spec: SemgSpec):
         self.spec = spec
         self.tot = None
-        self.q = None
         self.n_trials = 0
         self._reset_trial()
 
     def _reset_trial(self):
         self.ctx = None
-        self.trial = None
+        self.small = None
 
     def update(self, x, y, valid):
         m = 0 if self.ctx is None else self.ctx[0].shape[0]
@@ -153,15 +164,20 @@ class StreamAcc:
         yc = y if self.ctx is None else torch.cat([self.ctx[1], y])
         vc = valid if self.ctx is None else torch.cat([self.ctx[2], valid])
         s = accumulate_chunk(xc, yc, vc, m, self.spec)
-        self.trial = s if self.trial is None else {k: self.trial[k] + s[k] for k in s}
+        sm = {"n": s["n"], "sx": s["sx"], "syx0": s["syx"][0], "sy0": s["sy"][0]}
+        self.small = sm if self.small is None else {k: self.small[k] + sm[k] for k in sm}
+        self.tot = s if self.tot is None else {**self.tot, **{k: self.tot[k] + s[k] for k in s}}
         keep = self.spec.max_lag
         self.ctx = (xc[-keep:], yc[-keep:], vc[-keep:])
 
+    def trial_state_bytes(self, bytes_per_value: int = 4) -> int:
+        """Size of the per-trial buffer (the whole of it; the Gram is NOT duplicated per trial)."""
+        return 0 if self.small is None else sum(v.numel() for v in self.small.values()) * bytes_per_value
+
     def end_trial(self):
-        s = self.trial
-        add = _q_terms(s["n"], s["sx"], s["syx"][0], s["sy"][0])
-        s = {**s, **{k: v for k, v in add.items()}}
-        self.tot = s if self.tot is None else {k: self.tot[k] + s[k] for k in s}
+        add = _q_terms(self.small["n"], self.small["sx"], self.small["syx0"], self.small["sy0"])
+        for k, v in add.items():
+            self.tot[k] = v if k not in self.tot else self.tot[k] + v
         self.n_trials += 1
         self._reset_trial()
 
@@ -350,13 +366,28 @@ def online_softmax_pool(scores: torch.Tensor, values: torch.Tensor, chunk: int =
     return acc / norm[:, None]
 
 
+def _p0_param_count(fd: int, k: int, h: int) -> int:
+    return (fd + 1) * h + (h + 1) * h + (h + 1) * k
+
+
+def wide_p0_hidden(spec: SemgSpec, ref_variant: str = "p2", *, hidden: int = 64, dctx: int = 32, m: int = 8) -> int:
+    """Hidden width of a plain P0 generator whose parameter count is closest to that of ``ref_variant``."""
+    target = sum(p.numel() for p in SemgCalibrator(ref_variant, spec, m=m, hidden=hidden, dctx=dctx).parameters())
+    return min(range(8, 2048), key=lambda h: abs(_p0_param_count(spec.desc_dim, spec.k, h) - target))
+
+
 class SemgCalibrator(nn.Module):
-    """p0 / p1 / p2 / p4 generator: descriptor -> K-dim table column (residual on the prior)."""
+    """p0 / p1 / p2 / p4 generator: descriptor -> K-dim table column (residual on the prior).
+
+    Control variants (see ``CONTROL_VARIANTS``): p0w / p0w4 (wider P0), p2c (constant context), p2l
+    (per-channel context).  None of the controls mixes information across channels, so the table column
+    of channel i depends on (d_i, r_i, prior_i) only.
+    """
 
     def __init__(self, variant: str, spec: SemgSpec, *, m: int = 8, hidden: int = 64, dctx: int = 32,
                  prior_mode: str = "aligned", out_scale: float = 1.0):
         super().__init__()
-        if variant not in VARIANTS:
+        if variant not in ALL_VARIANTS:
             raise ValueError(variant)
         if prior_mode not in PRIOR_MODES:
             raise ValueError(prior_mode)
@@ -373,14 +404,20 @@ class SemgCalibrator(nn.Module):
             g = spec.groups
             keep[g["prior"] + g["corr_prior"]] = 0.0
         self.register_buffer("d_keep", keep)
-        self.rel = self.mu0 = self.psi = self.phi = self.val = None
+        self.rel = self.mu0 = self.psi = self.phi = self.val = self.ctx_const = None
         gen_in = fd
-        if variant != "p0":
+        gen_hidden = hidden
+        if variant not in ("p0", "p0w", "p0w4"):
             self.rel = _mlp(REL_DIM, 1, 16, layers=1)
             nn.init.constant_(self.rel[-1].bias, 2.0)
             self.mu0 = nn.Parameter(torch.zeros(fd))
-        if variant == "p2":
+        if variant in ("p0w", "p0w4"):
+            gen_hidden = wide_p0_hidden(spec, "p2" if variant == "p0w" else "p4", hidden=hidden, dctx=dctx, m=m)
+        if variant in ("p2", "p2l"):
             self.psi = _mlp(fd, dctx, hidden)
+            gen_in = fd + dctx
+        if variant == "p2c":
+            self.ctx_const = nn.Parameter(torch.zeros(dctx))
             gen_in = fd + dctx
         if variant == "p4":
             self.phi = _mlp(fd, hidden, hidden)
@@ -388,7 +425,7 @@ class SemgCalibrator(nn.Module):
             self.a = nn.Parameter(torch.randn(m, hidden) * 0.1)
             self.val = nn.Linear(hidden, dctx)
             gen_in = fd + dctx + 1
-        self.gen = _mlp(gen_in, k, hidden, zero_last=True)
+        self.gen = _mlp(gen_in, k, gen_hidden, zero_last=True)
 
     def set_normalizers(self, d, r):
         with torch.no_grad():
@@ -404,17 +441,21 @@ class SemgCalibrator(nn.Module):
         """d [N, Fd], r [N, Fr], prior [K, N] (zeros for the free mode) -> table [K, N]."""
         dn = (d - self.d_mu) / self.d_sd * self.d_keep
         aux = {}
-        if self.variant == "p0":
+        if self.variant in ("p0", "p0w", "p0w4"):
             dt, lam = dn, None
         else:
             lam = self.reliability(r)
             dt = lam[:, None] * dn + (1.0 - lam[:, None]) * self.mu0 * self.d_keep
             aux["lam"] = lam
-        if self.variant in ("p0", "p1"):
+        if self.variant in ("p0", "p1", "p0w", "p0w4"):
             inp = dt
         elif self.variant == "p2":
             ctx = self.psi(dt).mean(0, keepdim=True).expand(dt.shape[0], -1)
             inp = torch.cat([dt, ctx], 1)
+        elif self.variant == "p2l":                                             # control: no pooling over channels
+            inp = torch.cat([dt, self.psi(dt)], 1)
+        elif self.variant == "p2c":                                             # control: constant learned context
+            inp = torch.cat([dt, self.ctx_const[None, :].expand(dt.shape[0], -1)], 1)
         else:
             ph = self.phi(dt)
             scores = ph @ self.u.T / math.sqrt(self.hidden) + torch.log(lam.clamp_min(1e-6))[:, None]
@@ -450,13 +491,52 @@ class CalibResult:
 
 # ------------------------------------------------------ analytic cost (A'4) ----
 
+def _lin_macs(i, o, h, layers=2):
+    """Weight x activation MACs per channel of ``_mlp(i, o, h, layers)``."""
+    return i * h + (layers - 1) * h * h + h * o
+
+
+def fixed_macs_per_channel(spec: SemgSpec, variant: str, *, hidden=64, dctx=32, m=8) -> dict:
+    """Fixed-weight (weight x activation) MACs per channel of the calibrator forward, by part.
+
+    Counts every Linear layer that is executed per channel, the PMA score/route products (u, a), and the two
+    PMA pooling matmuls (softmax(scores)^T @ values and beta @ zj, m*dctx each).  Mean pooling (P2) is adds only.
+    """
+    fd, k = spec.desc_dim, spec.k
+    parts = {}
+    if variant in ("p0w", "p0w4"):
+        hw = wide_p0_hidden(spec, "p2" if variant == "p0w" else "p4", hidden=hidden, dctx=dctx, m=m)
+        parts["gen"] = _lin_macs(fd, k, hw)
+        return parts
+    gen_in = fd
+    if variant != "p0":
+        parts["reliability"] = REL_DIM * 16 + 16
+    if variant in ("p2", "p2l"):
+        parts["psi"] = _lin_macs(fd, dctx, hidden)
+        gen_in = fd + dctx
+    if variant == "p2c":
+        gen_in = fd + dctx
+    if variant == "p4":
+        parts["phi"] = _lin_macs(fd, hidden, hidden)
+        parts["score_route"] = 2 * m * hidden
+        parts["value"] = hidden * dctx
+        parts["pool"] = 2 * m * dctx
+        gen_in = fd + dctx + 1
+    parts["gen"] = _lin_macs(gen_in, k, hidden)
+    return parts
+
+
 def cost_model(spec: SemgSpec, variant: str, n_bins_per_trial: int, b_trials: int, *, hidden=64,
                dctx=32, m=8, acc_bytes=4, table_bytes=2, trunk_params=None) -> dict:
     """Analytic MAC / SRAM numbers of ONE calibration of the implemented descriptor + calibrator.
 
-    Counts tensors actually kept by this implementation (float64 on GPU in the experiments; bytes are
-    reported for ``acc_bytes``-wide accumulators, i.e. an fp32 hardware port; the symmetric Gram can
-    be stored as its upper triangle).
+    Counts tensors actually kept by this implementation.  The experiments simulated the accumulators in float64
+    on GPU/CPU (no fixed-point per-add rounding / saturation was simulated, see README); bytes are reported
+    for ``acc_bytes``-wide accumulators, i.e. an fp32 hardware port; the symmetric Gram can be stored as
+    its upper triangle.  Buffers: session accumulators, the small per-trial state (``per_trial_state``), the lag
+    delay line, descriptors, table.  The earlier ``StreamAcc`` additionally kept a full per-trial copy of
+    every accumulator (``per_trial_full_copy``, ~2x the Gram); its totals are reported separately
+    (``*_with_trial_copy``).
     """
     n, k, d_lab = spec.n_ch, spec.k, spec.d_label
     la, ll = len(spec.ac_lags), len(spec.label_lags)
@@ -475,41 +555,44 @@ def cost_model(spec: SemgSpec, variant: str, n_bins_per_trial: int, b_trials: in
         "corr_glob": n * n,
     }
     fin_macs = sum(finalize.values())
-    fixed = n * (fd * hidden + hidden * hidden + hidden * k)
-    if variant != "p0":
-        fixed += n * (REL_DIM * 16 + 16)
-    if variant == "p2":
-        fixed += n * (fd * hidden + hidden * dctx) + n * dctx * hidden
-    if variant == "p4":
-        fixed += n * (fd * hidden + hidden * hidden + 2 * hidden * m + hidden * dctx + (dctx + 1) * hidden) + m * dctx * n
+    parts = fixed_macs_per_channel(spec, variant, hidden=hidden, dctx=dctx, m=m)
+    fixed_per_channel = sum(parts.values())
+    fixed = n * fixed_per_channel
+    n_params = sum(p.numel() for p in SemgCalibrator(variant, spec, m=m, hidden=hidden, dctx=dctx).parameters())
+    nw = fixed_per_channel - parts.get("pool", 0)           # weight elements that multiply an activation
+    acc_core = {"sx": n * acc_bytes, "ac": 3 * la * n * acc_bytes, "label_cross": ll * d_lab * n * acc_bytes}
+    per_trial_state = (n + d_lab * n + d_lab + 1) * acc_bytes
     sram = {
         "gram_full": n * n * acc_bytes,
         "gram_upper_triangle": n * (n + 1) // 2 * acc_bytes,
-        "sx": n * acc_bytes, "ac": 3 * la * n * acc_bytes,
-        "label_cross": ll * d_lab * n * acc_bytes, "per_trial_q_terms": (n + 2 * d_lab * n) * acc_bytes,
+        **acc_core, "per_trial_q_terms": (n + 2 * d_lab * n) * acc_bytes,
+        "per_trial_state": per_trial_state,
         "stream_ctx": spec.max_lag * (n + d_lab) * acc_bytes,
         "descriptors": n * fd * acc_bytes, "table": k * n * table_bytes,
         "norm_mean_std": 2 * n * acc_bytes,
     }
-    nw = fd * hidden + hidden * hidden + hidden * k
-    if variant != "p0":
-        nw += REL_DIM * 16 + 16 + fd
-    if variant == "p2":
-        nw += fd * hidden + hidden * dctx + dctx * hidden
-    if variant == "p4":
-        nw += fd * hidden + hidden * hidden + 2 * m * hidden + hidden * dctx + (dctx + 1) * hidden
+    copy_core = sum(acc_core.values()) + 2 * acc_bytes          # + trial counters (n and the lag counts)
+    copy_full = n * n * acc_bytes + copy_core
+    copy_tri = n * (n + 1) // 2 * acc_bytes + copy_core
     # analytic-only alternative (NOT implemented / NOT evaluated): replace the N x N Gram by projections of a
     # fixed-reference-normalised stream onto the K prior latents (sxz [N,K]) and the global activity (sxm [N])
     lite_per_bin = 2 * n * k + n + n * (1 + 2 * la + ll * d_lab) + 3 * n
     lite_sram = (n * k + 2 * k + 3 * n + n + 3 * la * n + ll * d_lab * n + (n + 2 * d_lab * n)) * acc_bytes
+    tot_full = int(sum(v for k_, v in sram.items() if k_ != "gram_upper_triangle"))
+    tot_tri = int(sum(v for k_, v in sram.items() if k_ != "gram_full"))
     out = {"gram_free_estimate": {"accumulate_macs_per_bin": int(lite_per_bin),
                                   "accumulate_macs": int(bins * lite_per_bin),
                                   "sram_accumulators_bytes": int(lite_sram), "evaluated": False},
            "accumulate_macs": int(acc_macs), "accumulate_macs_per_bin": int(sum(per_bin.values())),
            "finalize_macs": int(fin_macs), "calibrator_fixed_macs": int(fixed),
+           "calibrator_fixed_macs_per_channel": int(fixed_per_channel),
+           "calibrator_fixed_macs_parts": {k_: int(v) for k_, v in parts.items()},
            "total_macs": int(acc_macs + fin_macs + fixed),
            "fixed_weight_fraction": float(fixed / max(acc_macs + fin_macs + fixed, 1)),
-           "calibrator_weights": int(nw), "sram_bytes": {k_: int(v) for k_, v in sram.items()},
-           "sram_total_bytes_full_gram": int(sum(v for k_, v in sram.items() if k_ != "gram_upper_triangle")),
-           "sram_total_bytes_tri_gram": int(sum(v for k_, v in sram.items() if k_ != "gram_full"))}
+           "calibrator_weights": int(nw), "calibrator_params_total": int(n_params),
+           "sram_bytes": {k_: int(v) for k_, v in sram.items()},
+           "per_trial_full_copy_bytes": {"full_gram": int(copy_full), "tri_gram": int(copy_tri)},
+           "sram_total_bytes_full_gram": tot_full, "sram_total_bytes_tri_gram": tot_tri,
+           "sram_total_bytes_full_gram_with_trial_copy": int(tot_full - per_trial_state + copy_full),
+           "sram_total_bytes_tri_gram_with_trial_copy": int(tot_tri - per_trial_state + copy_tri)}
     return out

@@ -20,6 +20,34 @@
   "h4_pass": 18000,
   "h5_pass": 18000
  },
+ "fix/db6v2/seed0/rows_original.jsonl": {
+  "rows": 3000,
+  "h1_pass": 3000,
+  "h2_pass": 3000,
+  "h4_pass": 3000,
+  "h5_pass": 3000
+ },
+ "fix/db6v2/seed1/rows_original.jsonl": {
+  "rows": 3000,
+  "h1_pass": 3000,
+  "h2_pass": 3000,
+  "h4_pass": 3000,
+  "h5_pass": 3000
+ },
+ "fix/hyser/seed0/rows.jsonl": {
+  "rows": 2560,
+  "h1_pass": 2560,
+  "h2_pass": 2560,
+  "h4_pass": 2560,
+  "h5_pass": 2560
+ },
+ "fix/hyser/seed1/rows.jsonl": {
+  "rows": 2560,
+  "h1_pass": 2560,
+  "h2_pass": 2560,
+  "h4_pass": 2560,
+  "h5_pass": 2560
+ },
  "hyser/seed0/rows.jsonl": {
   "rows": 7680,
   "h1_pass": 7680,
@@ -33,5 +61,12 @@
   "h2_pass": 7680,
   "h4_pass": 7680,
   "h5_pass": 7680
+ },
+ "_notes": {
+  "h1": "hash of the trunk held by the evaluating process; on the DB6 CPU rows this is the hash of the CPU copy of the weights (the GPU model is not touched), so it cannot detect a change of the GPU trunk.",
+  "h2": "backprop_steps is a constant 0 written by the eval script plus the no_grad guard; it is a code-path property, not a measurement.",
+  "h4": "only checks that the number of calibration trials equals B (len(cal_trials) == B); the unit test (non-calibration trials replaced by noise give bit-identical stats) is the real content check.",
+  "h5": "covers the output table only (K x N fp16 <= 32 KB). The descriptor accumulators (Gram etc.) are NOT included: they exceed 32 KB for Hyser (N=256) and fit for DB6 (N=14) only without any per-trial copy; see cost_model.json. H5 is therefore NOT satisfied for the whole calibration path on Hyser.",
+  "accumulator_simulation": "accumulators were simulated in float64; fp32 per-bin streaming was checked by the reviewer (rel err ~2e-7, |dR2| <= 1e-4); fixed-point per-add rounding/saturation was NOT simulated (feasibility rule 8 open item)."
  }
 }

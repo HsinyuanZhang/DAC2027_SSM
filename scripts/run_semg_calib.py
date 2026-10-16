@@ -5,7 +5,9 @@ Hyser H-A:
   train : python scripts/run_semg_calib.py train hyser --seed S --worker W --n-workers NW
           (all source x variant x subject-fold configs of one backbone seed, idempotent)
   eval  : python scripts/run_semg_calib.py eval hyser --seed S --targets 1-20
-Outputs go to results/semg_calib_20261016/.  GPU1 only (CUDA_VISIBLE_DEVICES=1).
+Outputs go to results/semg_calib_20261016/ (or a sub-directory via --out-subdir, e.g. 'fix' for the
+post-review capacity controls).  The original runs used GPU1; the host now has ONE GPU (cuda:0), so the
+guard only requires a working CUDA device (one GPU job at a time is the caller's responsibility).
 """
 import argparse
 import itertools
@@ -23,7 +25,7 @@ sys.path.insert(0, str(ROOT))
 from ssm_decode import db6_backbone as db6b  # noqa: E402
 from ssm_decode import hyser_backbone as hysb  # noqa: E402
 from ssm_decode.hyser_data import load_session  # noqa: E402
-from ssm_decode.semg_calib import VARIANTS, SemgCalibrator, norm_stats  # noqa: E402
+from ssm_decode.semg_calib import ALL_VARIANTS, VARIANTS, SemgCalibrator, norm_stats  # noqa: E402
 from ssm_decode.semg_calib_db6 import Db6CpuEnv, Db6StreamEnv, StreamStore  # noqa: E402
 from ssm_decode.semg_calib_env import HyserEnv, SessStore, draw_hyser_cal, train_calibrator  # noqa: E402
 
@@ -48,8 +50,10 @@ def backbone_ckpt(dataset, seed, db6_ckpt=None):
 
 
 def require_gpu1():
-    if os.environ.get("CUDA_VISIBLE_DEVICES") != "1":
-        raise SystemExit("GPU1 only: launch with CUDA_VISIBLE_DEVICES=1")
+    """Kept under its old name.  The original runs required CUDA_VISIBLE_DEVICES=1 (two-GPU host); on the
+    single-GPU host any working CUDA device is accepted."""
+    if not torch.cuda.is_available():
+        raise SystemExit("no CUDA device available (use --device cpu where supported)")
 
 
 # ------------------------------------------------------------------- train ----
@@ -280,7 +284,9 @@ def main():
         p.add_argument("dataset", choices=["hyser", "db6"])
         p.add_argument("--seed", type=int, required=True)
         p.add_argument("--sources", default="mean,own,free")
-        p.add_argument("--variants", default=",".join(VARIANTS))
+        p.add_argument("--variants", default=",".join(VARIANTS),
+                       help=f"comma list from {','.join(ALL_VARIANTS)} (p0w/p0w4/p2c/p2l = post-review controls)")
+        p.add_argument("--out-subdir", default="", help="sub-directory of results/semg_calib_20261016 for ckpts/rows")
         p.add_argument("--worker", type=int, default=0)
         p.add_argument("--n-workers", type=int, default=1)
         p.add_argument("--steps-cap", type=int, default=4000)
@@ -300,6 +306,12 @@ def main():
                        help="db6 eval: decode the target stream in recorded or trial-shuffled order")
         p.add_argument("--budgets", type=int, nargs="+", default=DB6_BUDGETS)
     a = ap.parse_args()
+    global OUT
+    if a.out_subdir:
+        OUT = OUT / a.out_subdir
+    bad = [v for v in a.variants.split(",") if v not in ALL_VARIANTS]
+    if bad:
+        raise SystemExit(f"unknown variants {bad}")
     if a.targets is None:
         a.targets = "1-20" if a.dataset == "hyser" else "1-10"
     if a.draws is None:
