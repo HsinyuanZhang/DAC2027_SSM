@@ -1,8 +1,8 @@
 # sEMG 上的 fixed-weight forward calibrator（Q-D，Hyser H-A + NinaPro DB6 v2）
 
-日期：2026-10-16。GPU 计算全部在 cuda:1。代码：`ssm_decode/semg_calib.py`（描述量、流式累加器、calibrator、cost model）、`ssm_decode/semg_calib_env.py`（Hyser episode 环境）、`ssm_decode/semg_calib_db6.py`（DB6 v2 contiguous-stream episode 环境）、`scripts/run_semg_calib.py`（train / eval）、`scripts/summarize_semg_calib.py`、`scripts/summarize_semg_calib_meta.py`、`scripts/semg_cost_report.py`、`tests/test_semg_calib.py`（20 项）。原始 rows 与 checkpoint 在 `results/semg_calib_20261016/`（gitignore）；本目录是压缩后的 csv/json。
+日期：2026-10-16。GPU 计算全部在 cuda:1。代码：`ssm_decode/semg_calib.py`（描述量、流式累加器、calibrator、cost model）、`ssm_decode/semg_calib_env.py`（Hyser episode 环境）、`ssm_decode/semg_calib_db6.py`（DB6 v2 contiguous-stream episode 环境）、`scripts/run_semg_calib.py`（train / eval）、`scripts/summarize_semg_calib.py`、`scripts/summarize_semg_calib_meta.py`、`scripts/semg_cost_report.py`、`tests/test_semg_calib.py`（21 项）。原始 rows 与 checkpoint 在 `results/semg_calib_20261016/`（gitignore）；本目录是压缩后的 csv/json。
 
-**状态（务必先看）：Hyser 部分完整（2 个 backbone seed x 3 种 prior x 4 个变体 x 5 个 subject fold，8320 条 eval row/seed）。DB6 部分：calibrator 已按 v2 backbone 训练完（24 个，2 seed x 3 prior x 4 变体），但评测没有跑完——GPU 在 06:00 左右失效（`torch.cuda.is_available() == False`，`nvidia-smi` 报 GPU0 Unknown Error），见第 6 节。DB6 的数字不在本报告里，不应被引用。**
+**状态：** Hyser（2 个 backbone seed x 3 种 prior x 4 个变体 x 5 个 subject fold，每个 seed 7680 条 candidate row）和 DB6 v2（2 seed x 3 prior x 4 变体，记录顺序整段解码，每个 seed 18000 条 candidate row；打乱顺序的诊断只做了 seed 0、B in {4,16}）都已完成。**两处与计划不同，必须知道：（1）GPU 在 2026-10-16 06:00 左右失效（cuda:1 的 `torch.cuda.is_available()` 变为 False，`nvidia-smi` 报 GPU0 Unknown Error），所以全部 DB6 评测和 DB6 的 lr 扫描是在 CPU 上用 Mamba-3 的 CPU 端口（`mamba3_cpu.py`，解除 128 bin 窗口限制）完成的；CPU 解码已用 6000 个 (target,B,draw,方法) 对照存档的 GPU 参照行：平均偏差 −0.0007，平均绝对偏差 0.0022，最大 0.069，12% 的行偏差 > 0.005（集中在含近死通道的受试者 S4–S6、S10，bf16 舍入翻转个别 bin），不影响均值层面的比较。DB6 的 calibrator 训练（24 个）和 Hyser 全部在 GPU 上完成。（2）DB6 参照行（reuse/mean/ridge/ui_prior）直接取自 v2 报告的存档行（GPU 解码，同一抽样），没有重算。**
 
 ## 0. 结论摘要（Hyser，H-A；query R²，物理单位，macro 5 根手指；n=20 target，t-CI；2 个 backbone seed 平均）
 
@@ -20,6 +20,18 @@
 6. 以 source validation 选变体（各 prior 下 source-val 均值最高的变体，Hyser 全部为 P2）：`own`/P2 为 0.212/0.446/0.599/0.600，与 P4 相差 <= 0.05（B=1）。source validation 在 `own`/`mean` 下对变体几乎没有区分度（P2/P4 比 P0/P1 高 0.01–0.03），在 identity-free 下则明确区分（P2 0.270、P4 0.245 对 P0 0.072、P1 0.103），与 target 上的排序一致。
 
 约束检查：Hyser 全部 15360 条 candidate row 满足 H1（trunk 哈希不变）、H2（校准在 `no_grad` 下，0 次反传）、H4（描述量只用 B 个校准 trial：一次测试把非校准 trial 换成噪声后 stats 逐位相同）、H5（静态表 K x N fp16 = 8 KB <= 32 KB）。
+
+### 0.1 DB6 v2（D-A，记录顺序整段 contiguous 解码；per-bin balanced accuracy；n=10 受试者，t-CI；2 个 backbone seed 平均）
+
+最强的可部署零/低标签基线（事后按 B 在受试者均值上挑选）：B=1/2/4 为 `mean_table_calnorm`（0.428/0.477/0.511），B=8 为 `reuse_latest_calnorm`（0.541），B=16 为闭式 `rownorm_ridge`（0.578）。ui_prior_latest_calnorm（非部署）：0.355/0.445/0.553/0.666/0.724（B=1/2/4/8/16）。
+
+1. **没有任何 calibrator 在任何 B 上以 CI 排除 0 的幅度超过最强可部署基线。** 最接近的是 `mean` prior 的 P0：B=4 +0.022 ± 0.027，B=8 +0.035 ± 0.067，B=16 +0.003 ± 0.022；B=1/2 为 −0.020 ± 0.021 / −0.002 ± 0.024。identity-free 在 B=1/2 显著更差（−0.08 到 −0.12，CI 约 ±0.03），B=16 持平（P2/P4：+0.002 / −0.000 ± 0.025）。
+2. **相对 “同一个 prior 不校准”，只有 population prior 的 calibrator 有增益：** `mean` prior 的 P0 − `mean_loso_calnorm` = −0.004 ± 0.024 / +0.016 ± 0.030 / +0.043 ± 0.034 / +0.065 ± 0.034 / +0.071 ± 0.034（B=1/2/4/8/16）。**`own`（最新 source session 的表）prior 的 calibrator 基本等于 prior 本身：** P0 − `reuse_latest_calnorm` = −0.009 ± 0.011 … +0.011 ± 0.022（全部 B）。这与 source-side 事实一致：`own` calibrator 的 source validation 只从 prior-only 的 0.503 提到 0.508–0.514（best step 250–900），lr 降到 3e-4、1e-4（seed 0，P0/P4，CPU，只看 source val）仍是 0.505–0.506，所以不是学习率问题；在 19 个训练 session（早期 session 作 prior）上，固定权重 calibrator 学不到跨 session 的表修正。
+3. **离 ui_prior 的距离：** B=1 时 `mean`/`own` calibrator 高于 ui_prior（+0.03 到 +0.055，那里 ui_prior 因类覆盖不足而失败），identity-free 低 0.03–0.04；B=4 低 0.02–0.04（identity-free 低 0.07–0.10），B=8 低 0.09–0.13，B=16 低 0.14–0.17（0.58 对 0.724）。B=16 时最好的 calibrator（`mean`/P0 0.581、identity-free P2 0.579）只拿到 ui_prior 相对 reuse 的增益（+0.176）的约 19%/18%。B>=8 的 ui_prior 增益需要标签驱动的逐 session 梯度拟合；固定权重前向目前拿不到。
+4. **identity-free（零 prior，无 prior 列）下 pooling 有小而可靠的作用，已知身份时没有：** P2/P4 − P0 = +0.015 / +0.019 / +0.020 / +0.024 / +0.021（P2，B=1/2/4/8/16，CI 约 ±0.008–0.010，B>=1 均不含 0）；P4 ≈ P2（|差| <= 0.004）；P1 − P0 在 ±0.01 以内。`mean` 或 `own` prior 下 |P2/P4 − P0| <= 0.007（不显著），`mean` 下 P1 − P0 为 −0.008 到 −0.014（略负）。方向与 Hyser 一致，幅度小一个量级。identity-free 在小 B（1–4）显著差于带身份的变体（B=4：0.48 对 0.53/0.51），在 B>=8 不低于 ridge 与 reuse（B=8：0.556–0.557 对 0.514/0.541；B=16：0.578–0.579 对 0.578/0.548）。
+5. **backbone-seed spread：** calibrator 行 0.000–0.046（多数 <= 0.03；`mean`/P0 在 B=1 最大 0.046），`reuse_latest_calnorm` 0.005–0.010，`ui_prior` <= 0.006。pooling 变体（P2/P4）的 seed spread 一般小于 P0/P1。
+6. **打乱顺序诊断（seed 0，B in {4,16}，每格 3 个 draw，10 名受试者；`db6_shuffled_*`）与记录顺序一致：** `own` 0.517/0.557（reuse 0.518/0.558），`mean`/P0 0.530/0.586（mean_table 0.504/0.518），identity-free P2/P4 0.480/0.590 与 0.491/0.590（ridge 0.379/0.578）；与记录顺序的差别 <= 0.015（样本不同：seed 0、3 个 draw），没有 block 顺序捷径的迹象。
+7. 约束检查：DB6 全部 36000 + 5064 条 candidate row 满足 H1/H2/H4/H5（描述量与归一化只用 B 个校准 trial，224 B 表）。
 
 ## 1. 方法（与第一轮 000688 的关系、偏离处）
 
@@ -119,30 +131,90 @@
 
 要点：（i）累加通路由 N x N Gram（用于 prior-latent 相关和全局活动相关）主导：N=256 时 65.5k MAC/bin 占 90%，持续 3.6 MMAC/s（50 Hz），固定权重 calibrator 只占 0.3–6%；（ii）**N=256 的累加器 SRAM 约 391 KB（fp32，全 Gram；上三角 261 KB）远超 32 KB**，H5 的 32 KB 约束目前只对输出表成立，对描述量累加器不成立——这是一个要诚实写出的硬件问题；（iii）解析估计的 Gram-free 替代（用固定参考归一化后的 prior-latent 投影累加 N x K，而不是 N x N Gram）约 16.1 kMAC/bin、61.6 KB 累加器（DB6 为 490 MAC/bin、2.6 KB），**但没有实现也没有评测，不知道精度是否保持**；（iv）DB6 N=14 的 SRAM 只有 6 KB，累加不是瓶颈，固定权重前向占 3.5–61%。
 
-## 4. DB6（D-A，v2 contiguous 解码）——未完成
+## 4. DB6（D-A，v2 contiguous 解码）
 
-- 已完成：按 v2 协议实现（`semg_calib_db6.py`、`run_semg_calib.py train/eval db6`）：整段 session 作为一条连续因果流，状态跨 trial 携带；query 只在非校准 trial 的 bin 上打分；B-trial 归一化的 std 下限为 0.01 x median std（v2 在 source 上选出的值，近零 std 通道不会被放大成单位方差噪声）；calibrator 的 episode 从 **trial 顺序随机打乱的** source 流（每 session 6 个固定排列副本）里切 512–1024 bin 的随机偏移窗口（前 128 bin burn-in），校准 trial 取训练重复、query 取留出重复，source validation 也用 v2 的固定打乱顺序留出流；`own` prior 在训练里是同一受试者的随机更早 source session 表（DB6 每个受试者有 4 个 source session，所以不需要 stale 替身，也不需要 subject fold），测试时取最新 source session 表；`mean` prior = 其余受试者 source 表的均值；评测按记录顺序整段解码（主），打乱顺序解码作为诊断。
-- 已完成的 source-side 结果（24 个 calibrator，seed 0/1）：source validation（打乱顺序，B in {1,2,4,8,16}）相对 prior-only 的提升：`mean` 0.44 -> 0.55（P0–P4 差 <= 0.008）；`free` 0.127 -> 0.46–0.48；`own` 0.503 -> 0.508–0.514，即 **`own` calibrator 在 source validation 上几乎学不到东西**（best step 250–900，val 在 prior-only 附近波动）。这是 source-side 的事实，不是 target 结果。
-- **没有完成：** 60 个 target session 的评测。训练完成后（05:59）GPU 驱动失效，无法评测。需要恢复 GPU 后运行：`CUDA_VISIBLE_DEVICES=1 python scripts/run_semg_calib.py eval db6 --seed {0,1} --db6-ckpt results/db6_v2_20261016/final/seed{seed}/best.pt --out-tag db6v2 --std-floor 0.01 --order original`（再加 `--order shuffled` 作诊断），然后 `python scripts/summarize_semg_calib.py db6`（该脚本已实现并在参照行上验证，参照行取自 `results/db6_v2_20261016/eval_seed{0,1}/rows.jsonl`，复现 v2 报告里的数字）。
+### 4.1 实现与协议
+
+- 整段 session 是一条连续因果流，状态跨 trial 携带；query 只在非校准 trial 的 bin 上打分；协议、抽样（随机数 `[7919, subject, day*10+tod, B, draw]`，5 个 draw，B in {1,2,4,8,16}，60 个 target session）、聚合（draw -> tod -> seed -> 受试者 -> 3 个 gap 平均，t-CI n=10）与 v2 参照行逐条相同；backbone 为 v2 的 `final/seed{0,1}`（K=8 w128，在 trial 顺序打乱的流上训练）。
+- B-trial 归一化：均值/std 来自 B 个校准 trial，std 下限 `0.01 x median_c std`（v2 在 source 上选出的值，近零 std 通道不会被放大成单位方差噪声；本模块的 `norm_stats(..., floor_ref="median", floor=0.01)` 与 `db6_backbone.input_stats` 同规则，由 `--check-ref` 行验证）。
+- calibrator 训练（`semg_calib_db6.py`，24 个：2 seed x 3 prior x 4 变体）：episode = 某个 source session 的 trial 顺序打乱后拼成的流（每个 session 6 个固定排列副本）里随机偏移的 512–1024 bin 窗口，前 128 bin burn-in；校准 trial 是训练重复（class-balanced，B log-uniform 1..20），loss 是窗口内留出重复（backbone 从未用过其标签）的 bin 上的 CE；梯度只到 calibrator。source validation = v2 的固定打乱顺序留出流，10 个受试者各取最新的 source session 作为验证 session（其数据只出现在验证里；`own` 验证用它的前一个 session 表），B in {1,2,4,8,16} x 2 个 draw。AdamW lr 1e-3（`own` 另扫 3e-4、1e-4），patience 6、至少 400 步、上限 4000 步。没有 subject fold：DB6 每个受试者有多个 source session，`own` prior 在训练里就是同一受试者**更早的**一个 source session 的表（不用目标 session 自己的表，测试时用最新 source session 的表），所以不需要 Hyser 里的 stale 替身；`mean` = 其余受试者 source 表的均值（训练时再去掉验证 session 的表，测试与 `mean_loso_calnorm` 相同）。
+- source-side 结果（`training_summary.csv`）：source validation（打乱顺序 balanced accuracy）prior-only -> 训练后：`mean` 0.440 -> 0.545–0.553；`free` 0.127 -> 0.460–0.476；`own` 0.503 -> 0.508–0.514；lr 扫描（seed 0）`own` 0.504 -> 0.505–0.506。
+
+### 4.2 结果（记录顺序；balanced accuracy，均值 ± 95% CI，n=10 受试者，all gaps，2 seed 平均；参照行取自 v2 存档）
+
+| method | B=1 | B=2 | B=4 | B=8 | B=16 |
+|---|---|---|---|---|---|
+| `reuse_latest_srcnorm`（零 target 数据） | 0.407 ± 0.091 | 0.407 ± 0.091 | 0.407 ± 0.092 | 0.407 ± 0.092 | 0.407 ± 0.092 |
+| `reuse_latest_calnorm`（reuse + B-trial 统计量） | 0.396 ± 0.062 | 0.457 ± 0.076 | 0.508 ± 0.086 | 0.541 ± 0.092 | 0.548 ± 0.093 |
+| `mean_table_calnorm` | 0.428 ± 0.059 | 0.477 ± 0.056 | 0.511 ± 0.051 | 0.533 ± 0.053 | 0.532 ± 0.053 |
+| `mean_loso_calnorm` | 0.413 ± 0.058 | 0.459 ± 0.055 | 0.490 ± 0.050 | 0.511 ± 0.051 | 0.510 ± 0.052 |
+| `rownorm_ridge`（闭式，block-free 选择） | 0.201 ± 0.014 | 0.277 ± 0.020 | 0.381 ± 0.029 | 0.514 ± 0.049 | 0.578 ± 0.047 |
+| `ui_prior_latest_calnorm`（非部署） | 0.355 ± 0.047 | 0.445 ± 0.065 | 0.553 ± 0.067 | 0.666 ± 0.073 | 0.724 ± 0.073 |
+| `ui_prior_mean_calnorm`（非部署） | 0.346 ± 0.037 | 0.437 ± 0.045 | 0.549 ± 0.054 | 0.673 ± 0.068 | 0.730 ± 0.068 |
+| **prior = own（最新 source session 表）** | | | | | |
+| `cal_p0_own` | 0.386 ± 0.056 | 0.455 ± 0.071 | 0.512 ± 0.075 | 0.551 ± 0.080 | 0.557 ± 0.081 |
+| `cal_p1_own` | 0.390 ± 0.063 | 0.456 ± 0.075 | 0.510 ± 0.081 | 0.546 ± 0.087 | 0.552 ± 0.089 |
+| `cal_p2_own` | 0.387 ± 0.060 | 0.452 ± 0.074 | 0.509 ± 0.078 | 0.546 ± 0.083 | 0.552 ± 0.084 |
+| `cal_p4_own` | 0.387 ± 0.060 | 0.454 ± 0.074 | 0.510 ± 0.079 | 0.548 ± 0.084 | 0.553 ± 0.087 |
+| **prior = mean（其余受试者的均值表）** | | | | | |
+| `cal_p0_mean` | 0.409 ± 0.050 | 0.475 ± 0.050 | 0.533 ± 0.052 | 0.575 ± 0.057 | 0.581 ± 0.060 |
+| `cal_p1_mean` | 0.401 ± 0.051 | 0.462 ± 0.046 | 0.519 ± 0.046 | 0.563 ± 0.053 | 0.568 ± 0.053 |
+| `cal_p2_mean` | 0.405 ± 0.053 | 0.469 ± 0.049 | 0.526 ± 0.049 | 0.570 ± 0.054 | 0.576 ± 0.057 |
+| `cal_p4_mean` | 0.410 ± 0.051 | 0.471 ± 0.048 | 0.526 ± 0.052 | 0.569 ± 0.057 | 0.574 ± 0.060 |
+| **identity-free（零 prior，无 prior 列）** | | | | | |
+| `cal_p0_free` | 0.311 ± 0.040 | 0.373 ± 0.047 | 0.457 ± 0.054 | 0.532 ± 0.059 | 0.558 ± 0.057 |
+| `cal_p1_free` | 0.308 ± 0.042 | 0.376 ± 0.046 | 0.462 ± 0.052 | 0.542 ± 0.057 | 0.568 ± 0.057 |
+| `cal_p2_free` | 0.326 ± 0.042 | 0.393 ± 0.046 | 0.477 ± 0.053 | 0.556 ± 0.057 | 0.579 ± 0.057 |
+| `cal_p4_free` | 0.323 ± 0.043 | 0.394 ± 0.046 | 0.480 ± 0.050 | 0.557 ± 0.054 | 0.578 ± 0.052 |
+
+macro-F1 与 balanced accuracy 同序（`db6_original_table_macro_f1.csv`：例如 B=16 `cal_p0_mean` 0.569、`cal_p2_free` 0.565、ridge 0.578、ui_prior_latest 0.719、reuse 0.540）。按 gap（B=16，`db6_original_gap_table_bal_acc.csv`）：`cal_p4_own` 0.579/0.574/0.507（gap 1/2/3，与 reuse 0.582/0.568/0.494 同形，随 gap 下降），`cal_p0_mean` 0.593/0.594/0.557，`cal_p2_free` 0.580/0.601/0.557，ridge 0.568/0.583/0.582，ui_prior_latest 0.729/0.737/0.706。
+
+### 4.3 配对差（a − b，n=10 受试者，95% CI；全表见 `db6_original_paired.csv`）
+
+| a | b | B=1 | B=2 | B=4 | B=8 | B=16 |
+|---|---|---|---|---|---|---|
+| `cal_p0_mean` | best deployable | -0.020 ± 0.021 | -0.002 ± 0.024 | +0.022 ± 0.027 | +0.035 ± 0.067 | +0.003 ± 0.022 |
+| `cal_p4_mean` | best deployable | -0.018 ± 0.019 | -0.006 ± 0.023 | +0.015 ± 0.028 | +0.028 ± 0.069 | -0.004 ± 0.018 |
+| `cal_p4_own` | best deployable | -0.041 ± 0.049 | -0.023 ± 0.056 | -0.000 ± 0.062 | +0.007 ± 0.024 | -0.024 ± 0.065 |
+| `cal_p2_free` | best deployable | -0.102 ± 0.030 | -0.085 ± 0.026 | -0.034 ± 0.023 | +0.016 ± 0.072 | +0.002 ± 0.024 |
+| `cal_p4_free` | best deployable | -0.106 ± 0.029 | -0.083 ± 0.028 | -0.031 ± 0.027 | +0.016 ± 0.075 | -0.000 ± 0.025 |
+| `cal_p0_mean` | `mean_loso_calnorm` | -0.004 ± 0.024 | +0.016 ± 0.030 | +0.043 ± 0.034 | +0.065 ± 0.034 | +0.071 ± 0.034 |
+| `cal_p4_mean` | `mean_loso_calnorm` | -0.002 ± 0.022 | +0.012 ± 0.028 | +0.036 ± 0.035 | +0.058 ± 0.035 | +0.064 ± 0.036 |
+| `cal_p4_own` | `reuse_latest_calnorm` | -0.009 ± 0.010 | -0.003 ± 0.012 | +0.002 ± 0.017 | +0.007 ± 0.024 | +0.005 ± 0.024 |
+| `cal_p0_mean` | `ui_prior_latest_calnorm` | +0.053 ± 0.026 | +0.030 ± 0.033 | -0.020 ± 0.034 | -0.090 ± 0.029 | -0.143 ± 0.029 |
+| `cal_p4_own` | `ui_prior_latest_calnorm` | +0.031 ± 0.021 | +0.009 ± 0.024 | -0.042 ± 0.033 | -0.118 ± 0.047 | -0.171 ± 0.050 |
+| `cal_p4_free` | `ui_prior_latest_calnorm` | -0.033 ± 0.034 | -0.051 ± 0.048 | -0.073 ± 0.050 | -0.109 ± 0.041 | -0.147 ± 0.040 |
+
+best deployable（事后按 B 在受试者均值上挑）：B=1/2/4 `mean_table_calnorm`，B=8 `reuse_latest_calnorm`，B=16 `rownorm_ridge`。
+
+变体之间（`db6_original_variant_pairs.csv`）：identity-free 下 P2 − P0 = +0.015 ± 0.008 / +0.019 ± 0.008 / +0.020 ± 0.009 / +0.024 ± 0.010 / +0.021 ± 0.010，P4 − P0 = +0.012 ± 0.012 … +0.025 ± 0.012，P4 − P2 在 ±0.004 内，P1 − P0 在 −0.002 … +0.010 内；`mean`：P2 − P0 = −0.003 … −0.007、P4 − P0 = +0.002 … −0.007（均不显著），P1 − P0 = −0.008 … −0.014；`own`：|P_x − P0| <= 0.005。
+
+### 4.4 解读
+
+- DB6 上固定权重 calibrator 的实际价值很低：`own` prior（最新 source session 表）下 calibrator 退化为 prior 本身（source validation 无提升，lr 扫描也无提升）；`mean` prior 下 calibrator 比 “未校准的 mean 表” 好 0.04–0.07（B>=4），但仍只是追平 reuse/ridge，不超过；identity-free 下追平 ridge/reuse（B>=8）但小 B 很差。三者在 B=16 都约在 0.56–0.58，离 ui_prior 的 0.72 还有 0.14–0.17。
+- 这与 Hyser 的结论方向一致：已知身份且 prior 强（`own`）时固定权重 calibrator 只在最小 B 有一点点收益（Hyser）或没有收益（DB6），prior 弱/缺失时（`mean`、identity-free）calibrator 能显著提升，但提升到的水平仍低于最强的可部署基线或持平。DB6 的 `own` prior 弱于 Hyser（同日 T1/T2 的漂移已与跨天同量级，见 v2 报告），而 calibrator 训练样本只有 19 个 session 级对。
+- pooling：identity-free 下稳定正向但很小（+0.02），已知身份时为 0；这与 000688 的 “已知映射时 pooling 无增益” 一致，也支持 “pooling 的价值来自缺失的身份信息”。
 
 ## 5. 局限与未做
 
-- **DB6 评测未做**（见第 4 节）。
-- Hyser `own` 模式的训练 prior 是 stale 替身（table 空间的混合 + 噪声），不是真实 session1->session2 漂移；真实漂移主要是输入空间的空间模式变化，而不是表的变化。这解释不了也无法排除 “B>=5 时 calibrator 比 ridge 低” 的原因之一：训练分布与真实漂移不匹配。没有做真实漂移的验证（Hyser 只有一个 source session/受试者）。
-- Hyser source 数据：每个 fold 只有 13 个训练受试者；train/test 的 mean prior 个数略不同（训练 12–15 张表，测试 19 张）。
-- 只做了 P0/P1/P2/P4；P3、P-oracle（Q-B 诊断）、行增益/偏移、`_nolab` 标签对照没有做。calibrator 没有 unit/channel dropout。
-- 超参数（lr、patience、hidden=64、stale 强度、B 分布）在 Hyser 上都是事先固定的，没有调。DB6 `own` 的 source-val 无提升，本来想用小的 lr 扫描（3e-4、1e-4，只看 source val）排除 “学习率过大” 的解释，但 GPU 失效时扫描刚启动，没有结果。
-- CI 以 target/subject 为单位，不含 backbone seed 与 calibrator 训练 seed 的方差（每个 backbone seed 只训练一个 calibrator）；2.4 节给出了 seed spread。
+- **GPU 失效后的 CPU 回退（DB6 评测与 lr 扫描）：** CPU 端口与 Triton kernel 在个别行上差 0.02–0.07（bf16 舍入翻转，集中在含近死通道的受试者），均值偏差 −0.0007；参照行（reuse/mean/ridge/ui_prior）取自 GPU 存档，calibrator 行取自 CPU，所以 “calibrator − 参照” 的差里含这个 CPU/GPU 噪声（量级 0.002 的均值绝对偏差，对 0.02–0.07 的效应量可忽略）。已用 `chk_*` 行把同一流水线重算的 `reuse_latest_calnorm`/`mean_table_calnorm` 与存档对照。
+- 打乱顺序的 DB6 诊断只做了 seed 0、B in {4,16}、3 个 draw（CPU 时间）；`ui_prior` 的打乱顺序参照行不存在。
+- Hyser `own` 模式的训练 prior 是 stale 替身（table 空间的混合 + 噪声），不是真实 session1->session2 漂移；真实漂移主要是输入空间的空间模式变化。这是 Hyser `own` 在 B>=5 时低于 ridge 的可能原因之一，没有验证（Hyser 只有一个 source session/受试者，无法得到真实的跨 session 训练对）。
+- Hyser source 数据：每个 fold 只有 13 个训练受试者；train/test 的 mean prior 张数略不同（训练 12–15 张，测试 19 张）。DB6 只有 19–29 个训练 session，calibrator 容易在 session 层过拟合（best step 250–3150，`own` 在 source val 上无提升）。
+- 只做了 P0/P1/P2/P4；P3、P-oracle（Q-B 诊断）、行增益/偏移、`_nolab` 标签对照没有做。calibrator 没有 unit/channel dropout。DB6 的 lr 扫描只做了 `own`/P0,P4/seed 0（CPU）；`mean`、`free` 没有扫。
+- 超参数（lr 1e-3、patience、hidden=64、Hyser stale 强度、B 分布）在 Hyser 上是事先固定的，没有调。
+- CI 以 target/subject 为单位，不含 backbone seed 与 calibrator 训练 seed 的方差（每个 backbone seed 只训练一个 calibrator，Hyser 是每个 fold 一个）；seed spread 见 2.4 和 0.1 第 5 条。
 - Gram 累加器 SRAM 远大于 32 KB（第 3 节）；Gram-free 替代没有评测。
-- Hyser 前端不是因果的（见上）。DB6 v2 的 trial 打乱拼接点保留了前一个 trial 的包络衰减尾（v2 review：约 0.006 的弱 “同一抓取” 线索）；本模块沿用 `reorder_stream` 的原始拼接，没有做 review 建议的连续性修正，backbone 训练本身也有这个线索。
-- 事后挑选的 “best deployable” 基线对基线有利，但它是按 target 均值选的，与配对 CI 一起读。
+- Hyser 前端不是因果的（见第 1 节）。DB6 v2 的 trial 打乱拼接点保留了前一个 trial 的包络衰减尾（v2 review：约 0.006 的弱 “同一抓取” 线索）；本模块沿用 `reorder_stream` 的原始拼接，没有做 review 建议的连续性修正（backbone 训练本身也带这个线索，修正需要重训 backbone）。
+- 事后挑选的 “best deployable” 基线对基线有利；它是按 target/受试者均值选的，需与配对 CI 一起读。
+- 没有更新 Overleaf exp-log、没有 GDrive 备份、没有 push。
 
-## 6. 阻塞
+## 6. 异常
 
-2026-10-16 约 06:00 起，cuda:1 上 `torch.cuda.is_available()` 为 False（`nvidia-smi` 报 GPU 0 Unknown Error，驱动级失败，需要 root 重置），DB6 评测无法运行；Mamba-3 的 CPU 端口（`mamba3_cpu.py`）只支持 128 bin 的固定窗口、不带状态，无法做 35.7k bin 的整段解码，所以没有 CPU 回退。
+2026-10-16 约 06:00，cuda:1 的 CUDA 驱动失效（`torch.cuda.is_available()` False，`nvidia-smi` 报 GPU0 Unknown Error，需要 root 重置）。当时 DB6 calibrator 训练已完成、Hyser 全部完成，只剩 DB6 评测。回退方案：`mamba3_cpu.CPUDecoder`（已有的 CPU 端口，SSM 状态在 64-bin chunk 间携带）去掉 128 bin 窗口限制后整段解码，并与存档 GPU 行对照（见第 5 节首条）。DB6 lr 扫描用了同一 CPU 端口的可微版本（输入可微、权重为常数）训练。
 
 ## 7. 文件
 
-本目录：`hyser_table.csv`（所有方法 x B 的均值与 CI）、`hyser_paired.csv`、`hyser_variant_pairs.csv`、`hyser_seed_table.csv`、`hyser_tables.md`、`training_summary.csv`（每个 calibrator 的 source-val、best step）、`h_flags.json`、`cost_model.{json,csv}`。
+本目录：`hyser_table.csv`（所有方法 x B 的均值与 CI）、`hyser_paired.csv`、`hyser_variant_pairs.csv`、`hyser_seed_table.csv`、`hyser_tables.md`；`db6_original_{table_bal_acc,table_macro_f1,gap_table_bal_acc,seed_table_bal_acc,paired,variant_pairs}.csv`、`db6_original_tables.md`、`db6_shuffled_{table_bal_acc,paired}.csv`、`db6_shuffled_tables.md`、`db6_cpu_vs_gpu_check_original.json`；`training_summary.csv`（每个 calibrator 的 source-val 与 best step，含 DB6 lr 扫描）、`h_flags.json`、`cost_model.{json,csv}`。
 
-复现（Hyser）：`python scripts/run_semg_calib.py train hyser --seed S`（6 小时量级，120 个 run/2 seed，GPU 拥挤时更慢），`python scripts/run_semg_calib.py eval hyser --seed S --check`，`python scripts/summarize_semg_calib.py hyser`，`python scripts/summarize_semg_calib_meta.py`，`python scripts/semg_cost_report.py`。测试：`pytest tests/test_semg_calib.py`。
+复现：`python scripts/run_semg_calib.py train hyser --seed S`（120 个 run/2 seed，GPU 拥挤时数小时）-> `eval hyser --seed S --check`；`train db6 --seed S --db6-ckpt results/db6_v2_20261016/final/seed{seed}/best.pt --out-tag db6v2 --std-floor 0.01` -> `eval db6 --seed S ... --order original --check-ref [--device cpu --threads N]`（`--targets 1-10`；默认 `1-20` 是 Hyser 的范围，DB6 跑完 10 名受试者后会在 11 报错退出，不影响已写出的行）；`python scripts/summarize_semg_calib.py {hyser,db6}`、`scripts/summarize_semg_calib_meta.py`、`scripts/semg_cost_report.py`。测试：`pytest tests/test_semg_calib.py`（21 项）。

@@ -1,4 +1,25 @@
 {
+ "db6v2/seed0/rows_original.jsonl": {
+  "rows": 18000,
+  "h1_pass": 18000,
+  "h2_pass": 18000,
+  "h4_pass": 18000,
+  "h5_pass": 18000
+ },
+ "db6v2/seed0/rows_shuffled.jsonl": {
+  "rows": 5064,
+  "h1_pass": 5064,
+  "h2_pass": 5064,
+  "h4_pass": 5064,
+  "h5_pass": 5064
+ },
+ "db6v2/seed1/rows_original.jsonl": {
+  "rows": 18000,
+  "h1_pass": 18000,
+  "h2_pass": 18000,
+  "h4_pass": 18000,
+  "h5_pass": 18000
+ },
  "hyser/seed0/rows.jsonl": {
   "rows": 7680,
   "h1_pass": 7680,

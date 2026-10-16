@@ -53,7 +53,10 @@ class Db6StreamEnv:
 
     def __init__(self, ckpt, device="cuda:0", std_floor=None, n_copies=6):
         """``std_floor``: relative floor (x median channel std) of the B-trial z-score statistics; default = the
-        backbone's training floor.  The same value is used in calibrator training episodes and at the target."""
+        backbone's training floor.  The same value is used in calibrator training episodes and at the target.
+        ``device='cpu'`` uses the CPU port of the frozen trunk (slower; only for GPU-less training)."""
+        if device == "cpu":
+            return self._init_cpu(ckpt, std_floor, n_copies)
         self.dev = torch.device(device)
         self.model, blob = db6b.load_backbone(ckpt, device=device)
         self.blob = blob
@@ -64,6 +67,9 @@ class Db6StreamEnv:
         self.src = db6b.SourceSet(self.keys, tau_ms=self.tau)
         self.tables = torch.stack([t.detach() for t in self.model.tables]).to(self.dev)
         self.k = self.model.k
+        self._finish_init(floor, n_copies)
+
+    def _finish_init(self, floor, n_copies):
         self.spec = SemgSpec("db6", 14, self.k, db6b.N_CLASS, (0,), std_floor_ref="median", std_floor=floor)
         self.out_scale = table_rms(self.tables)
         self.sess = [StreamStore(s, self.spec, self.dev) for s in self.src.sess]      # per-trial sums (any order)
@@ -82,6 +88,37 @@ class Db6StreamEnv:
             self.copies.append(row)
         self.subject = [k[0] for k in self.keys]
         self.val_sess = sorted({db6b.latest_source_index(self.keys, s) for s in set(self.subject)})
+
+    def _init_cpu(self, ckpt, std_floor, n_copies):
+        """Training environment without a GPU (CPU port of the frozen trunk; weights are constants)."""
+        import types
+        self.dev = torch.device("cpu")
+        blob = torch.load(ckpt, map_location="cpu", weights_only=False)
+        self.blob = blob
+        self.keys = [tuple(k) for k in blob["keys"]]
+        assert self.keys == db6b.source_keys()
+        self.tau = blob["cfg"]["tau_ms"]
+        floor = float(std_floor) if std_floor is not None else blob["cfg"].get("std_floor_train", db6b.TRAIN_STD_FLOOR)
+        sd = blob["state_dict"]
+        self.tables = torch.stack([sd[f"tables.{i}"].detach().cpu() for i in range(len(self.keys))])
+        self.k = int(blob["cfg"]["k"])
+        self.model = types.SimpleNamespace(base=TrainableCpuTrunk(sd), parameters=lambda: [], k=self.k)
+        self.cpu_decode = _LongCpuDecoder(sd)
+        self.src = db6b.SourceSet(self.keys, tau_ms=self.tau)
+        self._finish_init(floor, n_copies)
+
+    def decode(self, z):
+        """z [M,T,K] -> logits [M,T,8] (numpy), one contiguous causal pass per row."""
+        if getattr(self, "cpu_decode", None) is not None:
+            with torch.no_grad():
+                outs, step = [], max(1, 200_000 // z.shape[1])
+                for lo in range(0, z.shape[0], step):
+                    outs.append(self.cpu_decode(z[lo:lo + step]))
+            return torch.cat(outs).numpy()
+        return db6b.decode_z(self.model.base, z)
+
+    def trunk_hash(self):
+        return db6b.trunk_hash(self.model)
 
     # -- priors -----------------------------------------------------------------
     def earlier(self, j):
@@ -186,7 +223,86 @@ class Db6StreamEnv:
                 st = self.sess[j].stats(e["cal"])          # sums of the calibration trials (original indices)
                 table, mean, std = forward_table(calib, st, e["prior"], grad=False)
                 zs.append(((xs - mean) / std) @ table.T)
-            logits = db6b.decode_z(self.model.base, torch.stack(zs))
+            logits = self.decode(torch.stack(zs))
             for i in range(len(group)):
                 scores.append(db6b.score_stream(logits[i], S, self.src.val_idx_shuf[j])["bal_acc"])
         return float(np.mean(scores))
+
+
+# ------------------------------------------------------------ CPU eval fallback ----
+
+class _LongCpuDecoder:
+    """The pinned-Mamba-3 CPU port (``mamba3_cpu.CPUDecoder``) with the 128-bin window guard lifted.
+
+    The port already carries the SSM state across its internal 64-bin chunks, so a full stream is decoded in one
+    causal pass exactly like the Triton kernel up to bf16 rounding (checked against stored GPU rows by the
+    ``--check-ref`` rows of the eval script).
+    """
+
+    def __init__(self, state_dict):
+        from .mamba3_cpu import CPUDecoder
+
+        class Long(CPUDecoder):
+            context = 10 ** 9
+
+        sd = {k[5:]: v.detach().cpu() for k, v in state_dict.items() if k.startswith("base.")}
+        self.dec = Long.from_state_dict(sd)
+        import hashlib
+        h = hashlib.sha256()
+        for k in sorted(sd):
+            h.update(sd[k].numpy().tobytes())
+        self.hash = h.hexdigest()
+
+    def __call__(self, z):
+        return self.dec.forward(z.float().cpu())
+
+
+class TrainableCpuTrunk(_LongCpuDecoder):
+    """Differentiable (w.r.t. its input only) variant of the CPU trunk: used for source-side episodic training
+    when no GPU is available.  The trunk weights are constants."""
+
+    def __call__(self, z):
+        from .mamba3_cpu import _ln, _linear
+        import torch.nn.functional as F
+        d = self.dec
+        h = _linear(z.float(), d.in_w, d.in_b)
+        for b in d.blocks:
+            h = h + d._core(_ln(h, b.norm1_w, b.norm1_b), b)
+            h = h + _linear(F.silu(_linear(_ln(h, b.norm2_w, b.norm2_b), b.ff1_w, b.ff1_b)), b.ff2_w, b.ff2_b)
+        return _linear(_ln(h, d.final_w, d.final_b), d.out_w, d.out_b)
+
+
+class Db6CpuEnv:
+    """Eval-only DB6 environment on CPU (no training, no source streams): used when no GPU is available."""
+    kind = "db6"
+
+    def __init__(self, ckpt, std_floor=None):
+        self.dev = torch.device("cpu")
+        blob = torch.load(ckpt, map_location="cpu", weights_only=False)
+        self.blob = blob
+        self.keys = [tuple(k) for k in blob["keys"]]
+        assert self.keys == db6b.source_keys()
+        self.tau = blob["cfg"]["tau_ms"]
+        self.k = int(blob["cfg"]["k"])
+        floor = float(std_floor) if std_floor is not None else blob["cfg"].get("std_floor_train", db6b.TRAIN_STD_FLOOR)
+        sd = blob["state_dict"]
+        self.tables = torch.stack([sd[f"tables.{i}"].detach().cpu() for i in range(len(self.keys))])
+        self.spec = SemgSpec("db6", 14, self.k, db6b.N_CLASS, (0,), std_floor_ref="median", std_floor=floor)
+        self.out_scale = table_rms(self.tables)
+        self.subject = [k[0] for k in self.keys]
+        self.val_sess = sorted({db6b.latest_source_index(self.keys, s) for s in set(self.subject)})
+        self.trunk = _LongCpuDecoder(sd)
+        self.tables_ref = self.tables
+
+    prior_for = Db6StreamEnv.prior_for
+    earlier = Db6StreamEnv.earlier
+
+    def decode(self, z):
+        outs = []
+        step = max(1, 200_000 // z.shape[1])
+        for lo in range(0, z.shape[0], step):
+            outs.append(self.trunk(z[lo:lo + step]))
+        return torch.cat(outs).numpy()
+
+    def trunk_hash(self):
+        return self.trunk.hash

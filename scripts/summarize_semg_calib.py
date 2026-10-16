@@ -182,7 +182,10 @@ def load_db6(order="original", seeds=(0, 1), tag="db6v2"):
         q = RES / tag / f"seed{s}" / f"rows_{order}.jsonl"
         if q.exists():
             rows += [{k: r.get(k) for k in keep} for r in read_jsonl(q) if r["method"].startswith("cal_")]
-    return pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+    if order == "shuffled" and len(df):            # the shuffled diagnostic only covers B in {4,16}, draws 0-2
+        df = df[df.B.isin([4, 16]) & (df.draw < 3)]
+    return df
 
 
 def per_subject(df, metric):
@@ -240,14 +243,15 @@ def db6_main(order="original", tag="db6v2", suffix=""):
     st.to_csv(RES / f"db6_{order}{suffix}_seed_table_bal_acc.csv", index=False)
     methods = sorted(m for m in df.method.unique() if m.startswith("cal_"))
     tab = out["bal_acc"]
+    bs = sorted(int(b) for b in df.B.unique())
     best = {B: max(tab[(tab.method.isin(DB6_DEPLOYABLE)) & (tab.B == B)].set_index("method")["bal_acc_mean"].items(),
-                   key=lambda kv: kv[1]) for B in DB6_B}
+                   key=lambda kv: kv[1]) for B in bs}
     pr = []
     pt = per_subject(df, "bal_acc").pivot_table(index=["B", "subject"], columns="method", values="val")
     for m in methods:
         for ref in DB6_DEPLOYABLE + ["ui_prior_latest_calnorm", "ui_prior_mean_calnorm"]:
             pr += db6_paired(df, m, ref, "bal_acc")
-        for B in DB6_B:
+        for B in bs:
             bn = best[B][0]
             d = (pt.loc[B][m] - pt.loc[B][bn]).dropna().values
             mu, ci = tci(d)
@@ -263,6 +267,53 @@ def db6_main(order="original", tag="db6v2", suffix=""):
     return df, out, st, pd.DataFrame(pr), best
 
 
+def db6_markdown(out, st, pr, order="original", suffix=""):
+    budgets = [int(b) for b in sorted(out["bal_acc"].B.unique())]
+    cal = sorted(m for m in out["bal_acc"].method.unique() if m.startswith("cal_"))
+    order_m = ["reuse_latest_srcnorm", "reuse_latest_calnorm", "mean_table_calnorm", "mean_loso_calnorm", "rownorm_ridge",
+               "ui_prior_latest_calnorm", "ui_prior_mean_calnorm"] + cal
+    md = md_table(out["bal_acc"], "bal_acc", order_m, budgets,
+                  f"DB6 v2 ({order} order) per-bin balanced accuracy, mean ± 95% CI over 10 subjects (all gaps)")
+    md += "\n" + md_table(out["macro_f1"], "macro_f1", order_m, budgets, f"DB6 v2 ({order} order) macro-F1")
+    sp = st.set_index(["method", "B"])["seed_spread"].unstack("B")
+    md += "\n### Backbone-seed spread of the subject-mean balanced accuracy\n\n" + df_md(sp.round(3)) + "\n"
+    sel = pr[pr.b.str.startswith("best_deployable")]
+    piv = sel.assign(cell=lambda d: d.diff_mean.map("{:+.3f}".format) + " ± " + d.diff_ci95.map("{:.3f}".format)) \
+        .pivot_table(index="a", columns="B", values="cell", aggfunc="first")
+    md += "\n### Paired difference to the best deployable baseline per B (post hoc on subject means)\n\n" + df_md(piv)
+    (RES / f"db6_{order}{suffix}_tables.md").write_text(md)
+    return md
+
+
+def db6_cpu_check(order="original", tag="db6v2"):
+    """Agreement of the CPU-decoded chk_* rows with the stored GPU reference rows (same draws)."""
+    ref_dir = {"original": "eval_seed{s}", "shuffled": "extra_shuffled_order_seed{s}"}[order]
+    diffs = []
+    for s in (0, 1):
+        ref = {}
+        p = ROOT / "results/db6_v2_20261016" / ref_dir.format(s=s) / "rows.jsonl"
+        for r in read_jsonl(p):
+            if r["method"] in ("reuse_latest_calnorm", "mean_table_calnorm") and r["B"] in DB6_B:
+                ref[(r["target"], r["B"], r["draw"], r["method"])] = r
+        q = RES / tag / f"seed{s}" / f"rows_{order}.jsonl"
+        for r in read_jsonl(q):
+            if r["method"].startswith("chk_"):
+                g = ref.get((r["target"], r["B"], r["draw"], r["method"][4:]))
+                if g is None:
+                    continue
+                assert g["cal_trials"] == r["cal_trials"]
+                diffs.append({"seed": s, "method": r["method"][4:], "B": r["B"], "d_bal_acc": r["bal_acc"] - g["bal_acc"],
+                              "d_macro_f1": r["macro_f1"] - g["macro_f1"]})
+    d = pd.DataFrame(diffs)
+    if d.empty:
+        return {}
+    out = {"n": int(len(d)), "mean_d_bal_acc": float(d.d_bal_acc.mean()), "mean_abs_d_bal_acc": float(d.d_bal_acc.abs().mean()),
+           "max_abs_d_bal_acc": float(d.d_bal_acc.abs().max()), "frac_abs_gt_0.005": float((d.d_bal_acc.abs() > 0.005).mean()),
+           "by_B_mean_d": {int(b): float(v) for b, v in d.groupby("B").d_bal_acc.mean().items()}}
+    (RES / f"db6_cpu_vs_gpu_check_{order}.json").write_text(json.dumps(out, indent=1))
+    return out
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("dataset", choices=["hyser", "db6"])
@@ -272,6 +323,11 @@ if __name__ == "__main__":
             df, out, st, pr, best = db6_main(order)
             print(order)
             print(out["bal_acc"].pivot_table(index="method", columns="B", values="bal_acc_mean").round(3).to_string())
+            try:
+                print(db6_cpu_check(order))
+            except FileNotFoundError:
+                pass
+            db6_markdown(out, st, pr, order)
     if a.dataset == "hyser":
         df, tab, st, pr, base = hyser_main()
         piv = tab.pivot_table(index="method", columns="B", values="r2_mean")

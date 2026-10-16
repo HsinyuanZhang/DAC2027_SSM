@@ -24,7 +24,7 @@ from ssm_decode import db6_backbone as db6b  # noqa: E402
 from ssm_decode import hyser_backbone as hysb  # noqa: E402
 from ssm_decode.hyser_data import load_session  # noqa: E402
 from ssm_decode.semg_calib import VARIANTS, SemgCalibrator, norm_stats  # noqa: E402
-from ssm_decode.semg_calib_db6 import Db6StreamEnv, StreamStore  # noqa: E402
+from ssm_decode.semg_calib_db6 import Db6CpuEnv, Db6StreamEnv, StreamStore  # noqa: E402
 from ssm_decode.semg_calib_env import HyserEnv, SessStore, draw_hyser_cal, train_calibrator  # noqa: E402
 
 OUT = ROOT / "results" / "semg_calib_20261016"
@@ -84,8 +84,12 @@ def train_cmd(a):
 
 
 def db6_train_cmd(a):
-    require_gpu1()
-    env = Db6StreamEnv(backbone_ckpt("db6", a.seed, a.db6_ckpt), device="cuda:0", std_floor=a.std_floor)
+    if a.device == "cpu":
+        torch.set_num_threads(a.threads)
+        env = Db6StreamEnv(backbone_ckpt("db6", a.seed, a.db6_ckpt), device="cpu", std_floor=a.std_floor)
+    else:
+        require_gpu1()
+        env = Db6StreamEnv(backbone_ckpt("db6", a.seed, a.db6_ckpt), device="cuda:0", std_floor=a.std_floor)
     jobs = [(s, v) for s in a.sources.split(",") for v in a.variants.split(",")]
     jobs = [j for i, j in enumerate(jobs) if i % a.n_workers == a.worker]
     for source, variant in jobs:
@@ -108,13 +112,17 @@ def db6_train_cmd(a):
 
 
 def db6_eval_cmd(a):
-    require_gpu1()
-    dev = torch.device("cuda:0")
-    env = Db6StreamEnv(backbone_ckpt("db6", a.seed, a.db6_ckpt), device="cuda:0", std_floor=a.std_floor)
-    model = env.model
+    if a.device == "cpu":                       # fallback when the GPU is unavailable (documented in the README)
+        torch.set_num_threads(a.threads)
+        env = Db6CpuEnv(backbone_ckpt("db6", a.seed, a.db6_ckpt), std_floor=a.std_floor)
+        dev = torch.device("cpu")
+    else:
+        require_gpu1()
+        dev = torch.device("cuda:0")
+        env = Db6StreamEnv(backbone_ckpt("db6", a.seed, a.db6_ckpt), device="cuda:0", std_floor=a.std_floor)
     out = OUT / a.out_tag / f"seed{a.seed}"
     out.mkdir(parents=True, exist_ok=True)
-    rows_path = out / f"rows_{a.order}.jsonl"
+    rows_path = out / f"rows_{a.order}{a.rows_suffix}.jsonl"
     done = set()
     if rows_path.exists():
         for ln in rows_path.read_text().splitlines():
@@ -122,7 +130,7 @@ def db6_eval_cmd(a):
     lo, hi = (int(v) for v in a.targets.split("-"))
     sources, variants = a.sources.split(","), a.variants.split(",")
     calibs = {(s, v): load_calib(env, a.out_tag, a.seed, s, v, "all") for s in sources for v in variants}
-    h1_ref = db6b.trunk_hash(model)
+    h1_ref = env.trunk_hash()
     table_bytes = env.k * 14 * 2
     for subj in range(lo, hi + 1):
         li = db6b.latest_source_index(env.keys, subj)
@@ -153,9 +161,17 @@ def db6_eval_cmd(a):
                             res = calibs[(source, v)].calibrate(st, priors[source])
                             zs.append(((store.x - res.mean.float()) / res.std.float()) @ res.table.to(dev).T)
                             names.append((name, v, source, bool(res.grad_enabled_inside)))
+                    if a.check_ref:                    # recompute two stored reference rows with this very pipeline
+                        mean_c, std_c = norm_stats(st, env.spec.std_floor_ref, env.spec.std_floor)
+                        xc = (store.x - mean_c.float()) / std_c.float()
+                        for cname, ctab in (("chk_reuse_latest_calnorm", env.tables[li]),
+                                            ("chk_mean_table_calnorm", env.tables.mean(0))):
+                            if (tname, b, d, cname) not in done:
+                                zs.append(xc @ ctab.to(dev).T)
+                                names.append((cname, "ref", "ref", False))
                     if not zs:
                         continue
-                    logits = db6b.decode_z(model.base, torch.stack(zs))
+                    logits = env.decode(torch.stack(zs))
                     for i, (name, v, source, ge) in enumerate(names):
                         sc = db6b.score_stream(logits[i], S, q)
                         with rows_path.open("a") as fh:
@@ -163,7 +179,7 @@ def db6_eval_cmd(a):
                                 "target": tname, "subject": key[0], "day": key[1], "tod": key[2], "gap": key[1] - 2,
                                 "B": b, "draw": d, "seed": a.seed, "method": name, "variant": v, "source": source,
                                 "cal_trials": cal, "coverage": db6b.coverage(cal, S.grasp), "n_query": len(q), "order": a.order, **sc,
-                                "h1_trunk_unchanged": db6b.trunk_hash(model) == h1_ref, "h2_backprop_steps": 0,
+                                "h1_trunk_unchanged": env.trunk_hash() == h1_ref, "h2_backprop_steps": 0,
                                 "h2_grad_enabled_inside": ge, "h4_trials_used": len(cal),
                                 "table_bytes_fp16": table_bytes, "h5_pass": table_bytes <= 32 * 1024}) + "\n")
             print(f"[{time.strftime('%H:%M:%S')}] db6 seed{a.seed} {tname} done", flush=True)
@@ -276,6 +292,10 @@ def main():
         p.add_argument("--db6-ckpt", default=None, help="path template, {seed} is substituted")
         p.add_argument("--out-tag", default="db6v2")
         p.add_argument("--std-floor", type=float, default=None, help="db6: relative std floor of B-trial statistics")
+        p.add_argument("--device", default="cuda", choices=["cuda", "cpu"])
+        p.add_argument("--rows-suffix", default="", help="db6 eval: suffix of the rows file (scratch checks)")
+        p.add_argument("--threads", type=int, default=8)
+        p.add_argument("--check-ref", action="store_true", help="db6 eval: also recompute reuse_latest_calnorm and mean_table_calnorm")
         p.add_argument("--order", default="original", choices=["original", "shuffled"],
                        help="db6 eval: decode the target stream in recorded or trial-shuffled order")
         p.add_argument("--budgets", type=int, nargs="+", default=DB6_BUDGETS)

@@ -268,3 +268,44 @@ def test_hyser_folds_never_leak_heldout_subjects_into_training_or_priors():
         own = env.prior_for("own", s, train, rng)
         assert own.shape == base.shape and not torch.allclose(own, env.tables[s])   # stale surrogate, not the raw table
     assert seen_held == set(range(20))                  # every subject is held out exactly once
+
+
+def _random_trunk_state_dict(width=128, layers=2, state=32, k_in=8, out=8, seed=0):
+    g = torch.Generator().manual_seed(seed)
+    r = lambda *shape: torch.randn(*shape, generator=g) * 0.1  # noqa: E731
+    h = 2 * width
+    heads = h // 64
+    sd = {"base.in_proj.weight": r(width, k_in), "base.in_proj.bias": r(width),
+          "base.final_norm.weight": torch.ones(width), "base.final_norm.bias": torch.zeros(width),
+          "base.out_proj.weight": r(out, width), "base.out_proj.bias": r(out)}
+    for i in range(layers):
+        p = f"base.blocks.{i}."
+        ip_rows = 2 * h + 2 * state + 3 * heads + state // 4
+        sd.update({p + "norm1.weight": torch.ones(width), p + "norm1.bias": torch.zeros(width),
+                   p + "ssm.in_proj.weight": r(ip_rows, width), p + "ssm.dt_bias": r(heads),
+                   p + "ssm.B_bias": r(heads, 1, state), p + "ssm.C_bias": r(heads, 1, state), p + "ssm.D": r(heads),
+                   p + "ssm.B_norm.weight": torch.ones(state), p + "ssm.C_norm.weight": torch.ones(state),
+                   p + "ssm.out_proj.weight": r(width, h), p + "norm2.weight": torch.ones(width),
+                   p + "norm2.bias": torch.zeros(width), p + "ffn.0.weight": r(2 * width, width),
+                   p + "ffn.0.bias": r(2 * width), p + "ffn.2.weight": r(width, 2 * width), p + "ffn.2.bias": r(width)})
+    return sd
+
+
+def test_cpu_trunk_decodes_long_streams_causally_and_carries_state():
+    from ssm_decode.semg_calib_db6 import TrainableCpuTrunk, _LongCpuDecoder
+    sd = _random_trunk_state_dict()
+    trunk = _LongCpuDecoder(sd)
+    x = torch.randn(2, 400, 8)
+    full = trunk(x)
+    prefix = trunk(x[:, :260])
+    assert torch.allclose(full[:, :260], prefix, atol=1e-4)          # causal beyond the 128-bin guard of the port
+    other = x.clone(); other[:, 300:] += 5.0
+    assert torch.allclose(trunk(other)[:, :300], full[:, :300], atol=1e-4)
+    assert not torch.allclose(trunk(other)[:, 320:], full[:, 320:], atol=1e-3)
+    # the differentiable variant gives the same values and a gradient w.r.t. the input
+    tr = TrainableCpuTrunk(sd)
+    xg = x[:, :96].clone().requires_grad_(True)
+    out = tr(xg)
+    assert torch.allclose(out, trunk(x[:, :96]), atol=1e-5)
+    out.square().mean().backward()
+    assert xg.grad is not None and float(xg.grad.abs().sum()) > 0
