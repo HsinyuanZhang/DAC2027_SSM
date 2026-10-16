@@ -286,7 +286,7 @@ def main():
         p.add_argument("--steps-cap", type=int, default=4000)
         p.add_argument("--lr", type=float, default=1e-3)
         p.add_argument("--wd", type=float, default=1e-2)
-        p.add_argument("--targets", default="1-20")  # hyser: subjects 1-20; db6: subjects 1-10
+        p.add_argument("--targets", default=None)  # hyser: subjects 1-20 (default); db6: subjects 1-10 (default)
         p.add_argument("--draws", type=int, default=None)
         p.add_argument("--check", action="store_true")
         p.add_argument("--db6-ckpt", default=None, help="path template, {seed} is substituted")
@@ -300,6 +300,8 @@ def main():
                        help="db6 eval: decode the target stream in recorded or trial-shuffled order")
         p.add_argument("--budgets", type=int, nargs="+", default=DB6_BUDGETS)
     a = ap.parse_args()
+    if a.targets is None:
+        a.targets = "1-20" if a.dataset == "hyser" else "1-10"
     if a.draws is None:
         a.draws = 8 if a.dataset == "hyser" else 5
     if a.dataset == "hyser":
