@@ -170,11 +170,16 @@ class RefData:
 
 # ------------------------------------------------------------- methods ----
 
-def resolve_d(cfg, refdata, x_fit_feat):
-    """Latent dimension actually used: ``cfg['d']`` ('N' = all active input dimensions of the baseline day),
-    capped by the number of active input dimensions of the target fit data (FA / PCA need d <= dimensions)."""
+def resolve_d(cfg, refdata, x_fit_feat=None):
+    """Latent dimension of the FA / PCA spaces and of the latent -> AP-latent bridge: ``cfg['d']`` ('N' = all active
+    input dimensions of the *baseline day*).  It is a property of the reference day only and is NOT capped by the
+    number of active dimensions of the target fit data: a target with fewer active dimensions (fewer sorted units,
+    or a small calibration subset) gets a rank-deficient d_ref-dimensional latent (``fa_fit`` / ``pca_basis``
+    zero-pad the missing dimensions) that Procrustes / CCA map into the d_ref reference latent space, so the
+    baseline-day bridge stays exact at d = N_ref (second review, 2026-10-17; the earlier cap re-fitted the baseline
+    day and its bridge at the target's smaller dimension)."""
     d = refdata.n_active(cfg["inp"]) if cfg["d"] == "N" else int(cfg["d"])
-    return int(min(d, int((x_fit_feat.std(0) > 1e-6).sum())))
+    return int(min(d, refdata.n_active(cfg["inp"])))
 
 
 def run_method(kind, cfg, refdata, sd, idx_cal, *, use_all=False, align=True, seed=0):
@@ -197,7 +202,8 @@ def run_method(kind, cfg, refdata, sd, idx_cal, *, use_all=False, align=True, se
         res = pb.cca_readin(ref, x_feat, xs, cs, k=d, ridge=cfg["ridge"], t_phase=cfg["phases"],
                             transform=cfg["transform"])
     if res is not None:
-        res[4]["d_eff"] = d
+        res[4]["d_eff"] = d                                               # = reference-day latent dimension d_ref
+        res[4]["d_target_active"] = int((x_feat.std(0) > 1e-6).sum())     # active input dimensions of the target fit data
     return res
 
 

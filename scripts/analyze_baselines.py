@@ -51,8 +51,9 @@ REG = {
                             "B trials: neural only (input mean/std)", "no", True, True),
     "p0_native_eval": ("P0 (re-evaluated, native-query subset)", "ours",
                        "B trials: neural + behaviour labels", "no", True, True),
-    # Stabilizer: faithful input = electrode-pooled fixed channels; sorted-unit variant needs an ad-hoc unit matching
-    "stab_pool_a": (f"Stabilizer (a), electrode-pooled 96-ch input: {_ST}, B-trial data", "published", _T_NEURAL, "no", True, True),
+    # Stabilizer: closest-to-published input = electrode-pooled fixed channels (sorted spikes summed per electrode, a dataset-imposed
+    # approximation of the papers' threshold-crossing channels); sorted-unit variant needs an ad-hoc unit matching
+    "stab_pool_a": (f"Stabilizer (a), electrode-pooled input (sorted spikes summed per electrode): {_ST}, B-trial data", "published", _T_NEURAL, "no", True, True),
     "stab_pool_a_noalign": ("Stabilizer control (pooled): target FA, no rotation", "published-control", _T_NEURAL, "no", True, True),
     "stab_pool_b": (f"Stabilizer (b), pooled: {_ST}, all target-session trials", "published", _T_ALL_N, "no", False, False),
     "stab_a": (f"Stabilizer (a), sorted units + ad-hoc same-electrode unit matching: {_ST}, B-trial data", "published-variant",
@@ -88,7 +89,7 @@ REG = {
                         _T_NEURAL, "no", True, True),
     "apst_full_sel0307": ("APST-FULL (2014 retrain, seed 42; segment_08 chosen on source-OOS session 20140307, source-only)", "published",
                           _T_LABEL + " (MOVE-T4 profile)", "no", True, True),
-    "nomad_pooled": ("NoMAD, electrode-pooled 96-ch input (mean over 3 seeds)", "published",
+    "nomad_pooled": ("NoMAD, electrode-pooled input (sorted spikes summed per electrode; mean over 3 seeds)", "published",
                      "ALL target-session neural data, unlabeled", "YES (alignment net, target gradients)", False, False),
     "nomad_units_elec": ("NoMAD, sorted units re-ordered to day-0 columns by electrode (mean over 3 seeds)", "published-variant",
                          "ALL target-session neural data, unlabeled", "YES (alignment net, target gradients)", False, False),
@@ -231,7 +232,7 @@ def selection_table():
     return out, pd.DataFrame(sel)
 
 
-def bridge_table(prefix="sanity_v2"):
+def bridge_table(prefix="sanity_v3"):
     """Bridge ceiling: baseline-day session through each read-in path for the configurations used in the table."""
     rows = []
     for st in STRATA:

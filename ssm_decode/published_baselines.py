@@ -187,11 +187,15 @@ def _lstsq_affine(src: np.ndarray, dst: np.ndarray):
 
 
 def pca_basis(xz: np.ndarray, k: int) -> np.ndarray:
+    """Top-``k`` principal directions [N, k].  Only directions with non-zero variance are returned; the remaining
+    columns are exactly zero (a rank-deficient fit, e.g. a target with fewer active dimensions than the reference
+    latent dimension, must not receive arbitrary null-space directions that would pick up later activity)."""
     xc = xz - xz.mean(0)
-    _, _, vt = np.linalg.svd(xc, full_matrices=False)
-    basis = vt[:k].T                                     # [N, <=k]
-    if basis.shape[1] < k:                               # fewer directions than requested: zero-pad
-        basis = np.concatenate([basis, np.zeros((basis.shape[0], k - basis.shape[1]))], 1)
+    _, sv, vt = np.linalg.svd(xc, full_matrices=False)
+    rank = int((sv > 1e-8 * max(sv[0], 1e-300)).sum()) if len(sv) else 0
+    n_keep = min(k, rank)
+    basis = np.zeros((xz.shape[1], k))
+    basis[:, :n_keep] = vt[:n_keep].T
     return basis                                         # [N, k]
 
 

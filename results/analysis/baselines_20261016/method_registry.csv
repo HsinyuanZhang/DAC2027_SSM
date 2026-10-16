@@ -5,7 +5,7 @@ R1_stream,"P0 + R1-stream (readout ridge, level 2)",ours,B trials: neural + beha
 R3,"P0 + R3 (F7-J local update + readout ridge, optional level 3)",ours,B trials: neural + behaviour labels (forward replay),no (forward-only replay),True,True
 p_prior_native_eval,"P-prior (re-evaluated, native-query subset)",ours,B trials: neural only (input mean/std),no,True,True
 p0_native_eval,"P0 (re-evaluated, native-query subset)",ours,B trials: neural + behaviour labels,no,True,True
-stab_pool_a,"Stabilizer (a), electrode-pooled 96-ch input: FA + Procrustes on stable channels, B-trial data",published,B trials: neural only (no labels),no,True,True
+stab_pool_a,"Stabilizer (a), electrode-pooled input (sorted spikes summed per electrode): FA + Procrustes on stable channels, B-trial data",published,B trials: neural only (no labels),no,True,True
 stab_pool_a_noalign,"Stabilizer control (pooled): target FA, no rotation",published-control,B trials: neural only (no labels),no,True,True
 stab_pool_b,"Stabilizer (b), pooled: FA + Procrustes on stable channels, all target-session trials",published,ALL target usable trials: neural only (incl. query bins),no,False,False
 stab_a,"Stabilizer (a), sorted units + ad-hoc same-electrode unit matching: FA + Procrustes on stable channels, B-trial data",published-variant,B trials: neural only (no labels),no,True,True
@@ -28,7 +28,7 @@ apst_act_last,"APST ACT-only (last segment, source-only rule; seed 42)",publishe
 apst_full_devsel,"APST-FULL (authors' dev-selected segment_09; days targets ARE APST's dev sessions, so optimistic)",published,B trials: neural + reach-direction labels (MOVE-T4 profile),no,True,True
 apst_act_devsel,"APST ACT-only (authors' dev-selected segment_08; days targets are APST dev sessions, optimistic)",published,B trials: neural only (no labels),no,True,True
 apst_full_sel0307,"APST-FULL (2014 retrain, seed 42; segment_08 chosen on source-OOS session 20140307, source-only)",published,B trials: neural + reach-direction labels (MOVE-T4 profile),no,True,True
-nomad_pooled,"NoMAD, electrode-pooled 96-ch input (mean over 3 seeds)",published,"ALL target-session neural data, unlabeled","YES (alignment net, target gradients)",False,False
+nomad_pooled,"NoMAD, electrode-pooled input (sorted spikes summed per electrode; mean over 3 seeds)",published,"ALL target-session neural data, unlabeled","YES (alignment net, target gradients)",False,False
 nomad_units_elec,"NoMAD, sorted units re-ordered to day-0 columns by electrode (mean over 3 seeds)",published-variant,"ALL target-session neural data, unlabeled","YES (alignment net, target gradients)",False,False
 ui_reg,ui_reg: L2-to-prior table fine-tune through trunk (from prior),reference,B trials: neural + behaviour labels,YES (through frozen trunk),True,False
 ref_p2,P0 + ui_reg (P2 rule),reference,B trials: neural + behaviour labels,YES (through frozen trunk),True,False
