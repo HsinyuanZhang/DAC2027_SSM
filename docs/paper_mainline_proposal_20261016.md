@@ -51,3 +51,4 @@
 
 1. 数据定位：**植入式（000688 + M2）为主，sEMG（Hyser / DB6）作为“通道身份未知”的场景与边界。**
 2. RTL 范围：**第 0–2 级必做**（prior + B-trial 归一化、P0 固定权重 encoder、R1-stream readout ridge）；**F7-J 只做架构级建模**，作为可选精修级的 Pareto 点。
+3. **（同日更正）RTL 不是重点。** 贡献 2 改为架构级分析：系统中有哪些算子；流式输入时各处的数据带宽；存内计算（MVM）的使用方式与占比；特殊算子（非线性、norm、softmax、describe 中的 log/sqrt/除法、SSM 递推中的 exp/softplus/旋转等）的优化。对应文档：`docs/arch_analysis_operators_dataflow_20261016.md`（进行中）。
