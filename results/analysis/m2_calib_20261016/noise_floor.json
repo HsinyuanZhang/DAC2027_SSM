@@ -1,0 +1,7 @@
+{
+ "p0: calibrator-seed SD (mean over seed,target,B)": 0.0072604291831748595,
+ "p0: backbone-seed SD (mean over cseed,target,B)": 0.018541264780564375,
+ "p0_r1s: calibrator-seed SD (mean over seed,target,B)": 0.007561225647754875,
+ "p0_r1s: backbone-seed SD (mean over cseed,target,B)": 0.018630361764067092,
+ "p_prior: backbone-seed SD (mean over target,B)": 0.023933497136911886
+}
