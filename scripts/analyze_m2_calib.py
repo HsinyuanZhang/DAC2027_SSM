@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import glob
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -21,24 +22,46 @@ ROOT = Path(__file__).resolve().parents[1]
 B_GRID = (1, 2, 4, 8, 16, 33)
 T975 = {1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571, 6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262,
         10: 2.228, 11: 2.201, 12: 2.179, 13: 2.160, 14: 2.145}
-MAIN = ["p_prior", "p_prior_scale", "p_prior_r1s", "p0", "p0_int8", "p0_r1s"]
+MAIN = ["p_prior", "p_prior_scale", "p_prior_r1s", "p0", "p0_int8", "p0_r1s", "p0_r1s_lr16", "p0_r1s_lr32"]
 ABL = ["p0_swap", "p0_nogain", "p0_nolab", "p0_r1s_nogain", "p0_r1s_nolab"]
-REF = ["p_prior_nobias", "p_prior_srcnorm"]
+REF = ["p_prior_nobias", "p_prior_srcnorm", "p0_cpu", "p0_r1s_cpu"]
+
+
+EVAL_KEY = ["variant", "seed", "pool", "cseed", "tag", "target", "B", "draw"]
+UI_KEY = ["variant", "seed", "pool", "cseed", "target", "B", "draw"]
+
+
+def read_jsonl(files):
+    rows = []
+    for f in sorted(files):
+        rows += [json.loads(l) for l in open(f) if l.strip()]
+    return pd.DataFrame(rows)
+
+
+def dedup(df, key):
+    """Keep the LAST row per key (a resumed/relaunched chain can append a cell twice).  Missing key
+    columns are filled with a constant so that the subset is always valid."""
+    if df.empty:
+        return df
+    d = df.copy()
+    for k in key:
+        if k not in d.columns:
+            d[k] = 0
+    keep = ~d.duplicated(subset=key, keep="last")
+    return df[keep].reset_index(drop=True)
 
 
 def load_rows(root: Path) -> pd.DataFrame:
-    rows = []
-    for f in glob.glob(str(root / "runs/seed*/pool*/c*/eval_rows.jsonl")):
-        rows += [json.loads(l) for l in open(f)]
-    df = pd.DataFrame(rows)
-    df = df.drop_duplicates(subset=["variant", "seed", "pool", "cseed", "tag", "target", "B", "draw"], keep="last")
-    ui = []
-    for f in glob.glob(str(root / "uireg/seed*/pool*/eval_uireg.jsonl")):
-        ui += [json.loads(l) for l in open(f)]
-    if ui:
-        u = pd.DataFrame(ui)
-        u["cseed"] = 0
-        df = pd.concat([df, u[[c for c in u.columns if c in df.columns]]], ignore_index=True)
+    """All eval rows: GPU runs, ui_reg rows and the CPU compact-R1 rows; every file type is de-duplicated."""
+    df = dedup(read_jsonl(glob.glob(str(root / "runs/seed*/pool*/c*/eval_rows.jsonl"))), EVAL_KEY)
+    lr = dedup(read_jsonl(glob.glob(str(root / "r1lr_cpu/seed*/pool*/c*/eval_rows.jsonl"))), EVAL_KEY)
+    if len(lr):
+        df = pd.concat([df, lr], ignore_index=True)
+    ui = read_jsonl(glob.glob(str(root / "uireg/seed*/pool*/eval_uireg.jsonl")))
+    if len(ui):
+        ui["cseed"] = 0
+        ui = dedup(ui, UI_KEY)
+        df = pd.concat([df, ui[[c for c in ui.columns if c in df.columns]]], ignore_index=True)
     return df
 
 
@@ -103,7 +126,17 @@ def paired(df, a, b, seeds):
         t = mb.groupby(["pool", "target"])[["ra", "rb"]].mean()
         d = t.ra - t.rb
         mean, ci = tci(d.values)
+        # noise views (review item 2): effects must be compared to the SE of the multi-seed mean / the seed SD
+        # of the paired difference, and to the POOL level (targets of one pool share a trunk: 3 independent
+        # trunks per backbone seed), not to the single-seed SD of absolute R2.
+        seed_means = du.groupby(level=0).mean()
+        seed_sd = float(seed_means.std(ddof=1)) if len(seed_means) > 1 else float("nan")
+        pm = d.groupby(level=0).mean()
+        pool_mean, pool_ci = tci(pm.values)
         rows.append({"a": a, "b": b, "B": B, "diff": mean, "ci95": ci, "n_targets": len(d),
+                     "seed_sd_paired": seed_sd, "se_seedmean": seed_sd / np.sqrt(len(seed_means)),
+                     "per_seed": {int(k): round(float(v), 4) for k, v in seed_means.items()},
+                     "pool_mean": pool_mean, "pool_ci95": pool_ci, "n_pools": len(pm),
                      "n_pos": int((d > 0).sum()), "n_seeds": int(mb.seed.nunique()), "n_units": len(du),
                      "n_pos_units": int((du > 0).sum()), "n_draws_per_cell": float(mb.groupby(
                          ["seed", "target"]).draw.nunique().mean()),
@@ -185,11 +218,15 @@ def md_cells(cells, variants):
 def md_paired(p):
     if p.empty:
         return ""
-    lines = ["| a − b | B | Δ R² ± CI(targets) | #targets>0 | #(seed,target)>0 | sign-flip p | per-pool Δ |",
-             "|---|---:|---:|---:|---:|---:|---|"]
+    lines = ["| a − b | B | #seeds | Δ R² ± CI(targets, df=n−1) | #targets>0 | #(seed,target)>0 | sign-flip p (units) | "
+             "seed SD of Δ | SE of seed mean | pool-level Δ ± CI(df=2) | per-pool Δ |",
+             "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|"]
     for _, r in p.iterrows():
+        sd_ = "-" if np.isnan(r.seed_sd_paired) else f"{r.seed_sd_paired:.3f}"
+        se_ = "-" if np.isnan(r.se_seedmean) else f"{r.se_seedmean:.3f}"
         lines.append(f"| {r.a} − {r.b} | {r.B} | {r.n_seeds} | {r['diff']:+.3f}±{r.ci95:.3f} | {r.n_pos}/{r.n_targets} | "
-                     f"{r.n_pos_units}/{r.n_units} | {r.p_signflip_units:.3f} | {r.per_pool} |")
+                     f"{r.n_pos_units}/{r.n_units} | {r.p_signflip_units:.3f} | {sd_} | {se_} | "
+                     f"{r.pool_mean:+.3f}±{r.pool_ci95:.3f} | {r.per_pool} |")
     return "\n".join(lines)
 
 
@@ -309,7 +346,11 @@ def main():
         pairs = [("p_prior_scale", "p_prior"), ("p0", "p_prior_scale"), ("p0_r1s", "p_prior_scale"), ("p0", "p_prior"), ("p0_r1s", "p_prior"), ("p0_r1s", "p0"), ("p_prior_r1s", "p_prior"),
                  ("p0_int8", "p0"), ("ui_reg", "p_prior"), ("ui_reg", "p0"), ("p0_nogain", "p0"),
                  ("p0_nolab", "p0"), ("p_prior", "p_prior_nobias"), ("p0_swap", "p_prior"), ("p0", "p0_swap"),
-                 ("p0_nogain", "p_prior"), ("p0_nolab", "p_prior")]
+                 ("p0_nogain", "p_prior"), ("p0_nolab", "p_prior"),
+                 # compact (budget-compliant) R1-stream variants, CPU rows, backbone seed 0 only
+                 ("p0_r1s_lr16", "p_prior"), ("p0_r1s_lr32", "p_prior"), ("p0_r1s_lr16", "p0"),
+                 ("p0_r1s_lr32", "p0"), ("p0_r1s_lr16", "p0_r1s"), ("p0_r1s_lr32", "p0_r1s"),
+                 ("p0_cpu", "p0"), ("p0_r1s_cpu", "p0_r1s")]
         ptab = pd.concat([paired(df, a, b, seeds) for a, b in pairs
                           if (df.variant == a).any() and (df.variant == b).any()], ignore_index=True)
         ptab.to_csv(out / f"paired_{'seed0' if seeds == [0] else 'allseeds'}.csv", index=False)
@@ -332,6 +373,14 @@ def main():
     pv.to_csv(out / "per_target_B8_seed0.csv")
     md.append("### Per target, B=8, backbone seed 0\n")
     md.append(df_md(pv[[c for c in variants if c in pv.columns]]) + "\n")
+    # SRAM working state of the R1-stream variants (fp32 tensor sizes; NOT a fixed-point hardware simulation)
+    sys.path.insert(0, str(ROOT))
+    from ssm_decode import m2_calib as m2
+    sram = pd.DataFrame([m2.r1_stream_bytes("full"), m2.r1_stream_bytes("diag"),
+                         m2.r1_stream_bytes("lowrank", 16), m2.r1_stream_bytes("lowrank", 32)])
+    sram.to_csv(out / "r1_sram_bytes.csv", index=False)
+    md.append("### R1-stream target-side SRAM working state (fp32 tensor sizes, budget 32768 B shared with the table)\n")
+    md.append(df_md(sram, index=False) + "\n")
     trdf, seldf = train_and_selection_tables(Path(args.root))
     trdf.to_csv(out / "train_summary.csv", index=False)
     seldf.to_csv(out / "r1_selection.csv", index=False)
@@ -343,6 +392,15 @@ def main():
         sd_ = seldf.assign(off=seldf.lam.isna()).groupby(["base", "B"]).agg(
             frac_off=("off", "mean"), mean_source_gain=("source_gain", "mean"), n=("off", "size"))
         md.append(df_md(sd_.round(4)) + "\n")
+    lrsel = []
+    for f in sorted(glob.glob(str(Path(args.root) / "r1lr_cpu/seed*/pool*/c*/selection_r1lr.json"))):
+        parts = Path(f).parts
+        for rank, per_b in json.loads(Path(f).read_text()).items():
+            for B, r in per_b.items():
+                lrsel.append({"seed": parts[-4][4:], "pool": parts[-3], "run": parts[-2], "rank": int(rank),
+                              "B": int(B), **{k: r[k] for k in ("lam", "burn", "source_r2", "source_r2_off", "n_episodes")}})
+    if lrsel:
+        pd.DataFrame(lrsel).to_csv(out / "r1lr_selection.csv", index=False)
     ut = uireg_selection_table(Path(args.root))
     if len(ut):
         ut.to_csv(out / "uireg_selection.csv", index=False)

@@ -1,5 +1,27 @@
 # Labeled-Calibration Round Results (2026-10-07, doc second revision)
 
+> ## 勘误（2026-10-16，独立审查后加入；原文未删除）：本文所有 D2（FALCON M2）数字作废
+>
+> **问题。** `scripts/run_labeled_calibration.py` 的 `d2` 分支在所有解码路径上都丢掉了 folded `in_proj` 的 K 维 bias：
+> 第 139、244、349、434、529–530 行都是 `z = x @ T.T`（没有 `+ bias`），而 prior 取的是 `adapter.model.in_proj.weight`
+> （第 181、287、396、505 行）。M2 backbone 的 root `in_proj` 是 `W0·diag(g)` 加 bias（`W0·o + b0 + e`），bias 是冻结 trunk 的一部分。
+>
+> **证据（seed 0，pool1，CPU 重算）。** 带 bias 的 folded model 在 source validation 上的 R² = 0.69226，
+> 与 manifest 的 `best_source_val_r2` = 0.69228 一致；去掉 bias 变成 0.6539（−0.038）。bias 的 L2 范数 1.005（rms 0.063）。
+> 后续 M2 回合（`results/analysis/m2_calib_20261016/README.md`）里，把 bias 加回后 prior 在 target 上提高 +0.060–0.072（`p_prior` vs `p_prior_nobias`，B=1…33，3 个 backbone seed，5/5 个 target 为正）。
+>
+> **对 calibrator 行的额外混淆。** 带 per-channel 偏置/残差输出的 calibrator（F2/F3/F7/F7F3）可能把缺失的 bias 一部分重新学回来：
+> bias 的 ‖b‖² 有 46% / 42% / 39%（seed 0，pool1/2/3）落在 prior table 的列空间里。因此 “calibrated − prior” 的差
+> 混入了“补偿丢失 bias”的部分，不能解读为对 target 的校准增益。
+>
+> **影响范围。**
+> * 作废：§2 中 D2（M2）表的全部绝对数字（F1/F2/F3/F7 与 “source-only prior” 行）；§3 的 G2 判定；§4 第 3 条（“M2 上 F7/F3 残差修正位于 source-only prior 水平”）。这些结论既不能当作成立，也不能当作被推翻，需要在带 bias 的协议下重做（M2 回合已经对 P-prior/P0/R1-stream/ui_reg 重做，但没有重新评测 F3/F7）。
+> * §3 的 G5 写 “H5 bytes … 9600 on D2 — all within 32 KB”，与行里实际的 `h5_bytes` = 98,304 B（K×N = 256×96 fp32）不符；D2 行在 fp32 下没有满足 32 KB（int8 才满足，25.6 KB）。
+> * D1（000688）部分不在本次审查范围，没有重新审计。
+>
+> **不修复。** `run_labeled_calibration.py` 是遗留脚本，不改逻辑（只在文件顶部加了一行警告注释）。替代结果见 `results/analysis/m2_calib_20261016/README.md`。
+
+
 Status: Q0–Q11 executed; this is the Q12 summary.  All rows carry H1–H5
 records; violations are recorded, never abort (shared-checks convention).
 

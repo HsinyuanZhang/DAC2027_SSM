@@ -35,6 +35,12 @@ mean over available backbone seeds,p0_r1s,4,0.3330512097978908,0.147622032835313
 mean over available backbone seeds,p0_r1s,8,0.33690699513413225,0.1457121348112287,5,3
 mean over available backbone seeds,p0_r1s,16,0.3453134308793501,0.14954360288673244,5,3
 mean over available backbone seeds,p0_r1s,33,0.36644877207120097,0.12854186593563163,5,3
+mean over available backbone seeds,p0_r1s_lr16,8,0.33943836398437555,0.15528823982547382,5,1
+mean over available backbone seeds,p0_r1s_lr16,16,0.3398426791368015,0.16400669972466833,5,1
+mean over available backbone seeds,p0_r1s_lr16,33,0.36501077933245024,0.1372973558562,5,1
+mean over available backbone seeds,p0_r1s_lr32,8,0.33945088119791866,0.15527660038507374,5,1
+mean over available backbone seeds,p0_r1s_lr32,16,0.34080403712945484,0.16308490611658286,5,1
+mean over available backbone seeds,p0_r1s_lr32,33,0.36666592060038283,0.13525899604554045,5,1
 mean over available backbone seeds,ui_reg,1,0.29661949273722443,0.1408042548886923,5,3
 mean over available backbone seeds,ui_reg,2,0.29865591026596183,0.13188565706215355,5,3
 mean over available backbone seeds,ui_reg,4,0.31906612351711305,0.11661214836919075,5,3
@@ -83,3 +89,9 @@ mean over available backbone seeds,p_prior_srcnorm,4,0.1782806489230459,0.152889
 mean over available backbone seeds,p_prior_srcnorm,8,0.17805728896445464,0.15279597739045517,5,3
 mean over available backbone seeds,p_prior_srcnorm,16,0.17796643510690316,0.1504264358776939,5,3
 mean over available backbone seeds,p_prior_srcnorm,33,0.1781208265105424,0.15344974141856285,5,3
+mean over available backbone seeds,p0_cpu,8,0.33917264354168114,0.15650079360243163,5,1
+mean over available backbone seeds,p0_cpu,16,0.34538844754980846,0.16349538536081912,5,1
+mean over available backbone seeds,p0_cpu,33,0.3507217665520227,0.16377414963248071,5,1
+mean over available backbone seeds,p0_r1s_cpu,8,0.33946293127228655,0.1552752412042603,5,1
+mean over available backbone seeds,p0_r1s_cpu,16,0.3433174572055681,0.15936823193433802,5,1
+mean over available backbone seeds,p0_r1s_cpu,33,0.369612210912178,0.1308291583431576,5,1

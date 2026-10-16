@@ -9,6 +9,7 @@ Every evaluation row is appended to a jsonl file as soon as it is computed,
 so interrupted runs resume without losing rows.  H1-H5 are recorded per
 row; violations are recorded, never abort.
 """
+# WARNING (2026-10-16 review): the d2 (M2) decode paths drop the folded in_proj bias; d2 results are invalid (see docs/labeled_calibration_results_20261007.md).
 from __future__ import annotations
 
 import argparse

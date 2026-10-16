@@ -1,0 +1,5 @@
+kind,rank,gram_bytes,cross_bytes,accumulator_bytes,solve_and_scratch_bytes,sram_total_bytes,fixed_basis_fp32_bytes,fixed_basis_int8_bytes,extra_macs_per_bin,fits_32kb_alone
+full,,264196,2056,266260,3092,269352,0,0,0,False
+diag,,1028,2056,3092,3092,6184,0,0,0,True
+lowrank,16.0,1024,128,1160,200,1360,16448,4112,4144,True
+lowrank,32.0,4096,256,4360,392,4752,32896,8224,8288,True

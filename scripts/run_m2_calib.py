@@ -301,6 +301,10 @@ def cmd_select_r1(args):
 def write_r1_selection(rd):
     import pandas as pd
     df = pd.DataFrame([json.loads(l) for l in (rd / "select_r1.jsonl").read_text().splitlines()])
+    # a resumed/relaunched chain can append the same episode twice: keep the last row per key
+    df["_lamkey"] = df["lam"].map(lambda x: -1.0 if x is None or x != x else float(x))
+    df = df.drop_duplicates(subset=["base", "session", "B", "draw", "kind", "burn", "_lamkey"],
+                            keep="last").drop(columns="_lamkey").reset_index(drop=True)
     df["lam"] = df["lam"].astype(object).where(df["lam"].notna(), None)
     df["lam_key"] = df["lam"].map(lambda x: "off" if x is None else repr(float(x)))
     g = df.groupby(["base", "B", "lam_key", "kind", "burn"]).r2.agg(["mean", "count"]).reset_index()
@@ -577,6 +581,7 @@ def cmd_select_uireg(args):
 def write_uireg_selection(rd):
     import pandas as pd
     df = pd.DataFrame([json.loads(l) for l in (rd / "select_uireg.jsonl").read_text().splitlines()])
+    df = df.drop_duplicates(subset=["session", "B", "draw", "lam", "lr", "steps"], keep="last")
     g = df.groupby(["B", "lam", "lr", "steps"]).r2.agg(["mean", "count"]).reset_index()
     sel = {}
     for B, sub in g.groupby("B"):

@@ -1,0 +1,44 @@
+{
+ "2020-10-19-Run1": {
+  "nwb_sha256": "dc40ef63a379ae71bd051cc3c5ec0e6756bc24e5eda604ee5d100a8af3abe91a",
+  "data_root": "/mnt/data/work_host/SPINT/SPINT-main/data",
+  "nwb_path": "/mnt/data/work_host/SPINT/SPINT-main/data/000953/sub-MonkeyN-held-in-calib/sub-MonkeyN-held-in-calib_ses-2020-10-19-Run1_behavior+ecephys.nwb",
+  "array_sha256": "4884cf6bb513daa28c78ec8343df63f797a9ed12084812238eebc96e79a63b6c"
+ },
+ "2020-10-19-Run2": {
+  "nwb_sha256": "fdacf9f9cc55c5b778e5f7ae6c8014520cde038ef6f0dedb5e95ce2c51b0c677",
+  "data_root": "/mnt/data/work_host/SPINT/SPINT-main/data",
+  "nwb_path": "/mnt/data/work_host/SPINT/SPINT-main/data/000953/sub-MonkeyN-held-in-calib/sub-MonkeyN-held-in-calib_ses-2020-10-19-Run2_behavior+ecephys.nwb",
+  "array_sha256": "ccd3de498842caa713ad9e11de0a6aedab8327b7d725010c314066ce27f9f191"
+ },
+ "2020-10-20-Run1": {
+  "nwb_sha256": "757cf61bdbbdad4faaf363a7c6fc570ee3b7815bfa0359cad35cab4447f2fb49",
+  "data_root": "/mnt/data/work_host/SPINT/SPINT-main/data",
+  "nwb_path": "/mnt/data/work_host/SPINT/SPINT-main/data/000953/sub-MonkeyN-held-in-calib/sub-MonkeyN-held-in-calib_ses-2020-10-20-Run1_behavior+ecephys.nwb",
+  "array_sha256": "431684599ad1a37421e897ed5315ad4976f3ba692da9b4b90e5dd932c00e98cc"
+ },
+ "2020-10-20-Run2": {
+  "nwb_sha256": "5a11cded250929786d2991d3059b448e30a7e5aa57afc75ff4c514797f28ee1e",
+  "data_root": "/mnt/data/work_host/SPINT/SPINT-main/data",
+  "nwb_path": "/mnt/data/work_host/SPINT/SPINT-main/data/000953/sub-MonkeyN-held-in-calib/sub-MonkeyN-held-in-calib_ses-2020-10-20-Run2_behavior+ecephys.nwb",
+  "array_sha256": "85d5cb3c126bd9b8537d1a15688f955b84bf8cc8d81a0f8c78828e7efd1b90bc"
+ },
+ "2020-10-27-Run1": {
+  "nwb_sha256": "f7a8e1288bf1fa225ba8cde85f969d6e5547d937fbb69f531580bec9c8c4f1e0",
+  "data_root": "/mnt/data/work_host/SPINT/SPINT-main/data",
+  "nwb_path": "/mnt/data/work_host/SPINT/SPINT-main/data/000953/sub-MonkeyN-held-in-calib/sub-MonkeyN-held-in-calib_ses-2020-10-27-Run1_behavior+ecephys.nwb",
+  "array_sha256": "3866a369c695f7dbfcd96e2565c4e6fea10623beb8ec931b903d1262abaa4047"
+ },
+ "2020-10-27-Run2": {
+  "nwb_sha256": "e9d1bc0968f06bfe820fc3a036324032b35890a295dd8f9ad8b1b33a05e0bcd4",
+  "data_root": "/mnt/data/work_host/SPINT/SPINT-main/data",
+  "nwb_path": "/mnt/data/work_host/SPINT/SPINT-main/data/000953/sub-MonkeyN-held-in-calib/sub-MonkeyN-held-in-calib_ses-2020-10-27-Run2_behavior+ecephys.nwb",
+  "array_sha256": "e81213e658b2bbb890d00fc196842b273bb5a6cd25df13c2af84322365ee5a85"
+ },
+ "2020-10-28-Run1": {
+  "nwb_sha256": "45a41f15110a8c950f2439cddfa0c207179cfa97d1035c7b1776d2b3dba1c601",
+  "data_root": "/mnt/data/work_host/SPINT/SPINT-main/data",
+  "nwb_path": "/mnt/data/work_host/SPINT/SPINT-main/data/000953/sub-MonkeyN-held-in-calib/sub-MonkeyN-held-in-calib_ses-2020-10-28-Run1_behavior+ecephys.nwb",
+  "array_sha256": "be9d40ed02fc412873532a0569bedba8453995a82993319f683629dbad990e4f"
+ }
+}

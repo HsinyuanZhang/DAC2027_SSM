@@ -1,5 +1,5 @@
 {
- "rows": 22800,
+ "rows": 23760,
  "seeds": [
   0,
   1,
@@ -18,12 +18,14 @@
  "h5_bytes_int8": 25600,
  "rows_per_variant": {
   "p0": 1440,
+  "p0_cpu": 240,
   "p0_int8": 1440,
   "p0_int8_nogain": 240,
   "p0_int8_nolab": 240,
   "p0_nogain": 240,
   "p0_nolab": 240,
   "p0_r1s": 1440,
+  "p0_r1s_cpu": 240,
   "p0_r1s_lam0.001": 1440,
   "p0_r1s_lam0.001_nogain": 240,
   "p0_r1s_lam0.001_nolab": 240,
@@ -42,6 +44,8 @@
   "p0_r1s_lam10_nolab": 240,
   "p0_r1s_lam1_nogain": 240,
   "p0_r1s_lam1_nolab": 240,
+  "p0_r1s_lr16": 240,
+  "p0_r1s_lr32": 240,
   "p0_r1s_nogain": 240,
   "p0_r1s_nolab": 240,
   "p0_swap": 1440,

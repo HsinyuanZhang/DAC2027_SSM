@@ -55,19 +55,91 @@ POOL_DIRS = {
 
 # ------------------------------------------------------------------- data ----
 
-def load_m2_recording(session: str, cache_dir: Path = M2_CACHE):
-    """Held-in FALCON M2 recording from the npz cache (no NWB needed).
+M2_MANIFEST = ROOT / "results" / "analysis" / "m2_calib_20261016" / "m2_npz_manifest.json"
+_REQUIRED_KEYS = ("neural", "behavior", "eval_mask", "trial_bounds", "path", "sha256", "data_root")
+
+
+def npz_array_digest(neural, behavior, eval_mask, trial_bounds) -> str:
+    """sha256 over the canonical bytes of the arrays a recording is built from."""
+    h = hashlib.sha256()
+    for a, dt in ((neural, "<f4"), (behavior, "<f4"), (eval_mask, "|b1"), (trial_bounds, "<i8")):
+        a = np.ascontiguousarray(np.asarray(a).astype(dt))
+        h.update(str(a.shape).encode())
+        h.update(a.tobytes())
+    return h.hexdigest()
+
+
+def build_m2_manifest(cache_dir: Path = M2_CACHE) -> dict:
+    """Pin {session: nwb sha256, data_root, nwb path, array digest} of the npz cache files."""
+    out = {}
+    for f in sorted(Path(cache_dir).glob("*.npz")):
+        b = np.load(f, allow_pickle=False)
+        out[f.stem] = {"nwb_sha256": str(b["sha256"]), "data_root": str(b["data_root"]),
+                       "nwb_path": str(b["path"]),
+                       "array_sha256": npz_array_digest(b["neural"], b["behavior"], b["eval_mask"],
+                                                        b["trial_bounds"])}
+    return out
+
+
+def load_m2_recording(session: str, cache_dir: Path = M2_CACHE, *, manifest=None,
+                      verify_nwb: bool = False):
+    """Held-in FALCON M2 recording from the npz cache (no NWB needed), with integrity checks.
 
     Only the ``held_in`` split is ever read.  Channel identity is fixed, so
     ``unit_to_electrode`` is the identity map.
+
+    Integrity (review item 6; ``multi_target.cached_recording`` re-hashes the NWB on every load,
+    which is impossible on a VM without the 15 GB of NWB files, so the same metadata is checked
+    against a PINNED manifest instead):
+      * the npz must carry path / sha256 / data_root and consistent array shapes;
+      * the stored path must be a DANDI 000953 MonkeyN held-in file of this session;
+      * the stored NWB sha256, data root and a digest of the arrays must equal the pinned
+        manifest entry (``manifest``: dict, path, or None for ``M2_MANIFEST``; missing = error);
+      * ``verify_nwb=True`` additionally re-hashes the NWB file (needs the file) like
+        ``cached_recording``.
     """
     path = Path(cache_dir) / f"{session}.npz"
     blob = np.load(path, allow_pickle=False)
+    missing = [k for k in _REQUIRED_KEYS if k not in blob.files]
+    if missing:
+        raise ValueError(f"{path.name}: npz lacks integrity metadata {missing} (rebuild with cached_recording)")
+    sha, root, nwb = str(blob["sha256"]), str(blob["data_root"]), str(blob["path"])
+    if len(sha) != 64 or any(c not in "0123456789abcdef" for c in sha):
+        raise ValueError(f"{path.name}: malformed stored sha256 {sha!r}")
+    if "000953" not in nwb or "MonkeyN" not in nwb or "held-in" not in nwb \
+            or f"ses-{session}_" not in Path(nwb).name:
+        raise ValueError(f"{path.name}: stored NWB path {nwb!r} is not the DANDI 000953 MonkeyN held-in "
+                         f"file of session {session}")
+    neural, behavior, mask, bounds = blob["neural"], blob["behavior"], blob["eval_mask"], blob["trial_bounds"]
+    n = neural.shape[0]
+    if neural.ndim != 2 or neural.shape[1] != N_CHANNELS or behavior.shape[0] != n or mask.shape != (n,) \
+            or bounds.ndim != 2 or bounds.shape[1] != 2 or (len(bounds) and (bounds.min() < 0 or bounds.max() > n)):
+        raise ValueError(f"{path.name}: inconsistent array shapes {neural.shape} {behavior.shape} "
+                         f"{mask.shape} {bounds.shape}")
+    if manifest is None:
+        if not M2_MANIFEST.exists():
+            raise FileNotFoundError(f"pinned manifest {M2_MANIFEST} not found (build it with "
+                                    f"scripts/m2_npz_manifest.py)")
+        manifest = M2_MANIFEST
+    if not isinstance(manifest, dict):
+        manifest = json.loads(Path(manifest).read_text())
+    if session not in manifest:
+        raise ValueError(f"{session} is not in the pinned manifest")
+    want = manifest[session]
+    got = {"nwb_sha256": sha, "data_root": root,
+           "array_sha256": npz_array_digest(neural, behavior, mask, bounds)}
+    bad = [k for k, v in got.items() if want.get(k) != v]
+    if bad:
+        raise ValueError(f"{path.name}: {bad} differ from the pinned manifest (stale or tampered cache)")
+    if verify_nwb:
+        from .data import sha256_file
+        if not Path(nwb).exists() or sha256_file(Path(nwb)) != sha:
+            raise ValueError(f"{path.name}: NWB {nwb} missing or its sha256 differs from the cache entry")
     return SimpleNamespace(
-        session=session, neural=blob["neural"].astype(np.float64),
-        behavior=blob["behavior"].astype(np.float64), eval_mask=blob["eval_mask"].astype(bool),
-        trial_bounds=tuple((int(a), int(b)) for a, b in blob["trial_bounds"]),
-        unit_to_electrode=np.arange(blob["neural"].shape[1]))
+        session=session, neural=neural.astype(np.float64),
+        behavior=behavior.astype(np.float64), eval_mask=mask.astype(bool),
+        trial_bounds=tuple((int(a), int(b)) for a, b in bounds),
+        unit_to_electrode=np.arange(neural.shape[1]))
 
 
 def draw_trials(name, B, draw, n_trials):
@@ -99,6 +171,21 @@ def trunk_from_latent(model, z, want_h=False):
     return (y, h) if want_h else y
 
 
+def cpu_trunk_from_latent(dec, z, want_h=False):
+    """CPU twin of ``trunk_from_latent`` using the plain-export executor (blocks -> final_norm -> out_proj)."""
+    import torch.nn.functional as F
+    from .mamba3_cpu import _linear, _ln
+    with torch.inference_mode():
+        h = z.float()
+        for bl in dec.blocks:
+            h = h + dec._core(_ln(h, bl.norm1_w, bl.norm1_b), bl)
+            h = h + _linear(F.silu(_linear(_ln(h, bl.norm2_w, bl.norm2_b), bl.ff1_w, bl.ff1_b)),
+                            bl.ff2_w, bl.ff2_b)
+        hn = _ln(h, dec.final_w, dec.final_b)
+        y = _linear(hn, dec.out_w, dec.out_b)
+    return (y.clone(), hn.clone()) if want_h else y.clone()
+
+
 def fold_bank(state_dict):
     """Per-session folded read-in tables and biases from a session-bank state dict.
 
@@ -118,18 +205,33 @@ class M2Trunk:
     """Frozen M2 backbone + its per-source-session read-in tables (from the session bank)."""
 
     def __init__(self, pool_dir: Path, device):
-        from .mamba3_official import build_mamba3_official
         pool_dir = Path(pool_dir)
+        device = torch.device(device)
         self.pool_dir, self.device = pool_dir, device
         blob = torch.load(pool_dir / "best.pt", map_location="cpu", weights_only=False)
         a = blob["args"]
         self.width, self.layers, self.state = a["width"], a["layers"], a["state_size"]
-        self.model = build_mamba3_official(N_CHANNELS, 2, self.width, self.layers, self.state,
-                                           0.0).to(device)
-        self.model.load_state_dict(blob["state_dict"])
-        self.model.eval()
-        for p in self.model.parameters():
-            p.requires_grad_(False)
+        self.cpu_backend = device.type == "cpu"
+        if self.cpu_backend:
+            # official Mamba-3 kernels need CUDA; the plain-export CPU executor reproduces the
+            # GPU rows to |dR2| <= 7e-5 (independent review).  No autograd on this path.
+            from .mamba3_cpu import CPUDecoder
+
+            class _Dec(CPUDecoder):
+                state_size = self.state
+                context = 10 ** 7
+
+            self.model = _Dec.from_state_dict(blob["state_dict"])
+            self._hash_items = [(n, v) for n, v in blob["state_dict"].items()
+                                if not n.startswith("in_proj.")]
+        else:
+            from .mamba3_official import build_mamba3_official
+            self.model = build_mamba3_official(N_CHANNELS, 2, self.width, self.layers, self.state,
+                                               0.0).to(device)
+            self.model.load_state_dict(blob["state_dict"])
+            self.model.eval()
+            for p in self.model.parameters():
+                p.requires_grad_(False)
         self.k = self.width
         norm = np.load(pool_dir / "normalizer.npz")
         self.x_mean, self.x_std = norm["x_mean"].astype(np.float64), norm["x_std"].astype(np.float64)
@@ -147,6 +249,10 @@ class M2Trunk:
 
     def _hash(self):
         h = hashlib.sha256()
+        if self.cpu_backend:
+            for _, p in self._hash_items:
+                h.update(p.detach().cpu().numpy().tobytes())
+            return h.hexdigest()
         for n, p in self.model.named_parameters():
             if not n.startswith("in_proj."):
                 h.update(p.detach().cpu().numpy().tobytes())
@@ -160,9 +266,13 @@ class M2Trunk:
 
     # interface used by the generic routines below
     def run(self, z, want_h=False):
+        if self.cpu_backend:
+            return cpu_trunk_from_latent(self.model, z, want_h)
         return trunk_from_latent(self.model, z, want_h)
 
     def head(self):
+        if self.cpu_backend:
+            return torch.cat([self.model.out_w, self.model.out_b[:, None]], 1).detach()
         return fr.head_matrix(self.model)
 
 
@@ -329,6 +439,13 @@ def table_bytes(k: int, n: int):
 # ------------------------------------------------------- R1-stream readout ----
 
 def stream_readout_stats(trunk, sd: SessionData, prior, calib, idx, burn=0, use_calib=True):
+    """Single burn (int) -> stats dict; a tuple/list of burns -> {burn: stats} from ONE forward pass."""
+    burns = [burn] if isinstance(burn, int) else list(burn)
+    out = _stream_readout_stats(trunk, sd, prior, calib, idx, burns, use_calib)
+    return out[burns[0]] if isinstance(burn, int) else out
+
+
+def _stream_readout_stats(trunk, sd: SessionData, prior, calib, idx, burns, use_calib=True):
     """Readout statistics accumulated while the B trials stream in (no replay buffer).
 
     Trial j (chronological) is forwarded ONCE, from the zero state, with the table and input
@@ -340,7 +457,7 @@ def stream_readout_stats(trunk, sd: SessionData, prior, calib, idx, burn=0, use_
     """
     prior_tab, prior_bias = prior
     idx = np.sort(np.asarray(idx))
-    zs, ys, ms = [], [], []
+    zs, ys, vs = [], [], []
     for j, tr in enumerate(idx):
         if j == 0 or not use_calib:
             mean, std = norm_stats(PopStats.from_trials(sd.bank, idx[:1] if j == 0 else idx[:j]))
@@ -351,31 +468,93 @@ def stream_readout_stats(trunk, sd: SessionData, prior, calib, idx, burn=0, use_
         a, b = sd.trials[tr]
         zs.append(latent(sd, table, prior_bias, mean, std, a, b))
         ys.append(sd.y_norm.float()[a:b])
-        m = sd.valid[a:b].to(torch.float32).clone()
-        m[:burn] = 0.0
-        ms.append(m)
-    tm = max(len(m) for m in ms)
+        vs.append(sd.valid[a:b].to(torch.float32))
+    tm = max(len(v) for v in vs)
     K, D = zs[0].shape[1], ys[0].shape[1]
     Z = torch.zeros(len(zs), tm, K, device=sd.device)
     Y = torch.zeros(len(zs), tm, D, device=sd.device)
-    M = torch.zeros(len(zs), tm, device=sd.device)
-    for i, (z, y, m) in enumerate(zip(zs, ys, ms)):
-        Z[i, :len(z)], Y[i, :len(z)], M[i, :len(z)] = z, y, m
+    V = torch.zeros(len(zs), tm, device=sd.device)
+    for i, (z, y, v) in enumerate(zip(zs, ys, vs)):
+        Z[i, :len(z)], Y[i, :len(z)], V[i, :len(z)] = z, y, v
+    out = {}
     with torch.no_grad():
         yhat, h = trunk.run(Z, want_h=True)
-        hb = torch.cat([h, torch.ones_like(h[..., :1])], -1) * M.unsqueeze(-1)
-        r0 = (Y - yhat) * M.unsqueeze(-1)
-        G = torch.einsum("bti,btj->ij", hb, hb).double()
-        R = torch.einsum("btd,btj->dj", r0, hb).double()
-    return {"G": G, "R": R, "n": float(M.sum())}
+        for burn in burns:
+            M = V.clone()
+            M[:, :burn] = 0.0
+            hb = torch.cat([h, torch.ones_like(h[..., :1])], -1) * M.unsqueeze(-1)
+            r0 = (Y - yhat) * M.unsqueeze(-1)
+            G = torch.einsum("bti,btj->ij", hb, hb).double()
+            R = torch.einsum("btd,btj->dj", r0, hb).double()
+            out[burn] = {"G": G, "R": R, "n": float(M.sum())}
+    return out
 
 
-def ridge_v(trunk, st, lam, kind="full"):
-    """Prior-centred ridge readout V = V0 + dV (augmented [D, H+1]); lam=None means no change."""
+def ridge_v(trunk, st, lam, kind="full", basis=None):
+    """Prior-centred ridge readout V = V0 + dV (augmented [D, H+1]); lam=None means no change.
+
+    ``kind='lowrank'`` needs ``basis`` [H+1, r] (fixed source feature basis); only the r x r
+    projected Gram and the D x r projected cross term are then needed on the target side.
+    """
     v0 = trunk.head().double()
     if lam is None or st["n"] < 1:
         return v0
-    return v0 + fr.ridge_delta(st, lam, kind)
+    return v0 + fr.ridge_delta(st, lam, kind, basis=basis)
+
+
+def source_feature_moment(world):
+    """Second moment [H+1, H+1] of the augmented final features on SOURCE sessions only.
+
+    Each source session is decoded contiguously with its leave-one-out prior table/bias and the
+    input normalisation of its own training-region trials; only valid bins of the training
+    region (trials strictly before the trunk's validation region) enter.  Used for the fixed
+    low-rank basis of the compact R1-stream variants (no target information).
+    """
+    G, n = None, 0.0
+    for name, sd in world.sessions.items():
+        tr = world.train_trials(name)
+        mean, std = norm_stats(PopStats.from_trials(sd.bank, tr))
+        tab, bias = world.priors[name]
+        _, h = decode_full(world.trunk, sd, tab.float(), bias, mean, std, want_h=True)
+        m = torch.zeros(sd.n_bins, dtype=torch.bool, device=sd.device)
+        for i in tr:
+            a, b = sd.trials[int(i)]
+            m[a:b] = True
+        m &= sd.valid
+        hb = torch.cat([h, torch.ones_like(h[:, :1])], 1)[m].double()
+        g = hb.T @ hb
+        G = g if G is None else G + g
+        n += float(m.sum())
+    return G / max(n, 1.0)
+
+
+def r1_stream_bytes(kind: str, rank: int | None = None, h_aug: int = 257, d_out: int = 2,
+                    word: int = 4) -> dict:
+    """Target-side SRAM working state of the R1-stream readout correction (fp32 tensor sizes).
+
+    These are static tensor sizes, NOT a fixed-point hardware simulation (rule 8): accumulators
+    G (Gram) and R (cross term), the sample counter, and, for the solve, the correction dV and
+    the per-bin scratch (projected feature, residual).  ``fixed_basis_*`` is the fixed
+    source-derived projection U [H+1, r] (read-only, shipped with the trunk, not target-written).
+    Excluded (already needed by P0 itself): the table, the descriptor accumulators, the calibrator weights,
+    and the one-trial buffer that trial 0 of the stream needs.
+    """
+    if kind == "full":
+        g, r_, dv, scratch, basis = h_aug * h_aug, d_out * h_aug, d_out * h_aug, h_aug + d_out, 0
+    elif kind == "diag":
+        g, r_, dv, scratch, basis = h_aug, d_out * h_aug, d_out * h_aug, h_aug + d_out, 0
+    elif kind == "lowrank":
+        assert rank
+        g, r_, dv, scratch, basis = rank * rank, d_out * rank, d_out * rank, rank + d_out, h_aug * rank
+    else:
+        raise ValueError(kind)
+    acc = word * (g + r_) + 8                    # + 64-bit sample counter
+    solve = word * (dv + scratch)
+    return {"kind": kind, "rank": rank, "gram_bytes": word * g, "cross_bytes": word * r_,
+            "accumulator_bytes": acc, "solve_and_scratch_bytes": solve, "sram_total_bytes": acc + solve,
+            "fixed_basis_fp32_bytes": word * basis, "fixed_basis_int8_bytes": basis,
+            "extra_macs_per_bin": (h_aug * rank + rank * d_out) if kind == "lowrank" else 0,
+            "fits_32kb_alone": acc + solve <= 32 * 1024}
 
 
 # ---------------------------------------------------- ui_reg (reference) ----

@@ -1,5 +1,49 @@
 # FALCON M2（固定通道）population calibration：Colab 回合（2026-10-16）
 
+## 审查后修正（2026-10-16，独立审查之后；本节优先于下文与之冲突的说法）
+
+执行：本机 CPU（`ssm_decode/mamba3_cpu.py`，没有用 GPU、没有用 Colab）。下文 §0 第 3 点与 §4 已按本节改写；其余未改动的数字（所有旧 `paired_*.csv` 的 diff/ci95）与审查前逐项相同（最大差 0.0），新增列和新增行见 `tables_m2.md`。
+
+**1. 结论更正（HIGH）。** 原结论 “没有任何可部署的校准在噪声之上胜过 prior” **撤回**。在 B=33 上：
+
+* P0 + R1-stream − P-prior = **+0.037±0.014**（3 个 backbone seed；target 层面 t 区间 df=4），**5/5 个 target 为正，15/15 个 (seed, target) 单元为正，3 个 pool 全部为正**（pool1/2/3 = +0.028 / +0.044 / +0.038）；pool 层面（df=2）+0.037±0.020，不含 0（t=7.9，未校正 p=0.016）。3 个 seed 的 paired Δ 的 SD = 0.0125，3-seed mean 的 SE = 0.007。量级与非部署的梯度参照相当（ui_reg − P-prior @B=33：三 seed +0.042，seed 0 +0.060）。
+* 限定条件：(a) 只有 B=33 成立。B ≤ 16 时 R1-stream 在 P0 之上没有增益（−0.005…0.000），P0+R1 − prior 为 +0.010…+0.021，pool 层面 CI ±0.04–0.06 含 0，pool1 ≈ 0。(b) B=33 是看过 6 个 budget 之后才被突出的那一个：6 个 budget 做 Bonferroni 后 pool 层面 p ≈ 0.10，所以这是一个**需要在新 seed / 新 pool 上按预注册复验的发现**，不是已确认的结论。(c) 只有 3 个 pool（3 个独立 trunk），pool 层面的区间很宽。(d) 完整 R1-stream 要保存 257×257 fp32 的 Gram = 264,196 B（working state 合计 269,352 B ≈ 263 KB），按规则 3/8 超出 32 KB 预算，**完整版标记为非部署**；它在 B=33 的收益必须由预算内的紧凑版来承担。
+
+**紧凑 R1-stream（预算内）的 CPU 评测。** 变体 `p0_r1s_lr16` / `p0_r1s_lr32`：把 257 维增广特征投影到固定的 rank-r 基 U（**source** 特征二阶矩的前 r 个特征向量，按 (seed, pool) 只用 source session 计算，`ssm_decode.m2_calib.source_feature_moment`），目标侧只累加 r×r 的 Gram 和 D×r 的交叉项；(λ, burn) 与完整版相同，在 source 模拟上按 B 选择（“关闭”也是候选）。脚本 `scripts/run_m2_r1lr.py`（`select` + `evaluate`）；backbone seed 0，5 个 target，8 个 draw，2 个 calibrator seed，B∈{8, 16, 33}，与 GPU 行相同的 draw；行在 `results/m2_calib_20261016/r1lr_cpu/`（gitignored），选出的规则在各目录的 `selection_r1lr.json`。CPU 执行器 parity：同一批 draw 上 `p0_cpu` vs `p0`（240 行）最大 |ΔR²| = 2.5e-4（均值 5.9e-5），`p0_r1s_cpu` vs `p0_r1s` 最大 3.3e-4（均值 6.6e-5）。
+
+| seed 0（5 targets，均值） | target 侧 SRAM working state（fp32 张量字节） | B=8 | B=16 | B=33 | Δ vs prior @33 | Δ vs P0 @33 | Δ vs 完整 R1 @33 |
+|---|---|---:|---:|---:|---|---|---|
+| P-prior | — | 0.307 | 0.313 | 0.319 | — | — | — |
+| P0 | — | 0.339 | 0.345 | 0.351 | +0.032±0.039（5/5） | — | — |
+| P0 + R1-stream 完整（非部署） | 269,352 B | 0.339 | 0.343 | 0.370 | +0.051±0.026（5/5） | +0.019±0.034（4/5） | — |
+| P0 + R1-stream **lr16** | **1,360 B** | 0.339 | 0.340 | 0.365 | **+0.046±0.027（5/5）** | +0.014±0.028（2/5） | −0.005±0.007 |
+| P0 + R1-stream **lr32** | **4,752 B** | 0.339 | 0.341 | 0.367 | **+0.048±0.026（5/5）** | +0.016±0.030（4/5） | −0.003±0.004 |
+
+* 紧凑版保留了完整版增益的约 90%（lr16）/ 94%（lr32）。B=33 上 lr − prior 的 per-pool：lr16 +0.042 / +0.034 / +0.081，lr32 +0.046 / +0.034 / +0.081（seed 0）。B=8、16 上 lr 与 P0 相同或略低（−0.006…0.000），与完整版一致。
+* 相对 P0 的增益（+0.014…+0.016）在 seed 0 内几乎全部来自 pool1（+0.037…+0.040，pool2/3 ≈ 0），target 层面 CI 含 0；P0 与 R1 的收益来自不同 pool（P0 主要在 pool2/3，R1 主要在 pool1），二者合起来才让 3 个 pool 全部为正。
+* **SRAM 记账**（`r1_sram_bytes.csv`，`m2_calib.r1_stream_bytes`）：累加器 G（r²）+ R（D×r）+ 64 位计数器，加上求解后的 ΔV（D×r）和逐 bin 暂存（r + D）。lr16：1,024 + 128 + 8 累加器 = 1,160 B，求解与暂存 200 B；lr32：4,360 + 392 B。与 int8 表（25,600 B，含逐行 scale）相加：26,960 B（lr16）/ 30,352 B（lr32）≤ 32,768 B。**这只是 fp32 张量大小的静态统计，不是定点硬件仿真（规则 8），并且没有计入：** P0 的描述量累加器和 calibrator 权重（24,705 个参数）、trial 0 所需的一个 trial 大小的暂存区、固定基 U（257×r，只读，随 trunk 存放：fp32 16,448 / 32,896 B，int8 4,112 / 8,224 B）、以及每个 bin 的额外 MAC（4,144 / 8,288）。另外 R1 的统计量是在 **fp32 的 P0 表**上累加的；int8 表与 R1 的组合没有评测。
+* 未做：seed 1/2 的 lr16/lr32；B∈{1, 2, 4}；对紧凑版做新 pool 上的复验。
+
+**2. 噪声论证更正（MEDIUM）。** 原文把配对差（P0 − prior，+0.02–0.03）拿去和**单个 seed 下绝对 R² 的 SD**（P0 0.019、prior 0.024）比较，这不是合适的尺子：绝对水平在 seed 间的共同偏移在配对差里会抵消。正确的尺子是配对差的 seed 间 SD（P0 − prior：0.007–0.013）和 3-seed 均值的 SE（0.004–0.008）；P0 − prior 的 3-seed 均值 +0.011…+0.026 离 0 有 1.4–6.7 个 SE（B≥2 时 2.9–6.7），所以“seed 噪声就能解释它”不成立（B=1 除外）。原 §0(3)(i) 也不准确：seed 0 上 B=4 的 P0 − prior = +0.033±0.031，**排除 0**（5/5 个 target 为正）；B=2/8/16/33 的 seed 0 CI 为 ±0.034–0.040，含 0。
+
+真正的不确定性在 pool 之间：同一 pool 的两个 target 共享同一个 trunk，所以每个 backbone seed 只有 3 个独立 trunk（pool 层面 df=2）。P0-only 的主张因此改为：P0 在 pool2 上稳定提高 R²（三个 seed 一致，3-seed 平均 +0.03–0.05），在 pool3 上 seed 0/2 为 +0.03–0.08、seed 1 仅约 +0.01，在 pool1 上 ≈ 0（3-seed 平均 −0.004…−0.001，seed 1 为 −0.014…−0.018），pool 层面 B=8 为 +0.027±0.062，**含 0**，不能说成跨 pool 的一般增益。`tables_m2.md` 的配对表新增列：`seed SD of Δ`、`SE of seed mean`、`pool-level Δ ± CI(df=2)`。
+
+**3. 第一轮 M2 结果无效（MEDIUM）。** `scripts/run_labeled_calibration.py` 的 d2 分支在所有解码路径上丢掉了 folded `in_proj` bias；带 bias 的 folded model 在 source val 上复现 0.69226（manifest 0.69228，我在 CPU 上重算 seed 0 pool1），不带 bias 为 0.6539；bias 的 ‖b‖² 有 46% / 42% / 39%（pool1/2/3）落在 prior table 的列空间里，带 per-channel 偏置的 calibrator 可能部分重新学回它。勘误已加到 `docs/labeled_calibration_results_20261007.md` 的**最顶部**（原文未删），并在 `run_labeled_calibration.py` 顶部加了一行警告注释；该脚本本身**没有修**（遗留）。本 README §3.5 里对第一轮的比较因此只能作为参考。Overleaf 没有动（由 coordinator 处理）。
+
+**4. 表格式。** `analyze_m2_calib.py` 的 `md_paired` 表头与行不一致（行里多一个 `n_seeds` 列）已修，`tables_m2.md` 重新生成，并有测试（表头/分隔行/数据行的列数相同）。
+
+**5. 工具与流程。** `scripts/analyze_m2_calib.py` 现在对所有 row 文件去重（eval_rows、eval_uireg、紧凑 R1 行，保留最后一条），`run_m2_calib.py` 的 `write_r1_selection` / `write_uireg_selection` 也对 `select_*.jsonl` 去重（重启的 chain 会重复追加）；`scripts/colab_orch.py` 重写：使用 argv 的 DONE 文件、失败 chain 记入 `DONE.txt.failed` 且不阻塞退出、全部完成后自动退出并写 `/content/orch.finished`、`--max-hours` / `--stop-file` / `--idle-exit` / `--hook-cmd`（CU 检查钩子）/ `--on-exit`；`scripts/colab_exec_retry.sh` 只在非零 rc 时重试，rc=0 绝不重跑（输出含 “Connection was lost” 时返回 3），带 `# NONIDEMPOTENT` 的文件只尝试一次；`docs/colab_runbook.md` 同步更新（FALCON M2 是 DANDI 000953，`data_falcon_m2.tar.zst` 实际是 000954；`test_mamba3_official.py` 在不支持时也会通过，必须用 `compatibility_attempt('cuda:0')` 的断言）。这些改动只有本地单元测试，**没有在真实的 Colab VM 上重新验证**（`on-exit` 的 runtime-unassign 选项未测试）。
+
+**6. 数据加载完整性（LOW）。** `m2_calib.load_m2_recording` 现在要求 npz 带 path / sha256 / data_root，路径必须是 DANDI 000953 MonkeyN held-in 的该 session，并对照入库的 `m2_npz_manifest.json`（NWB sha256、data root、数组 digest）；不一致即报错，`verify_nwb=True` 额外重算 NWB 的 sha256。7 个 NWB 文件已在本机重新哈希，与缓存里存的 sha256 全部一致（`scripts/m2_npz_manifest.py build --verify-nwb`）。
+
+**7. 记录（INFO）。** P0 在 source validation 上输给 prior 时没有回退到 prior 的机制：seed 1 / pool1 的两个 calibrator 的 source-val 增益是 −0.0075 / −0.0030（`train_summary.csv`），仍然被部署，target 上 P0 − prior = −0.014…−0.018（所有 B）。这一轮的所有数字**不做事后修改**。对后续运行提出的预注册规则（提案，尚未采用）：
+
+1. *Fallback gate*：对每个 (backbone seed, pool, B)，仅当 P0 在 source 模拟上相对 prior 的增益（与 early stopping 相同的 source episode，对 calibrator seed 取平均）> 0 且至少 2/3 的 episode 为正时才部署 P0；否则部署 prior 表（R1 的规则也在 prior 基上选）。同时报告 gate 开/关两种行，gate 的阈值在运行前写死。
+2. *主要终点与单位*：运行前固定主要对比（P0 − prior @B=8；P0 + 紧凑 R1 − prior @B=33），统计单位 = pool（独立 trunk），至少 6 个独立 pool/trunk 或新的 backbone seed；对 budget 的多重比较用 Holm 校正。
+3. *预算合规*：任何标成“可部署”的行必须在规则 3/8 下记完所有 buffer，完整版 Gram 之类超预算的行一律标非部署。
+
+**未做的事。** (1) lr16/lr32 只做了 backbone seed 0、B∈{8,16,33}；(2) 没有定点仿真（规则 8）和 int8 表与 R1 的联合评测；(3) 第一轮 F3/F7 没有在带 bias 的协议下重新评测；(4) 没有改 `run_labeled_calibration.py` 的逻辑；(5) 没有触碰 Overleaf、没有使用 Colab/GPU；(6) 新的 orchestrator/retry/runbook 没有在真实 VM 上跑过。
+
 日期：2026-10-16。执行：Colab session `dac27`（NVIDIA L4 24 GB，12 vCPU），由本机用 `colab` CLI 驱动。规格：任务说明、`docs/feasibility_p1_20261015.md`（§0 约束，含 rule 7–9）、P1/P2/P3 的 README。
 代码（全部为新增文件，没有改动已有代码）：`ssm_decode/m2_calib.py`、`scripts/run_m2_calib.py`、`scripts/analyze_m2_calib.py`、`scripts/colab_orch.py`、`scripts/colab_exec_retry.sh`、`tests/test_m2_calib.py`（17 个测试；连同 P1 的 `test_population_calib.py` 21 个和 `test_mamba3_official.py` 1 个，在 VM 上共 39 个全部通过，35 s）。环境配方：`docs/colab_runbook.md`。
 原始 rows：`results/m2_calib_20261016/`（gitignored；Drive 备份 `DAC27/colab/out/m2_calib_out.tgz`）。本目录：`tables_m2.md`（全部 markdown 表）、`all_rows.csv.gz`（逐行 rows）、`cells_*.csv`、`paired_*.csv`、`train_summary.csv`、`r1_selection.csv`、`uireg_selection.csv`、`noise_floor.json`、`flags.json`、`m2_r2_vs_B.png`、`parity_p0.csv`。
@@ -13,12 +57,15 @@
 |---|---:|---:|---:|---:|---:|---:|
 | P-prior（均值表 + B-trial 输入归一化） | 0.273±0.146 | 0.285±0.146 | 0.302±0.142 | 0.307±0.135 | 0.313±0.134 | 0.319±0.133 |
 | P0（可部署，fixed-weight） | 0.292±0.163 | 0.317±0.170 | 0.334±0.165 | 0.339±0.157 | 0.345±0.163 | 0.351±0.164 |
-| P0 + R1-stream（可部署） | 0.292±0.163 | 0.316±0.171 | 0.335±0.162 | 0.339±0.155 | 0.343±0.159 | 0.370±0.131 |
+| P0 + R1-stream（完整版 257×257 Gram = 264 KB，**超预算，非部署**） | 0.292±0.163 | 0.316±0.171 | 0.335±0.162 | 0.339±0.155 | 0.343±0.159 | 0.370±0.131 |
 | ui_reg（非部署，梯度） | 0.283±0.145 | 0.273±0.129 | 0.311±0.130 | 0.334±0.135 | 0.357±0.118 | 0.379±0.135 |
 | 第一轮 F3 / F7（存档，不同协议，见 §3.5） | 0.231 / 0.201 | 0.237 / 0.244 | 0.244 / 0.277 | 0.261 / 0.285 | 0.288 / 0.307 | 0.291 / 0.297 |
 
    P0 − P-prior（配对，per-target，seed 0）：+0.019 / +0.032 / +0.033 / +0.032 / +0.032 / +0.032（B=1…33），CI ±0.023–0.040；B≥2 时 5 个 target 全部为正。三个 backbone seed 平均后降为 +0.011 / +0.021 / +0.022 / +0.024 / +0.026 / +0.026（CI ±0.022–0.033），4/5、4/5、3/5、4/5、4/5、3/5 个 target 为正。
-3. **回答问题：在固定通道的 M2 上，没有任何可部署的 fixed-weight 校准“在噪声之上”稳定地胜过 prior。** 最好的可部署行 P0 比 prior 高约 +0.02 到 +0.03（相对 +7%–10%），符号在 (backbone seed × target) 的 15 个单元中有 10–13 个为正，但是：(i) target 层面的 95% CI 包含 0（seed 0 的 B=2…33 约 ±0.03–0.04；n=5 个 target、df=4，且 pool1 的两个 target 共享同一个 trunk，pool1 上三个 seed 平均几乎为 0：−0.004…−0.001；增益主要来自 pool2 +0.03–0.05 与 pool3 +0.01–0.04）；(ii) 量级与 backbone-seed 噪声底同阶（P0 的 seed-to-seed SD 0.019，prior 0.024；calibrator-seed SD 只有 0.007）；(iii) 增益几乎与 B 无关（B=2 已经 +0.03，之后不增长），B≥8 时约 2/3 可以由“用另一个 source session 的 B-trial 统计量生成的表”复现（p0_swap，§3.3），也就是说主要是一个静态的 prior 修正，而不是对 target 的校准；(iv) 去掉标签（p0_nolab）损失 −0.02（5/5 个 target 为负），所以标签相关的部分（≈ +0.02）才是 target 特异的那部分，量级与噪声底相当。**R1-stream 在 P0 之上没有增益**：B≤16 的差在 −0.005…0.000（三个 seed 平均时 B=8、16 的小幅负值经 sign-flip 检验有统计显著，但只有 0.004–0.005），只有 B=33 是 +0.019（seed 0，4/5）/ +0.011（三 seed，3/5），且几乎全部来自 pool1。**ui_reg（梯度参照）在 B≤8 并不比 P0 好**（seed 0，B=8：−0.005；三 seed：−0.010），在 B=16/33 才领先 P0（seed 0：+0.012 / +0.028；三 seed：+0.005 / +0.015，CI 包含 0），相对 prior 的增益到 B=33 为 +0.060（seed 0，5/5）/ +0.042（三 seed，5/5）。即 M2 上不存在 000688 days 层那种“amortization gap 已闭合”的局面，也不存在 month/year 层那种大的 gap：整个“校准空间”本身就只有 +0.06 左右（梯度参照），trunk 与 prior 已经占据了大部分可得的 R²。
+3. **回答问题（审查后改写）：**
+   * **B=33：有一个超出噪声的可部署增益。** P0 + 紧凑 R1-stream（lr16 / lr32）比 prior 高 +0.046 / +0.048（seed 0，5/5 个 target，CI ±0.026；完整 R1 的三 seed +0.037±0.014，15/15 个单元为正，3 个 pool 全部为正）；紧凑版的 target 侧 SRAM working state 1,360 / 4,752 B，加 int8 表 ≤ 32 KB。完整 R1（Gram 264 KB）超预算，仅作非部署参照。限定见本文开头的 “审查后修正” 第 1 点（单个 budget、事后突出、seed 0 only、3 个 pool）。
+   * **B ≤ 16：没有超出噪声的可部署增益。** P0 比 prior 高约 +0.01…+0.03，但增益集中在 pool2/3（pool3 的 seed 1 很弱），pool1 ≈ 0，pool 层面 CI（B=8：+0.027±0.062）含 0；R1-stream 在 P0 之上没有增益（−0.005…0.000）。
+   * 机制证据不变：(i) 增益几乎与 B 无关（B=2 已经 +0.03），B≥8 时约 2/3 可以由另一个 source session 的 B-trial 统计量复现（`p0_swap`，§3.3），即主要是静态 prior 修正；(ii) 去掉标签（`p0_nolab`）损失 −0.02（5/5 个 target 为负），标签相关的 ≈ +0.02 才是 target 特异的部分；(iii) `ui_reg`（梯度参照）在三 seed 平均下比 prior 高 +0.006 / −0.005 / +0.006 / +0.017 / +0.032 / +0.042（B=1…33），与 P0 在统计上不可分（全部 CI 含 0，唯一的显著项是 B=2 的 P0 好于 ui_reg，p=0.013）。
 4. **表大小（K×N = 256×96 = 24,576 个参数）：fp32 98,304 B = 96 KB，超过 32 KB 预算；int8 24,576 B（含逐行 scale 25,600 B）= 25 KB，放得下。** P0 的 post-training 逐行 int8 量化对 R² 无影响（逐 target 的 |p0_int8 − p0| ≤ 5e-4，均值 ≤ 1e-4）。第一轮 D2 行的 `h5_bytes` 也是 98,304 B，即它们同样没有满足 32 KB（fp32）。
 5. **预算**：见 §5。
 
@@ -52,7 +99,7 @@ Parity 结果（`parity_p0.csv`；VM 上 `PC_OUT=/content/parity` 重算，主�
 
 **P0（可部署）。** `M2Calibrator`（`PopulationCalibrator` 的子类）：独立的 per-channel 编码器，所有通道共享权重，输入是 P1 的 `describe` 描述量（log rate/std、3 个 autocorr、与 prior latent 的相关、behavior 互协方差 5 个 lag × D=2、8 方向分箱、T4 系数、prior 列、log n、log B），但 prior latent 先投影到 K=256 维 prior 的 **前 16 个左奇异向量**（固定的 source 基，描述量 59 维），输出每个通道的 K 维残差加一个标量 log-gain：`T_i = (1 + a_i)·prior_i + res_i`（最后一层零初始化 ⇒ 未训练时严格等于 prior，有测试）。与 P1 的 P0 的偏离（均为 M2 适配）：(1) 输出 K+1 维而不是 K 维，因为 K=256 时 16 维 prior 坐标不足以重构 `α·prior_i`；(2) prior latent 降到 16 维；(3) unit dropout 率 U(0, 0.1)（trunk 训练时 channel dropout 0.05）；(4) 训练 episode 取自上述 source 模拟。其余同 P1：episodic 训练，B 从 log-uniform{1…33} 抽取，leave-one-out prior，256 bin 窗口前 64 bin burn-in，MSE 经冻结 trunk，AdamW lr 1e-3，每 100 步做 source-val（B∈{1,2,4,8,16,33}×2 draws），patience 8、至少 600 步，best step 落在最后 20% 就翻倍预算（最多 4 次）。参数量 24,705（+ 固定的 256×16 投影 4,096）。**calibrator seed：每个 (backbone seed, pool) 训练 2 个**（c0、c1），行内取平均；所有 18 个 run 都满足收敛规则（`train_summary.csv`）。消融（仅 backbone seed 0，c0）：`p0_nogain`（无 log-gain 输出）、`p0_nolab`（描述量中去掉所有标签相关的列，与 P1 的 `_nolab` 相同）。
 
-**R1-stream（可部署）。** 与 P3 相同的 readout 先验中心化岭回归 `V = V0 + R(G+λI)⁻¹`（特征 h 是 `final_norm` 之后、线性 readout 之前的 256 维加 bias，257 维），统计量 G、R 按到达顺序逐个 trial 在线累加：第 j 个 trial 只前向一次，用由前 j−1 个 trial 得到的 P0 表与归一化（j=1 用 prior 表与该 trial 自身统计量，需要一个 trial 大小的暂存区），**最后用 B 个 trial 的 P0 表做连续因果解码**。规则 (λ, kind, burn) 按 B 在 source 模拟上选择：λ∈{1e-3,…,100}（6 档）∪ {关闭}，kind∈{full, diag}，burn∈{0,10,20}（每个 replay trial 前几个 bin 不计入统计量，用来抵消零初始状态瞬态）。“关闭”是候选之一，所以如果模拟里岭回归没有帮助，R1 就退化为 P0。**已知偏差（P3 的 §R 中记录过）：**统计量来自“每个 trial 从零状态前向”，而评测是整段连续解码，两种状态机制不同；M2 的 trial 很短（50–110 bin），burn-in 占比更大。没有做 contig 变体。另有 `p_prior_r1s`（在 prior 表上做同样的 R1，规则单独在 source 上选）。λ 的敏感度行 `p0_r1s_lam*`（固定 λ，full，burn 取所选值）**是在 target 上评测的诊断行，从未用于选择**。
+**R1-stream（完整版：超预算，非部署；紧凑版见顶部“审查后修正”）。** 与 P3 相同的 readout 先验中心化岭回归 `V = V0 + R(G+λI)⁻¹`（特征 h 是 `final_norm` 之后、线性 readout 之前的 256 维加 bias，257 维），统计量 G、R 按到达顺序逐个 trial 在线累加：第 j 个 trial 只前向一次，用由前 j−1 个 trial 得到的 P0 表与归一化（j=1 用 prior 表与该 trial 自身统计量，需要一个 trial 大小的暂存区），**最后用 B 个 trial 的 P0 表做连续因果解码**。规则 (λ, kind, burn) 按 B 在 source 模拟上选择：λ∈{1e-3,…,100}（6 档）∪ {关闭}，kind∈{full, diag}，burn∈{0,10,20}（每个 replay trial 前几个 bin 不计入统计量，用来抵消零初始状态瞬态）。“关闭”是候选之一，所以如果模拟里岭回归没有帮助，R1 就退化为 P0。**已知偏差（P3 的 §R 中记录过）：**统计量来自“每个 trial 从零状态前向”，而评测是整段连续解码，两种状态机制不同；M2 的 trial 很短（50–110 bin），burn-in 占比更大。没有做 contig 变体。另有 `p_prior_r1s`（在 prior 表上做同样的 R1，规则单独在 source 上选）。λ 的敏感度行 `p0_r1s_lam*`（固定 λ，full，burn 取所选值）**是在 target 上评测的诊断行，从未用于选择**。
 
 **ui_reg（非部署参照）。** `loss = MSE(trunk(x_z Tᵀ + b), y) + λ‖T − T_prior‖²_F`，Adam，每步随机取一个标注 trial，只更新 read-in 表，bias 冻结（与 `ui_reg.ui_reg_trajectory` 的配方相同）。Mamba-3 的 Triton 反向对每个新序列长度重新 autotune，所以把每个 trial 窗口在**末尾**补零到 64 的倍数（trunk 是因果的，补零不影响窗口自身的输出；有测试证明轨迹不变）。(λ, lr, steps) 按 B 在 source 模拟上选择：λ∈{0, 0.01, 0.1}，lr∈{1e-3, 3e-3, 1e-2}，steps∈{10, 30, 100, 300}（同一条轨迹取快照），episode = **每个 pool 最近的 2 个 source session × 每个 B 1 个 draw（即每个 B 只有 2 个 episode）**，prior 为 leave-one-out。这个规模比 P2（12 个 episode/B）小得多，因此选择噪声很大（例如 seed 0 的 B=2 的 ui_reg 反而低于 B=1，很可能是选择噪声，见 `uireg_selection.csv`）；而且 Mamba-3 反向在 24,576 个参数上约 33 ms/步，网格不能更大。第一次试跑（更大的 λ/lr 网格、全部 source）因 Triton 对变长序列的 autotune（没有 padding）和 GPU 争用而放弃，其部分结果存放于 `results/m2_calib_20261016/uireg_v1_discarded/`，**没有用于任何表**。
 
@@ -123,8 +170,8 @@ seed 0（5 个 target，每个 (target, B) 8 个 draw）见 §0。配对（seed 
 ## 4. 对问题的回答与对 DAC 主线的含义
 
 * 固定通道的 M2 上，prior（source 均值表 + B-trial 输入归一化 + 冻结 bias）已经占据了几乎全部可得的 R²：梯度参照 ui_reg 相对 prior 在 B=8 只有 +0.027（三 seed +0.017）、B=33 +0.060（三 seed +0.042）；可部署的 P0 +0.03；R1-stream 为 0。**这是与 000688 的 days/month/year（那里 prior 只有 0.13–0.36，P0 把它提到 0.26–0.72）本质不同的体制**：身份对齐 + 固定通道使 prior 本身就很强，剩下的是 trunk 本身的上限。
-* “在噪声之上”的严格回答：没有。P0 的 +0.02–0.03 与 backbone-seed 噪声底同量级，target 层面 CI 包含 0，且 pool1 上为 0。它不是 B 的函数（B=2 起不再增长），一半以上的部分对标签依赖不大（nolab 去掉 0.02，剩下的 +0.01 不显著）。这里的“校准”主要是一个在 source 上学到的静态 prior 修正，而不是对 target 的适应。
-* R1-stream 在 M2 上没有价值；它的 SRAM 代价（full：257×257 fp32 Gram = 264 KB，加 R 的 514 个数；diag：约 1 KB；还要一个 trial 大小的暂存区）也远大于它带来的收益。
+* “在噪声之上”的回答（审查后改写）：**B=33 有，B≤16 没有。** B=33 时 P0 + R1-stream 比 prior 高 +0.037±0.014（三 seed，5/5 target，15/15 单元，3 个 pool 全正），预算内的紧凑版（lr16/lr32，seed 0）保留约 90–94%（+0.046 / +0.048）；这与梯度参照 ui_reg（+0.042）同量级，即在 M2 上 B=33 时 forward-only 的 P0 + R1 基本补上了 amortization gap。B≤16 时 P0 的 +0.01…+0.03 主要来自 pool2/3（pool1 ≈ 0），pool 层面含 0。P0 的增益不随 B 增长，且大部分是静态的 prior 修正（`p0_swap`、`p0_nolab` 的对照），不是对 target 的适应；R1 才是随 B 增长的那一部分（只在 B=33 出现）。
+* R1-stream：完整版的 SRAM 代价（257×257 fp32 Gram = 264 KB）超预算，不能算可部署；预算内的 lr16（1.4 KB working state + 固定基 U 16 KB fp32 / 4 KB int8）已经拿到几乎全部收益。B≤16 时它仍然没有价值。
 * 表大小：fp32 的 K×N = 96 KB 不满足 32 KB；int8（25 KB）满足。如果最终的硬件把 M2 类通道固定的数据集放在 32 KB 的 SRAM 里，int8 表是必要的，P0 的 int8 量化是无损的（post-training，逐行 scale）。
 
 ## 5. 预算与资源
@@ -138,7 +185,7 @@ seed 0（5 个 target，每个 (target, B) 8 个 draw）见 §0。配对（seed 
 1. **source 模拟不含跨 session 漂移**（within-session 的时间划分 + LOO prior）。p_prior_scale 在 source 上选出的 c 在 target 上不迁移就是一个症状；P0 的 early-stopping、R1 的 λ、ui_reg 的规则都是在这种模拟下选的。pool1 只有 2 个 source，LOO prior 只是另一个 session 的表。真正的“漂移匹配”的模拟（P3 的教训）在 M2 上没有可用的 OOS source session（所有 held-in session 要么是 source 要么是 target）。
 2. **target 只有 5 个、来自 3 个 pool**（pool1 的两个共享 trunk；pool3 只有一个）。t 区间 df=4，非常保守，但结论“增益 ≈ 噪声”对 pool 的选择敏感（pool1 为 0，pool2/3 为 +0.03–0.05）。
 3. **ui_reg 的选择只有 2 个 source episode/B**、lr 常选到网格上限附近；该参照行的绝对水平有噪声（不是上界）。
-4. **R1-stream 的零初始状态 replay** 与连续评测状态机制不一致（P3 的已知偏差），M2 的短 trial 使它更严重；没有做 contig、cap、低秩（lr16）readout 变体，也没有评测量化的 R1 统计量。
+4. **R1-stream 的零初始状态 replay** 与连续评测状态机制不一致（P3 的已知偏差），M2 的短 trial 使它更严重；没有做 contig、cap 变体，也没有评测量化的 R1 统计量；低秩（lr16/lr32）变体在审查后补做了 seed 0（见顶部）。
 5. **P0 的 bias 不校准**（冻结的 K 维常数）；R2（F7-J）没有在 M2 上运行（任务未要求）。
 6. **没有硬件代价建模**（只报告了张量字节数），也没有逐步定点模拟（rule 8）。表字节数是静态张量大小，不是代价结论。
 7. 没有请独立 Opus 评审；自查项：候选路径 no_grad + 反传计数、query 与校准 trial 不相交、trunk 哈希、因果性（解码对未来扰动不变，有测试）、选择只用 source。
