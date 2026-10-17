@@ -1,5 +1,8 @@
 # 已发表方法 baseline 与可部署行的同协议对比（DANDI 000688 sub-M，DAC2027）——两轮审查后修订版
 
+> **MZ 的决定（2026-10-17）：APST 是 MZ 尚未发表的论文。DAC 论文中不引用 APST，也不与它比较。本 README 中的 APST 行只作为内部参考保留，不进入论文的任何表格、图或正文。**
+
+
 日期：初版 2026-10-16，第一轮审查后修订 2026-10-17，第二轮审查后修订 2026-10-17。执行者：baseline 工作线（read-in 对齐与 APST 评测用单卡 cuda:0，NoMAD 全程 CPU）。规格：MZ 的任务说明（`docs/paper_mainline_proposal_20261016.md`、`docs/feasibility_p1_20261015.md` §0、P1/P2/P3 README 的协议）。
 
 代码：`ssm_decode/published_baselines.py`（FA/Procrustes/Stabilizer、PCA+CCA）、`ssm_decode/electrode_align.py`（electrode pooling、电极匹配列重排、NoMAD 列顺序 guard，仅依赖 numpy）、`scripts/run_baselines_readin.py`（source 选择 / 评测 / 桥自检）、`scripts/run_baselines_apst.py`（APST 适配器）、`scripts/apst_2014_train.py`（APST 在 2014 roster 上按作者冻结配方重训）、`scripts/run_baselines_nomad_tf.py` + `nomad_prep.py` + `run_baselines_nomad_score.py` + `run_nomad_jobs.sh`（NoMAD）、`scripts/run_baselines_native_p.py`（P-prior / P0 在 native-query 子集上重算）、`scripts/analyze_baselines.py`（汇总）、`scripts/baselines_selection_sensitivity.py`（第二次审查：重选之后的敏感性）、`tests/test_published_baselines.py` + `tests/test_electrode_align.py`（单元测试）。

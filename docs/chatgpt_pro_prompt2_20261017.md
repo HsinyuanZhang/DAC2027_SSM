@@ -74,12 +74,12 @@
 
 ### 3.6 与已发表方法对比（sub-M，4 个 target，相同的抽样与 query）
 
-- 忠实复现的 Stabilizer（Degenhart 2020）、Gallego 2020 的 CCA 对齐、APST、NoMAD，除下面两点外都低于 P0：
+- 忠实复现的 Stabilizer（Degenhart 2020）、Gallego 2020 的 CCA 对齐、NoMAD，除下面两点外都低于 P0：
   - **按电极汇总输入的 Stabilizer 在 days 层与 P0 打平**；
   - **我们加了正则的 ridge-CCA（闭式，用 B 个 trial 的方向标签）在 B=33 时比 P0 高 +0.09 至 +0.12，与 R3 打平**（year：0.439 对 0.435）。
 - B=1 时 CCA 类方法基本不可用，P0 仍有 0.47 / 0.20。
 
-### 3.7 set-attention（我们知道它是 POSSM / SPINT / APST 的核心组件）
+### 3.7 set-attention（我们知道它是 POSSM / SPINT 等 spike 解码模型的核心组件）
 
 - 电极身份已知时：P2（DeepSets）、P3/P4（PMA）相对 P0 没有超出噪声的增益。
 - 部分 unit 落在新电极上（混合实验 v1、v2，包括 pairwise cross-attention，key 用两个 unit 之间的噪声相关）：在参数量匹配的对照面前没有增益，即使把新电极 unit 的比例提高到 90% 也一样。
@@ -111,7 +111,7 @@ sub-M 的核心对比只有 4 个 target session（month 和 year 共用一个 t
 - B2. 哪些地方适合不同精度的量化、算子融合和近似计算？请指出能直接由我们已有证据支撑的部分，以及还需要补的实验。
 
 **C. 创新点定位**
-- C1. 给出题目方向和 3 个贡献点的写法，并说明相对 NoMAD、Stabilizer、Gallego CCA、APST、POSSM、SPINT、HaLoRA、NoiseZO、DRAFT 的差异。
+- C1. 给出题目方向和 3 个贡献点的写法，并说明相对 NoMAD、Stabilizer、Gallego CCA、POSSM、SPINT、HaLoRA、NoiseZO、DRAFT 的差异。
 - C2. 论文的主图和主表应该放什么？必须补的实验有哪些？审稿人最可能质疑的三点是什么，怎么提前准备？
 - C3. 坦诚评估：按目前的证据，这篇论文最大的风险是什么？如果只能再做一周的实验，你会做哪三件事？
 
