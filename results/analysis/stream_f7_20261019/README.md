@@ -1,5 +1,13 @@
 # Streaming fixed-feedback refinement（F7-J 求和重排，2026-10-19）
 
+> **第三轮独立审查（Opus，2026-10-19，针对 e7af2d8）：**
+> - **re-based 的数学与因果性已独立验证**：每个 trial 部署的表和 bias 等于当前归一化下的 P0_{<k}+Δ，误差 ≤ 1e-10；η=0、ρ=0 时精确返回 P0_B；抽查的存档行重跑后逐位一致。**12 个漂移 target 上保留 0.82 / 0.83（B=8 / 33）可信**；source 上的增益（0.018–0.047）远大于门槛，所以这个结论不依赖门槛的定义。
+> - **sub-C 的数字由选参门槛决定，不应作为“保留比例”引用**：门槛是“增益 ≥ 0.005 **或** > 2 SE”。sc_0629 在 B=8/16 时以 0.0006/0.0017 的增益通过了 2 SE 那一半；只用 0.005 的门槛时，sub-C 在所有 B 都会回退到 P0。sc_0708 的 target 上其实有真实的提升空间（B=33 时约 0.51 对 P0 0.44），但它唯一的选参 session 看不到这个增益。sub-C 要按 backbone 分开报告：sc_0629 在 B=8/16/33 时为 0.14 / 0.30 / 0.86（6/6 个 session 为正）；sc_0708 因为全部回退，按定义为 0。合并后的 CI 偏窄，因为回退决定是按 backbone 做的，实际只有 2 个聚类。
+> - **SRAM**：N=26 时从 13.5 KB 涨到 44.7 KB，几乎全是 ROM（P0 calibrator 的 fp32 权重 31.4 KB），两边都计入了，所以 R2 − S1-causal 仍约为 18.7 KB；表格应分成 SRAM 和 ROM 两列（calibrator 用 int8 时约 8 KB）。trace 的延迟线高估了：用 S_t = ρS_{t−1} + x_t − ρ^L x_{t−L} 只需要 L·N 的 3-bit 输入环形缓冲；不过 re-based 的 trace 还没有精度结果。
+> - 小问题：trial 0 用 prior 前向再叠加到 P0_{≤0} 上，这个设计不如直接用 P0_{≤0}，但影响很小；缺少 `rebased_feedback_loop` 的因果测试；“8 个测试通过”应为 14 个；14/44 的回退计数单位是**规则**（层或 backbone × B × 变体），不是格子。
+> - re-based 在 B ≥ 8 时，12 个漂移 target 上仍然全部低于 R2（−0.024 / −0.033）。
+
+
 ## 第二轮修正：Δ 与 P0 分开，每个 trial 重建表
 
 上一节（以及方法名 `s1c` / `s1c_ridge` / `tr4c` / `tr8c`）的 “S1-causal” 是 **prior-anchored，已作废**。`commit_on_p0` 写成 `T = rescale(T_used) + η·step − ρ(rescale(T_used) − P0)`，表从 prior 往下传，prior 的权重是 `(1−ρ)^B`；ρ=0 时 P0 根本不会成为基座。sub-C 的 prior 很差，所以那一版 target 上低于 P0。
