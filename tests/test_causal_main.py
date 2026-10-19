@@ -10,7 +10,8 @@ from ssm_decode.causal_protocol import (COLD, INITIAL, AffineMap, assert_prefix_
                                         assert_segment_causal, calibration_indices,
                                         calibration_spans, commit_segments, latent_from_maps,
                                         margin_pick, measured_read_bin, query_bins_on_commit,
-                                        query_indices, run_rebased_many)
+                                        query_indices, run_rebased_many,
+                                        sessions_with_positive_gain)
 from ssm_decode.stream_f7 import rebased_feedback_loop
 
 
@@ -205,6 +206,18 @@ def test_gate_gain_is_against_the_methods_own_base():
     assert vs_base["fallback_base"] is True and vs_base["eta"] == 0.0
 
 
+def test_conservative_gate_needs_two_positive_sessions():
+    def ep(session, gain):
+        return {"session": session, "p0": 0.2,
+                "rebase": [{"eta": 1.0, "rho": 0.0, "r2": 0.2 + gain}]}
+    one = sessions_with_positive_gain([ep("a", 0.02), ep("a", 0.03)], "rebase", 1.0, 0.0)
+    assert one["n_sessions"] == 1 and one["deploy"] is False
+    two = sessions_with_positive_gain([ep("a", 0.02), ep("b", 0.01)], "rebase", 1.0, 0.0)
+    assert two["n_positive_sessions"] == 2 and two["deploy"] is True
+    mixed = sessions_with_positive_gain([ep("a", 0.02), ep("b", -0.01)], "rebase", 1.0, 0.0)
+    assert mixed["n_positive_sessions"] == 1 and mixed["deploy"] is False
+
+
 def test_query_and_prefix_perturbation_of_a_measured_prefix():
     """Same contract as the reviewer's leak.py / leak_prefix.py, on a pure prefix statistic.
 
@@ -289,10 +302,15 @@ def _map_delta(a, b, fields=("weight", "bias", "mean", "std")):
 
 @pytest.mark.skipif(__import__("os").environ.get("CAUSAL_LEAK") != "1", reason="set CAUSAL_LEAK=1")
 def test_real_query_and_prefix_perturbation():
-    """Reviewer leak.py / leak_prefix.py on one short target, including the COMBO bias path.
+    """Query and in-block perturbation on a drift target with alpha > 0 and eta > 0.
 
-    Covers P0, W_alpha, S1, COMBO, CCA+S1, R1, R2, R3 and ui_reg. Query bins and, separately,
-    bins after an in-block prefix must not move commits that were not allowed to read them.
+    B=8, J=4, 20140929 (month trunk). The days B=2 case had alpha 0 and a CCA+S1 fallback,
+    so it never touched the W_alpha bias path or a real refinement step.
+
+    ``read_bin`` stored on loop commits and on R2/R3/ui_reg is the prefix-cache label
+    (the trials those routines were asked to read). This perturbation is the guard that
+    those reads did not depend on later bins. A positive control checks that commits
+    after J do move when those bins are corrupted.
     """
     import dataclasses
     import os
@@ -304,30 +322,34 @@ def test_real_query_and_prefix_perturbation():
 
     pc.set_variant("base")
     dev = torch.device("cuda:0")
-    world = rpc.World("days", "O", dev, load_sessions=False)
-    p0 = pc.load_p0(world, "days")
-    p3 = rcm.load_p3("days")
-    B, J = 2, 1
+    B, J = 8, 4
+    date = "20140929"
+    world = rpc.World("month", "O", dev, load_sessions=False)
+    p0 = pc.load_p0(world, "month")
+    p3 = rcm.load_p3("drift")
     L = int(p3["r2"][str(B)]["cfg"]["L"])
-    jb = pc.jbar_for("days", L)
-    fix = rcm.load_fix_rules("days")
-    rules = rcm.load_s1_rules("days")[0]
+    jb = pc.jbar_for("month", L)
+    fix = rcm.load_fix_rules("month")
+    rules = rcm.load_s1_rules("month")[0]
     s1 = rules["b"][str(B)]["and"]
-    date = "20150616"
     alphas = rcm.alpha_bundle(fix["trunk"], fix["pooled"], date, B)
+    assert float(alphas["pooled"]) > 0.0
+    assert float(s1["eta"]) > 0.0
+    assert float(fix["combo"][0]["b"][str(B)]["and"]["eta"]) > 0.0
+    assert float(fix["cca_s1"][0]["b"][str(B)]["and"]["eta"]) > 0.0
     sd, prior = world.target(rcm.PREFIX + date)
     spans = [(int(a), int(b)) for a, b in sd.trials]
-    basis = pc.load_basis("days")
+    basis = pc.load_basis("month")
     k1 = __import__("scripts.run_drift_curve", fromlist=["pick_kind"]).pick_kind(p3, "r1s", B)
     lam1 = p3[f"r1s_{k1}"][str(B)]["cfg"]["lam"]
     r2_cfg = p3["r2"][str(B)]["cfg"]
     k3 = __import__("scripts.run_drift_curve", fromlist=["pick_kind"]).pick_kind(p3, "r3", B)
     lam3 = p3[f"r3_{k3}"][str(B)]["cfg"]["lam"]
-    ui_block, _ui_spec = rcm.load_ui("days")
+    ui_block, _ui_spec = rcm.load_ui("drift")
     ui = ui_block[str(B)]
 
     def build(s):
-        cache = rcm.prefix_cache(s, prior, p0, B, world, "days")
+        cache = rcm.prefix_cache(s, prior, p0, B, world, "month")
         cold, initial = rcm.cold_and_initial(rcm.to_cpu(prior), cache, spans)
         base = world.adapter.model.base
         out = {}
@@ -376,7 +398,7 @@ def test_real_query_and_prefix_perturbation():
     assert np.allclose(orig["combo_eta0"][B].weight, orig["wa"][B].weight, atol=1e-5)
     assert np.allclose(orig["combo_eta0"][B].bias, orig["wa"][B].bias, atol=1e-5)
     query = build(corrupt(sd, spans[B - 1][1]))
-    for name in ("p0", "wa", "s1", "combo", "cca_s1", "r1", "r2", "r3", "ui"):
+    for name in ("p0", "wa", "s1", "combo", "cca_s1", "r1", "r2", "r3", "ui", "combo_eta0"):
         for k, amap in orig[name].items():
             if k in (COLD, INITIAL):
                 continue
@@ -387,3 +409,7 @@ def test_real_query_and_prefix_perturbation():
             if k in (COLD, INITIAL) or k > J:
                 continue
             assert _map_delta(amap, prefix[name][k]) < 1e-6, (name, k)
+    # Positive control: commits that are allowed to read the corrupted prefix do move.
+    assert _map_delta(orig["p0"][B], prefix["p0"][B]) > 1e-4
+    assert _map_delta(orig["wa"][B], prefix["wa"][B]) > 1e-4
+    assert _map_delta(orig["combo"][B], prefix["combo"][B]) > 1e-4

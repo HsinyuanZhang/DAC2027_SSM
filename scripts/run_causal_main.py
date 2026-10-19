@@ -668,6 +668,8 @@ def eval_target(world, p0, sd, prior, cache, spec_rules, jbars, basis, *,
         alpha_trunk = alpha_info.get("trunk")
         alpha_pooled = alpha_info.get("pooled")
         alpha_B = alpha_info.get("by_B")
+        alpha_a = alpha_info.get("a")
+        alpha_b = alpha_info.get("b")
         s1_or = _choice(spec_rules["s1"], B, "or")
         s1_and = _choice(spec_rules["s1"], B, "and")
         combo_rules = spec_rules["combo"]
@@ -707,7 +709,9 @@ def eval_target(world, p0, sd, prior, cache, spec_rules, jbars, basis, *,
                 built["p0"] = (maps, reads, "anytime", {})
             for label, aval, src in (("w_alpha_trunk", alpha_trunk, "per_trunk"),
                                      ("w_alpha_pooled", alpha_pooled, "pooled_gap"),
-                                     ("w_alpha_B", alpha_B, "pooled_B")):
+                                     ("w_alpha_B", alpha_B, "pooled_B"),
+                                     ("w_alpha_a", alpha_a, "expanding"),
+                                     ("w_alpha_b", alpha_b, "strict")):
                 if not any(m == label for m, _ in need):
                     continue
                 if aval is None:
@@ -746,7 +750,8 @@ def eval_target(world, p0, sd, prior, cache, spec_rules, jbars, basis, *,
                 if s1_and is not None and s1_or is not None and (
                         float(s1_and["eta"]), float(s1_and["rho"])) == (float(s1_or["eta"]), float(s1_or["rho"])):
                     if "s1_causal" in built:
-                        built["s1_causal_and"] = built["s1_causal"]
+                        maps_s, reads_s, inst_s, cfg_s = built["s1_causal"]
+                        built["s1_causal_and"] = (maps_s, reads_s, inst_s, {**cfg_s, "gate": "and"})
                     else:
                         s1_body(s1_and, "s1_causal_and")
                 else:
@@ -777,6 +782,9 @@ def eval_target(world, p0, sd, prior, cache, spec_rules, jbars, basis, *,
             # Primary COMBO / CCA+S1 use the AND gate. OR is the sensitivity row.
             if any(m == "combo" for m, _ in need):
                 refine_body(combo_and, "combo", "p0" if alpha_pooled == 0 else "w_alpha", alpha_pooled)
+            for label, aval in (("combo_a", alpha_a), ("combo_b", alpha_b)):
+                if any(m == label for m, _ in need):
+                    refine_body(combo_and, label, "p0" if aval == 0 else "w_alpha", aval)
             if any(m == "combo_or" for m, _ in need):
                 if combo_or is not None and combo_and is not None and "combo" in built and (
                         float(combo_or["eta"]), float(combo_or["rho"])) == (
@@ -946,9 +954,12 @@ def cmd_eval(args):
     latencies = tuple(int(x) for x in args.latency.split(",")) if args.latency else LATENCIES
     path = OUT / "rows.jsonl"
     seen = seen_keys(path, ("method", "stratum", "backbone", "target", "B", "seed", "latency"))
+    alpha_proto = None
+    if args.alpha_protocols:
+        alpha_proto = json.loads(Path(args.alpha_protocols).read_text())["protocols"]
     for stratum in strata:
         if stratum == "subc":
-            _eval_subc(args, path, seen, methods, Bs, seeds, latencies, device)
+            _eval_subc(args, path, seen, methods, Bs, seeds, latencies, device, alpha_proto)
             continue
         spec = SPECS[stratum]
         dates = spec["dates"] if not args.targets else args.targets.split(",")
@@ -985,10 +996,19 @@ def cmd_eval(args):
             k_max = max(b for b in Bs if b <= len(sd.trials))
             print(f"[load] {stratum} {date} N={sd.n_units} trials={len(sd.trials)} bins={sd.n_bins}", flush=True)
             cache = prefix_cache(sd, prior, p0, k_max, world, spec["cca"])
+            def _gi(B, date=date, stratum=stratum, trunk=trunk_rules, pooled=pooled_rules,
+                    alpha_proto=alpha_proto):
+                if alpha_proto is None:
+                    return alpha_bundle(trunk, pooled, date, B)
+                a = alpha_proto["expanding"][stratum][date][str(B)]
+                b = alpha_proto["strict"][stratum][date][str(B)]
+                return {"a": a["alpha"], "b": b["alpha"], "trunk": None, "pooled": None,
+                        "by_B": None, "bin": a.get("bin"), "elapsed": None,
+                        "a_sessions": a.get("sessions"), "b_sessions": b.get("sessions"),
+                        "a_tags": a.get("tags"), "b_tags": b.get("tags")}
             eval_target(world, p0, sd, prior, cache, bundle, jbars, basis,
                         stratum=stratum, backbone=spec["world"], date=date,
-                        gap_info_of=lambda B, date=date, trunk=trunk_rules, pooled=pooled_rules:
-                        alpha_bundle(trunk, pooled, date, B),
+                        gap_info_of=_gi,
                         seen=seen, path=path, methods=methods, Bs=Bs, seeds=seeds, latencies=latencies)
             if world.adapter._hash() != hash0:
                 raise SystemExit("trunk weights changed during eval")
@@ -996,7 +1016,7 @@ def cmd_eval(args):
             torch.cuda.empty_cache()
 
 
-def _eval_subc(args, path, seen, methods, Bs, seeds, latencies, device):
+def _eval_subc(args, path, seen, methods, Bs, seeds, latencies, device, alpha_proto=None):
     """Month targets of sc_0629 and sc_0708. B=2 has no source rule and is skipped."""
     from ssm_decode.expansion_protocol import forbidden_in
     from scripts.run_stream_f7 import _subc_contexts
@@ -1065,8 +1085,14 @@ def _eval_subc(args, path, seen, methods, Bs, seeds, latencies, device):
                                 "selection_protocol": "not_run"}])
                             seen.add(key)
 
-            def gap_of(B, date=date, trunk=fix["trunk"], pooled=fix["pooled"]):
-                return alpha_bundle(trunk, pooled, date, B)
+            def gap_of(B, date=date, bid=bid, trunk=fix["trunk"], pooled=fix["pooled"],
+                       alpha_proto=alpha_proto):
+                if alpha_proto is None:
+                    return alpha_bundle(trunk, pooled, date, B)
+                a = alpha_proto["expanding"][bid][date][str(B)]
+                b = alpha_proto["strict"][bid][date][str(B)]
+                return {"a": a["alpha"], "b": b["alpha"], "trunk": None, "pooled": None,
+                        "by_B": None, "bin": a.get("bin")}
 
             eval_target(ctx.world, ctx.p0, sd, prior, cache, bundle, jbars, basis,
                         stratum="subc_month", backbone=bid, date=date, gap_info_of=gap_of,
@@ -1412,6 +1438,70 @@ def cmd_select(args):
     _select_tag(args.tag, args.what, args.limit)
 
 
+# Reported targets. Strict alpha may not train on any of these sessions.
+_DRIFT = ["20140626", "20140627", "20140929", "20141203", "20150511", "20150512",
+          "20150610", "20150611", "20150612", "20150615", "20150616", "20150617"]
+_SUBC = {
+    "sc_0629": ["20150629", "20150701", "20150706", "20150709", "20150713", "20150716"],
+    "sc_0708": ["20151103", "20151104", "20151106", "20151109", "20151110", "20151112"],
+}
+
+
+def build_alpha_protocols() -> dict:
+    """Per-target alpha under expanding-window (a) and strict target-disjoint (b)."""
+    from ssm_decode.causal_protocol import select_alpha
+    rows = []
+    for tag in ("days", "month", "year", "sc_0629", "sc_0708"):
+        path = OUT / "select" / f"alpha_{tag}_episodes.jsonl"
+        rows.extend(_episodes(path))
+    reported = set(_DRIFT) | set(_SUBC["sc_0629"]) | set(_SUBC["sc_0708"])
+    specs = [("drift", "sub-M", "20140306", _DRIFT),
+             ("days", "sub-M", "20150615", ["20150616", "20150617"])]
+    for bid, dates in _SUBC.items():
+        ref = json.loads((OUT / "select" / f"gap_rules_{bid}.json").read_text())["ref"]
+        specs.append((bid, "sub-C", ref, dates))
+    out = {"reported_targets": sorted(reported), "protocols": {}}
+    for variant in ("expanding", "strict"):
+        block = {}
+        for name, subject, ref, dates in specs:
+            block[name] = {}
+            for date in dates:
+                gap = elapsed_days(date, ref)
+                block[name][date] = {}
+                for B in (1, 2, 4, 8, 16, 33):
+                    if name in _SUBC and B not in SUBC_B:
+                        continue
+                    block[name][date][str(B)] = select_alpha(
+                        rows, date, subject, gap, B, variant, reported)
+        out["protocols"][variant] = block
+    return out
+
+
+def cmd_alpha_protocols(_args):
+    out = build_alpha_protocols()
+    dest = OUT / "select" / "alpha_protocols.json"
+    dest.write_text(json.dumps(out, indent=1))
+    # Drift check against the reviewer's re-score, when that file is present.
+    review = Path("/tmp/causal_review2/alpha_variants.json")
+    if review.exists():
+        ref = json.loads(review.read_text())
+        bad = []
+        for date, per_b in out["protocols"]["expanding"]["drift"].items():
+            for B, spec in per_b.items():
+                exp = float(ref["causal"][date][str(int(B))])
+                if float(spec["alpha"]) != exp:
+                    bad.append(("expanding", date, B, spec["alpha"], exp))
+        for date, per_b in out["protocols"]["strict"]["drift"].items():
+            for B, spec in per_b.items():
+                exp = float(ref["strict"][date][str(int(B))])
+                if float(spec["alpha"]) != exp:
+                    bad.append(("strict", date, B, spec["alpha"], exp))
+        print(f"[alpha-protocols] drift mismatches vs review: {len(bad)}", flush=True)
+        for row in bad[:8]:
+            print(" ", row, flush=True)
+    print(f"[alpha-protocols] wrote {dest}", flush=True)
+
+
 def main():
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -1427,11 +1517,16 @@ def main():
     e.add_argument("--B", default=None)
     e.add_argument("--seeds", default=None)
     e.add_argument("--latency", default=None, help="comma list, default 0,1")
+    e.add_argument("--alpha-protocols", default=None,
+                   help="json from alpha-protocols; enables w_alpha_a/combo_a and w_alpha_b/combo_b")
+    sub.add_parser("alpha-protocols")
     args = p.parse_args()
     if args.cmd == "select":
         cmd_select(args)
     elif args.cmd == "pool-alpha":
         cmd_pool_alpha(args)
+    elif args.cmd == "alpha-protocols":
+        cmd_alpha_protocols(args)
     else:
         cmd_eval(args)
 

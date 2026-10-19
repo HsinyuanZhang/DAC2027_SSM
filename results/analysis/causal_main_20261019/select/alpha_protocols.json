@@ -1,0 +1,5038 @@
+{
+ "reported_targets": [
+  "20140626",
+  "20140627",
+  "20140929",
+  "20141203",
+  "20150511",
+  "20150512",
+  "20150610",
+  "20150611",
+  "20150612",
+  "20150615",
+  "20150616",
+  "20150617",
+  "20150629",
+  "20150701",
+  "20150706",
+  "20150709",
+  "20150713",
+  "20150716",
+  "20151103",
+  "20151104",
+  "20151106",
+  "20151109",
+  "20151110",
+  "20151112"
+ ],
+ "protocols": {
+  "expanding": {
+   "drift": {
+    "20140626": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6108379022932615,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.6340672765610035,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7158373566352301,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7584769442338792,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "16": {
+      "alpha": 0.25,
+      "source_r2": 0.7641569925532259,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7843039614896075,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     }
+    },
+    "20140627": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6108379022932615,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.6340672765610035,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7158373566352301,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7584769442338792,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "16": {
+      "alpha": 0.25,
+      "source_r2": 0.7641569925532259,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7843039614896075,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     }
+    },
+    "20140929": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.26576379524852417,
+      "bin": "gt180",
+      "bin_used": "mid",
+      "fallback_from": "gt180",
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.317259058578363,
+      "bin": "gt180",
+      "bin_used": "mid",
+      "fallback_from": "gt180",
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.5,
+      "source_r2": 0.4098256240541614,
+      "bin": "gt180",
+      "bin_used": "mid",
+      "fallback_from": "gt180",
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.5995356498916016,
+      "bin": "gt180",
+      "bin_used": "mid",
+      "fallback_from": "gt180",
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.6331055165735078,
+      "bin": "gt180",
+      "bin_used": "mid",
+      "fallback_from": "gt180",
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.6335559777496946,
+      "bin": "gt180",
+      "bin_used": "mid",
+      "fallback_from": "gt180",
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     }
+    },
+    "20141203": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.2594620244944352,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140929"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.24614938812965265,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140929"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.0,
+      "source_r2": 0.2574804066514197,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140929"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.47852086541327404,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140929"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.5294598171337699,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140929"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "33": {
+      "alpha": 0.75,
+      "source_r2": 0.5580652795627428,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140929"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     }
+    },
+    "20150511": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.1486798140864193,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "2": {
+      "alpha": 0.25,
+      "source_r2": 0.1655669567427278,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.5,
+      "source_r2": 0.21183797998050619,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.4119326077974331,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.46079976730986255,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "33": {
+      "alpha": 0.75,
+      "source_r2": 0.4800788198296344,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     }
+    },
+    "20150512": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.1486798140864193,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "2": {
+      "alpha": 0.25,
+      "source_r2": 0.1655669567427278,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.5,
+      "source_r2": 0.21183797998050619,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.4119326077974331,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.46079976730986255,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "33": {
+      "alpha": 0.75,
+      "source_r2": 0.4800788198296344,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     }
+    },
+    "20150610": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.1486798140864193,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "2": {
+      "alpha": 0.25,
+      "source_r2": 0.1655669567427278,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.5,
+      "source_r2": 0.21183797998050619,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.4119326077974331,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.46079976730986255,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "33": {
+      "alpha": 0.75,
+      "source_r2": 0.4800788198296344,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     }
+    },
+    "20150611": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.1486798140864193,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "2": {
+      "alpha": 0.25,
+      "source_r2": 0.1655669567427278,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.5,
+      "source_r2": 0.21183797998050619,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.4119326077974331,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.46079976730986255,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "33": {
+      "alpha": 0.75,
+      "source_r2": 0.4800788198296344,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     }
+    },
+    "20150612": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.1486798140864193,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "2": {
+      "alpha": 0.25,
+      "source_r2": 0.1655669567427278,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.5,
+      "source_r2": 0.21183797998050619,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.4119326077974331,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.46079976730986255,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "33": {
+      "alpha": 0.75,
+      "source_r2": 0.4800788198296344,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     }
+    },
+    "20150615": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.1486798140864193,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "2": {
+      "alpha": 0.25,
+      "source_r2": 0.1655669567427278,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.5,
+      "source_r2": 0.21183797998050619,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.4119326077974331,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.46079976730986255,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "33": {
+      "alpha": 0.75,
+      "source_r2": 0.4800788198296344,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": false
+     }
+    },
+    "20150616": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.19611863160281875,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 24,
+      "sessions": [
+       "20140203",
+       "20140217",
+       "20140218",
+       "20140303",
+       "20140304",
+       "20140306",
+       "20140307",
+       "20140627",
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "days",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.22651918932612403,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 24,
+      "sessions": [
+       "20140203",
+       "20140217",
+       "20140218",
+       "20140303",
+       "20140304",
+       "20140306",
+       "20140307",
+       "20140627",
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "days",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.26932795367246987,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 24,
+      "sessions": [
+       "20140203",
+       "20140217",
+       "20140218",
+       "20140303",
+       "20140304",
+       "20140306",
+       "20140307",
+       "20140627",
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "days",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.3650979459152879,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 24,
+      "sessions": [
+       "20140203",
+       "20140217",
+       "20140218",
+       "20140303",
+       "20140304",
+       "20140306",
+       "20140307",
+       "20140627",
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "days",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.435626746193669,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 24,
+      "sessions": [
+       "20140203",
+       "20140217",
+       "20140218",
+       "20140303",
+       "20140304",
+       "20140306",
+       "20140307",
+       "20140627",
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "days",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "33": {
+      "alpha": 0.75,
+      "source_r2": 0.4520525422626804,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 24,
+      "sessions": [
+       "20140203",
+       "20140217",
+       "20140218",
+       "20140303",
+       "20140304",
+       "20140306",
+       "20140307",
+       "20140627",
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "days",
+       "year"
+      ],
+      "cross_subject": false
+     }
+    },
+    "20150617": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.19611863160281875,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 24,
+      "sessions": [
+       "20140203",
+       "20140217",
+       "20140218",
+       "20140303",
+       "20140304",
+       "20140306",
+       "20140307",
+       "20140627",
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "days",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.22651918932612403,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 24,
+      "sessions": [
+       "20140203",
+       "20140217",
+       "20140218",
+       "20140303",
+       "20140304",
+       "20140306",
+       "20140307",
+       "20140627",
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "days",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.26932795367246987,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 24,
+      "sessions": [
+       "20140203",
+       "20140217",
+       "20140218",
+       "20140303",
+       "20140304",
+       "20140306",
+       "20140307",
+       "20140627",
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "days",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.3650979459152879,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 24,
+      "sessions": [
+       "20140203",
+       "20140217",
+       "20140218",
+       "20140303",
+       "20140304",
+       "20140306",
+       "20140307",
+       "20140627",
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "days",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.435626746193669,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 24,
+      "sessions": [
+       "20140203",
+       "20140217",
+       "20140218",
+       "20140303",
+       "20140304",
+       "20140306",
+       "20140307",
+       "20140627",
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "days",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "33": {
+      "alpha": 0.75,
+      "source_r2": 0.4520525422626804,
+      "bin": "gt180",
+      "bin_used": "gt180",
+      "fallback_from": null,
+      "n_episodes": 24,
+      "sessions": [
+       "20140203",
+       "20140217",
+       "20140218",
+       "20140303",
+       "20140304",
+       "20140306",
+       "20140307",
+       "20140627",
+       "20140929",
+       "20141203"
+      ],
+      "tags": [
+       "days",
+       "year"
+      ],
+      "cross_subject": false
+     }
+    }
+   },
+   "days": {
+    "20150616": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.6340672765610035,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20150617": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.6340672765610035,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    }
+   },
+   "sc_0629": {
+    "20150629": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.26576379524852417,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.5,
+      "source_r2": 0.4098256240541614,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.5995356498916016,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.6331055165735078,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.6335559777496946,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20150701": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.26576379524852417,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.5,
+      "source_r2": 0.4098256240541614,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.5995356498916016,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.6331055165735078,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.6335559777496946,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20150706": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.26576379524852417,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.5,
+      "source_r2": 0.4098256240541614,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.5995356498916016,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.6331055165735078,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.6335559777496946,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20150709": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.26576379524852417,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.5,
+      "source_r2": 0.4098256240541614,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.5995356498916016,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.6331055165735078,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.6335559777496946,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20150713": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.26576379524852417,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.5,
+      "source_r2": 0.4098256240541614,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.5995356498916016,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.6331055165735078,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.6335559777496946,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20150716": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.26576379524852417,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.5,
+      "source_r2": 0.4098256240541614,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.5995356498916016,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.6331055165735078,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.6335559777496946,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     }
+    }
+   },
+   "sc_0708": {
+    "20151103": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.26576379524852417,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.5,
+      "source_r2": 0.4098256240541614,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.5995356498916016,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.6331055165735078,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.6335559777496946,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20151104": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.26576379524852417,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.5,
+      "source_r2": 0.4098256240541614,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.5995356498916016,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.6331055165735078,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.6335559777496946,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20151106": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.26576379524852417,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.5,
+      "source_r2": 0.4098256240541614,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.5995356498916016,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.6331055165735078,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.6335559777496946,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20151109": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.26576379524852417,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.5,
+      "source_r2": 0.4098256240541614,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.5995356498916016,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.6331055165735078,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.6335559777496946,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20151110": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.26576379524852417,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.5,
+      "source_r2": 0.4098256240541614,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.5995356498916016,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.6331055165735078,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.6335559777496946,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20151112": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.26576379524852417,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.5,
+      "source_r2": 0.4098256240541614,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.75,
+      "source_r2": 0.5995356498916016,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.75,
+      "source_r2": 0.6331055165735078,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.6335559777496946,
+      "bin": "mid",
+      "bin_used": "mid",
+      "fallback_from": null,
+      "n_episodes": 2,
+      "sessions": [
+       "20140627"
+      ],
+      "tags": [
+       "year"
+      ],
+      "cross_subject": true
+     }
+    }
+   }
+  },
+  "strict": {
+   "drift": {
+    "20140626": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6108379022932615,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.6340672765610035,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7158373566352301,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7584769442338792,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "16": {
+      "alpha": 0.25,
+      "source_r2": 0.7641569925532259,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7843039614896075,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     }
+    },
+    "20140627": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6108379022932615,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.6340672765610035,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7158373566352301,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7584769442338792,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "16": {
+      "alpha": 0.25,
+      "source_r2": 0.7641569925532259,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7843039614896075,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     }
+    },
+    "20140929": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6108379022932615,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.6340672765610035,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7158373566352301,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7584769442338792,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "16": {
+      "alpha": 0.25,
+      "source_r2": 0.7641569925532259,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7843039614896075,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     }
+    },
+    "20141203": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6108379022932615,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.6340672765610035,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7158373566352301,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7584769442338792,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "16": {
+      "alpha": 0.25,
+      "source_r2": 0.7641569925532259,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7843039614896075,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     }
+    },
+    "20150511": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.6340672765610035,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20150512": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.6340672765610035,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20150610": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.6340672765610035,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20150611": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.6340672765610035,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20150612": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.6340672765610035,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20150615": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.6340672765610035,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20150616": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.6340672765610035,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20150617": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.6340672765610035,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "gt180",
+      "bin_used": "le14",
+      "fallback_from": "gt180",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    }
+   },
+   "days": {
+    "20150616": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.6340672765610035,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20150617": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "2": {
+      "alpha": 0.0,
+      "source_r2": 0.6340672765610035,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 4,
+      "sessions": [
+       "20140307"
+      ],
+      "tags": [
+       "month",
+       "year"
+      ],
+      "cross_subject": false
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "le14",
+      "bin_used": "le14",
+      "fallback_from": null,
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    }
+   },
+   "sc_0629": {
+    "20150629": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20150701": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20150706": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20150709": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20150713": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20150716": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    }
+   },
+   "sc_0708": {
+    "20151103": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20151104": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20151106": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20151109": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20151110": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    },
+    "20151112": {
+     "1": {
+      "alpha": 0.0,
+      "source_r2": 0.6486537750477172,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "4": {
+      "alpha": 0.25,
+      "source_r2": 0.7323309838472082,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "8": {
+      "alpha": 0.25,
+      "source_r2": 0.7707000601280972,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "16": {
+      "alpha": 0.5,
+      "source_r2": 0.7808727021804289,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     },
+     "33": {
+      "alpha": 0.5,
+      "source_r2": 0.7992512719951511,
+      "bin": "mid",
+      "bin_used": "le14",
+      "fallback_from": "mid",
+      "n_episodes": 6,
+      "sessions": [
+       "20140307",
+       "20150319"
+      ],
+      "tags": [
+       "month",
+       "sc_0629",
+       "year"
+      ],
+      "cross_subject": true
+     }
+    }
+   }
+  }
+ }
+}

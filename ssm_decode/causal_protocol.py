@@ -222,15 +222,44 @@ def assert_prefix_idx(idx, k: int) -> None:
         raise AssertionError(f"commit {k} used trials {got}, expected 0..{int(k) - 1}")
 
 
+def sessions_with_positive_gain(episodes, score_key: str, eta: float, rho: float, *,
+                                 base_key: str = "p0") -> dict:
+    """How many distinct selection sessions have a positive mean gain at this (eta, rho).
+
+    The AND gate's " > 2 SE" leg is not a session-level test: with one selection session
+    the SE is across P0 seeds (and is 0 when the two episodes are identical, as for a
+    seed-free method). This count is the conservative alternative: deploy the step only
+    when at least two sessions are positive, otherwise fall back to the base.
+    """
+    by = {}
+    for ep in episodes:
+        hit = [s for s in ep[score_key]
+               if abs(float(s["eta"]) - float(eta)) < 1e-9 and abs(float(s["rho"]) - float(rho)) < 1e-9]
+        # eta=rho=0 is the fallback and was not always on the stored grid. Gain is then 0.
+        gain = 0.0 if not hit else float(hit[0]["r2"]) - float(ep[base_key])
+        by.setdefault(str(ep["session"]), []).append(gain)
+    means = {s: float(np.mean(v)) for s, v in by.items()}
+    positive = sorted(s for s, m in means.items() if m > 0.0)
+    return {"n_sessions": len(means), "n_positive_sessions": len(positive),
+            "positive_sessions": positive,
+            "session_gain": means,
+            "deploy": len(positive) >= 2}
+
+
 def margin_pick(episodes, score_key: str, eta_r2: float, *, margin: float = MARGIN_R2,
                 mode: str = "and", base_key: str = "p0") -> dict:
-    """Source-only (eta, rho) pick. Primary gate is AND; OR is the sensitivity.
+    """Source-only (eta, rho) pick.
 
     Gain is ``score - episode[base_key]``. For S1 the base is P0. For COMBO and
     CCA+S1 the base is that method's own closed-form table, not P0.
-    AND: paired gain >= margin AND > 2 SE. OR: either condition.
+
+    ``mode='and'`` (primary): mean gain >= margin AND > 2 SE of the selection episodes.
+    That SE is across episodes. With a single selection session those episodes are
+    P0 seeds (or two identical copies for a seed-free method, so SE = 0 and the test
+    reduces to gain >= margin). It is not a session-level test.
+    ``mode='or'`` is the sensitivity: either leg is enough.
     Ties prefer the eta closest to the R2 rule. A non-positive gain never deploys,
-    so η = 0 (no refinement) wins only as the fallback.
+    so η = 0 wins only as the fallback.
     """
     if mode not in ("or", "and"):
         raise ValueError(mode)
@@ -354,3 +383,79 @@ def run_rebased_many(base, raw_trials, prior, configs, prepare, *, mode: str = "
         out.append({"table": table[i], "bias": bias[i], "mean": coord[0], "std": coord[1],
                     "delta": delta[i], "eta": float(etas[i]), "rho": float(rhos[i])})
     return out
+
+
+# Trunk dates used by the two alpha protocols. "last" is the latest session the trunk
+# was trained on. A trunk may contribute episodes only when that date is strictly before
+# the target. "train" lists those sessions so the strict protocol can see whether the
+# trunk was fit on any reported target.
+TRUNK_LAST = {
+    "days": "20150615", "month": "20140306", "year": "20140306",
+    "sc_0629": "20150313", "sc_0708": "20150706",
+}
+TRUNK_TRAIN = {
+    "days": {"20150511", "20150512", "20150610", "20150611", "20150612", "20150615"},
+    "month": set(), "year": set(),
+    "sc_0629": set(),
+    "sc_0708": {"20150629", "20150630", "20150701", "20150703", "20150706"},
+}
+
+
+def alpha_episode_allowed(row: dict, target_date: str, target_subject: str, variant: str,
+                          reported_targets: set) -> bool:
+    """Whether one source episode may vote on α for this target.
+
+    ``expanding`` (deployment-faithful): the episode session and the trunk's last training
+    session are both strictly before the target. An earlier reported target is a legal
+    source: at deployment it is a past, labeled session.
+    ``strict``: also drop every session that is a reported target (either subject) and
+    every trunk that was trained on a reported target.
+    """
+    if variant not in ("expanding", "strict"):
+        raise ValueError(variant)
+    session = str(row["session"])
+    date = session[-8:]
+    tag = str(row["tag"])
+    if date >= target_date or TRUNK_LAST[tag] >= target_date:
+        return False
+    if variant == "strict":
+        if date in reported_targets:
+            return False
+        if set(TRUNK_TRAIN.get(tag, ())) & set(reported_targets):
+            return False
+    return True
+
+
+def select_alpha(episodes, target_date: str, target_subject: str, gap_days: int, B: int,
+                 variant: str, reported_targets: set) -> dict:
+    """α for one target from the episodes that protocol ``variant`` allows.
+
+    The target's own gap bin is fixed (days from its trunk). Episodes are binned by the
+    gap they were scored under. Empty bins fall back with ``resolve_gap_bin``.
+    """
+    from ssm_decode.p0solve import ALPHAS, gap_bin_name, resolve_gap_bin
+    want = gap_bin_name(int(gap_days))
+    pool = [r for r in episodes
+            if alpha_episode_allowed(r, target_date, target_subject, variant, reported_targets)]
+    bins = {}
+    for r in pool:
+        if int(r["B"]) != int(B) or r.get("gap_days") is None:
+            continue
+        bins.setdefault(gap_bin_name(int(r["gap_days"])), []).append(r)
+    if not bins:
+        return {"alpha": None, "bin": want, "bin_used": None, "n_episodes": 0,
+                "sessions": [], "tags": [], "fallback_from": want}
+    used, fell = resolve_gap_bin(want, set(bins))
+    group = bins[used]
+    means = {}
+    for alpha in ALPHAS:
+        vals = [float(h["r2"]) for ep in group for h in ep["alphas"]
+                if float(h["alpha"]) == float(alpha) and h.get("r2") is not None and float(h["r2"]) > -0.5]
+        means[float(alpha)] = float(np.mean(vals)) if vals else -1.0
+    # Smaller alpha wins an exact tie (do not turn shrinkage on for nothing).
+    winner = sorted(means, key=lambda a: (means[a], -a), reverse=True)[0]
+    sessions = sorted({str(r["session"])[-8:] for r in group})
+    tags = sorted({str(r["tag"]) for r in group})
+    return {"alpha": float(winner), "source_r2": means[winner], "bin": want, "bin_used": used,
+            "fallback_from": fell, "n_episodes": len(group), "sessions": sessions, "tags": tags,
+            "cross_subject": any(not s.startswith(target_subject) for s in {r["session"] for r in group})}
