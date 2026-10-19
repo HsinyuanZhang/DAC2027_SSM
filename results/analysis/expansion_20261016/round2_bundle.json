@@ -1,0 +1,29 @@
+{
+  "note": "Do not upload. The coordinator runs rclone. Nothing here is a new NWB bundle.",
+  "already_on_drive": [
+    "gdrive:DAC27/colab/data_000688_subM.tar.zst",
+    "gdrive:DAC27/colab/data_000688_subC.tar.zst",
+    "gdrive:DAC27/colab/ckpts.tar.zst",
+    "gdrive:DAC27/colab/expansion_out_round1.tgz",
+    "gdrive:DAC27/colab/code bundles from earlier rounds (rebuild code at this commit; do not reuse an old code tar)"
+  ],
+  "new_code": {
+    "list": "results/analysis/expansion_20261016/colab_bundle_code_files.txt",
+    "listed_files_bytes": 543077,
+    "comment": "The Colab code tar is still a full repo archive (this commit) plus .tools/mamba_official, as in docs/colab_runbook.md. The list above is the expansion-specific set the queue imports, including the frozen causal modules."
+  },
+  "new_data_not_on_drive": [
+    {
+      "path": "results/causal_main_20261019/select",
+      "bytes": 1947673,
+      "files": 42,
+      "why": "Legacy causal-first-B episodes (days/month/year/sc_0629/sc_0708) merged into the round-2 selection pool. month and year are deduped at load time."
+    }
+  ],
+  "reused_local_artifacts": [
+    {
+      "path": "results/expansion_round1/x/expansion_out",
+      "why": "Round-1 trunks, P0, jacobian, basis, select for sc_0708, sc_0713, sc_0629. Already backed up as expansion_out_round1.tgz. Unpack into the round-2 --out (or pass --artifacts) before causal-source."
+    }
+  ]
+}

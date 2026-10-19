@@ -46,15 +46,19 @@ from ssm_decode.atomic_jsonl import append_jsonl, read_jsonl, repair_jsonl   # n
 
 METHODS_SEEDED = ("p0", "r1s", "r2", "r3")        # seed-dependent rows; p_prior is seed-free (stored with seed 0)
 EXPANSION_CODE_FILES = (          # files the expansion queue needs on top of the M2 code bundle (all git-tracked)
-    "scripts/run_expansion.py", "scripts/run_expansion_queue.sh", "scripts/analyze_expansion.py",
-    "scripts/expansion_cost.py", "scripts/smoke_expansion_cpu.py", "scripts/run_population_calib.py",
+    "scripts/run_expansion.py", "scripts/run_expansion_queue.sh", "scripts/run_expansion_causal.py",
+    "scripts/analyze_expansion.py", "scripts/expansion_cost.py", "scripts/smoke_expansion_cpu.py",
+    "scripts/smoke_expansion_causal_cpu.py", "scripts/run_population_calib.py",
+    "scripts/run_causal_main.py", "scripts/run_baselines_readin.py",
     "scripts/run_pc3_refine.py", "scripts/run_labeled_calibration.py",
     "ssm_decode/expansion_protocol.py", "ssm_decode/expansion_rules.py", "ssm_decode/atomic_jsonl.py",
-    "ssm_decode/dandi688_data.py", "ssm_decode/fwd_refine.py",
+    "ssm_decode/expansion_causal.py", "ssm_decode/dandi688_data.py", "ssm_decode/fwd_refine.py",
+    "ssm_decode/causal_protocol.py",
     "results/analysis/expansion_20261016/session_inventory.json", "results/analysis/expansion_20261016/protocol.json",
     "results/analysis/expansion_20261016/colab_bundle_subC_primary.txt",
     "tests/test_dandi688_subc.py", "tests/test_expansion_protocol.py", "tests/test_run_expansion.py",
     "tests/test_atomic_jsonl.py", "tests/test_expansion_rules.py", "tests/test_analyze_expansion.py",
+    "tests/test_expansion_causal.py", "tests/test_causal_main.py",
 )
 JAC_LMAX = 32                                     # P3 value; the L grid is (8, 16, 32)
 
@@ -266,7 +270,10 @@ def stage_flags(bb: ep.Backbone, st: Store) -> dict:
             "jacobian": st.exists(f"jacobian/{bb.bid}.pt"),
             "select": st.exists(f"select/{bb.bid}.json"),
             "selection_scope": "OOS" if bb.oos_selection else "IS",
-            "rows": f"{nrows}/{per_target * len(bb.targets)}"}
+            "rows": f"{nrows}/{per_target * len(bb.targets)}",
+            "causal_source": (not bb.oos_selection) or st.exists(f"causal_select/{bb.bid}/done.json"),
+            "causal_rows": sum(1 for t in bb.targets
+                               if st.exists(f"causal_rows/{bb.bid}/{ep.date_of(t.session)}.jsonl"))}
 
 
 def cmd_status(args):
@@ -734,7 +741,8 @@ def cmd_eval(args):
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
-    for name in ("check", "bundle", "status", "backbone", "p0", "jacobian", "select", "eval"):
+    for name in ("check", "bundle", "status", "backbone", "p0", "jacobian", "select", "eval",
+                 "causal-source", "causal-eval"):
         s = sub.add_parser(name)
         s.add_argument("--out", default=str(DEFAULT_OUT), help="persistent root (Drive on Colab)")
         s.add_argument("--work", default=None, help="fast local scratch (copied to --out per unit of work)")
@@ -767,7 +775,25 @@ def main():
             s.add_argument("--draws", type=int, default=ep.N_DRAWS)
             s.add_argument("--targets", default=None, help="comma list of YYYYMMDD")
             s.add_argument("--budgets", default=None, help="comma list; default 1,4,8,16,33 (smoke tests only)")
+        if name in ("causal-source", "causal-eval"):
+            s.add_argument("--artifacts", default=None,
+                           help="where backbone/p0/jacobian/select live (default: --out)")
+            s.add_argument("--legacy-select", default=str(ROOT / "results/causal_main_20261019/select"),
+                           help="causal-main episode directory merged into the selection pool")
+            s.add_argument("--budgets", default=None)
+            s.add_argument("--seeds", default=None)
+            s.add_argument("--latency", default="0,1")
+            s.add_argument("--targets", default=None, help="comma list of YYYYMMDD (causal-eval)")
+            s.add_argument("--etas", default=None, help="override the frozen eta grid (smoke only)")
+            s.add_argument("--rhos", default=None, help="override the frozen rho grid (smoke only)")
+            s.add_argument("--combo-alphas", default=None, help="alphas at which COMBO is scored (smoke only)")
+            s.add_argument("--allow-incomplete-pool", action="store_true",
+                           help="causal-eval: do not require every earlier held-out to be scored yet")
     args = p.parse_args()
+    if args.cmd in ("causal-source", "causal-eval"):
+        from scripts.run_expansion_causal import cmd_causal_eval, cmd_causal_source
+        {"causal-source": cmd_causal_source, "causal-eval": cmd_causal_eval}[args.cmd](args)
+        return
     {"check": cmd_check, "bundle": cmd_bundle, "status": cmd_status, "backbone": cmd_backbone,
      "p0": cmd_p0, "jacobian": cmd_jacobian, "select": cmd_basis_and_select, "eval": cmd_eval}[args.cmd](args)
 

@@ -351,3 +351,82 @@ CPU，全部通过（见最终汇总）：
 * 断言：trunk checkpoint 的 `source_sessions` 恰为前 5 个 pool session，不含 pool[-1]；P0 的 `train_ids` 不含 pool[-1]、`val_ids == [pool[-1]]`；所有行 `h2_backward_calls=0`、`h4_query_disjoint=True`，并含 `h1_trunk_hash / h1_trunk_unchanged / h5_bytes / h5_within_32kb / unit_check_passed`。
 * **可恢复性：** 同一进程里第二遍调用所有 stage，全部跳过（eval 日志里 `t=0s`），行数不变。
 * 数字本身没有意义（玩具 GRU trunk、20 步、6 个 Jacobian 窗口、η=10 的单点 R2 网格；R² 约 p_prior 0.07、p0 0.16、r1s 0.16、r3 0.00，玩具 R2 为负），只说明链路是通的。
+
+## 12. Round 2（frozen methods，causal-first-B）
+
+不改 `backbone / p0 / jacobian / select / eval` 的语义。默认队列阶段仍是这五个。Round 2 在它们后面加两个 stage，行写到 `causal_rows/`，不写进原来的 `rows/`（原来的行是 random draw）。
+
+### 12.1 Stage
+
+* **`causal-source`**（每个 OOS backbone 一条）：在 held-out `pool[-1]` 上按 causal-first-B 记 alpha、S1、COMBO（每个 α 一张 grid）、CCA+S1。`sm_0307` 是 IS，写 `skipped: IS`，不进池。已有的 legacy episode（`results/causal_main_20261019/select/`，days / month / year / sc_0629 / sc_0708）按 `(tag, session, seed, B, alpha)` 合并；本地行优先。month 与 year 是同一套 trunk 权重，同一 session 只留 month。
+* **`causal-eval`**（等所有 chain 的 `causal-source` 结束之后再跑，队列脚本把这一阶段从 chain 里拿出来做第二遍）：每个 target 用 frozen method 打分。校准集是前 B 个 usable trial，不是 draw。Latency 0 是主行，1 是 sensitivity。
+
+方法：`p_prior`、`p0`、`ridge_cca`（sub-C 走修好的 `nwb_path_for_session`，CCA 配置沿用 sub-M month 的 `CCA_CFG`，不在 sub-C 上重选）、`w_alpha_a` / `w_alpha_b`、`s1_causal`（协议 (a) 的 AND）和 `s1_causal_b`、`combo_a` / `combo_b`、`cca_s1` / `cca_s1_b`，以及它们的 `*_cons`（≥2 个 selection session 增益为正才部署，否则退回基座）、`r2` / `r3`（replay：用该 backbone 已有的 source 规则，在前 B 个 trial 上做 final-only commit）。Candidate 的 `h2_backward_calls` 必须为 0。`20140307` 只作为 `sm_0307` 的 target，不当作新的 selection session。2016 tier 仍关闭。Final session 仍被 loader 拒绝。
+
+选择池：legacy episode，加上每个 OOS backbone 的 held-out `pool[-1]`，但只保留协议允许的。**(a) expanding-window**：episode 的 session 和 trunk 最后一个训练日都严格早于 target。**(b) strict**：再去掉已报告的 target（causal-main 的 drift / sub-C month，加上本扩展 primary target）以及在这些 target 上训练过的 trunk。每个 target 的组成写在 `causal_select/composition/<bid>_<date>.json`（`n_sessions` 是不同的日期，`n_trunk_sessions` 把同一天的不同 trunk 分开计）。池不齐时 `causal-eval` 直接退出；smoke 才用 `--allow-incomplete-pool`。
+
+`score_tables` 里的 batched trunk forward 若和逐张 forward 不一致（3090 smoke 上 max abs 约 9.9e-3），会退回逐张 forward。分数仍然对，source 阶段会更慢。上界按这条慢路径留了余量。
+
+### 12.2 Colab 命令
+
+`--out` 放 VM 本地盘。`--sync-tar` 每 30 min 把 `--out` 打成 tar，先写 `.partial` 再 `os.replace` 到 Drive 路径（和 round 1 一样）。先把 `expansion_out_round1.tgz` 解进同一个 `--out`，这样 sc_0708 / sc_0713 / sc_0629 不用重训。Legacy select 目录放到 `--legacy-select`。
+
+```bash
+cd /home/xinyuan/Work_host/SSM
+# session 2a: 新 backbone 的旧 stage + 全部 OOS 的 causal-source（含 round-1 的三个）
+PY=python scripts/run_expansion_queue.sh \
+    --bids sc_0309,sm_0307,sm_0627,sm_0512,sm_0611,sc_0708,sc_0713,sc_0629 \
+    --stages backbone,p0,jacobian,select,eval,causal-source \
+    --out /content/expansion_out --work /content/expansion_work \
+    --artifacts /content/expansion_out \
+    --legacy-select /home/xinyuan/Work_host/SSM/results/causal_main_20261019/select \
+    --jobs 2 --deadline-hours 10 \
+    --sync-tar /content/drive/MyDrive/DAC27/colab/expansion_out_round2.tgz \
+    --sync-every-min 30
+# session 2b: 等 2a 的 causal-source 都在 --out 里之后，打 frozen-method 行（含 round-1 重打分）
+PY=python scripts/run_expansion_queue.sh \
+    --bids sc_0309,sm_0307,sm_0627,sm_0512,sm_0611,sc_0708,sc_0713,sc_0629 \
+    --stages causal-eval \
+    --out /content/expansion_out --work /content/expansion_work \
+    --artifacts /content/expansion_out \
+    --legacy-select /home/xinyuan/Work_host/SSM/results/causal_main_20261019/select \
+    --jobs 1 --deadline-hours 10 \
+    --sync-tar /content/drive/MyDrive/DAC27/colab/expansion_out_round2.tgz \
+    --sync-every-min 30
+```
+
+`causal-eval` 不在 chain 里并行：它要等每个更早的 held-out 都已打分。`--jobs 1` 是因为单个 target 的 prefix cache 已经占满一张卡上的 trunk；2a 的 `--jobs 2` 只重叠数据加载。若 2b 的第一个 target 超过 15 min，改成下面的 fallback，不要把 deadline 拉过 10 h。
+
+```bash
+# fallback：2b-subc 然后 2b-subm（命令同上，只改 --bids）
+# 2b-subc: sc_0309,sc_0708,sc_0713,sc_0629
+# 2b-subm: sm_0307,sm_0627,sm_0512,sm_0611
+```
+
+### 12.3 CU / 时间（L4，1.54 CU/h）
+
+CU 按 session 的 wall clock 计，不按 GPU job 相加。Round 1 实测 3 个 backbone、1 h 51 min、3.1 CU。下表是按这个速度外推的，上界假设 AP budget 翻倍，并且每个 causal target 大约是 round-1 eval 的 4 倍。数字在 `ssm_decode.expansion_causal.round2_cost_plan`。
+
+| session | 内容 | 期望 | 上界 |
+|---|---|---|---|
+| 2a | 5 个新 backbone 的旧 stage + 全部 OOS `causal-source` | 4.5 h / 6.9 CU | 8.5 h / 13.1 CU |
+| 2b | 全部 primary target 的 `causal-eval`（含 round-1 重打分） | 2.5 h / 3.9 CU | 8.0 h / 12.3 CU |
+| **合计** | | **10.8 CU** | **25.4 CU** |
+| fallback 2b-subc | 只打 sub-C | 2.0 h / 3.1 CU | 6.5 h / 10.0 CU |
+| fallback 2b-subm | 只打 sub-M | 0.8 h / 1.2 CU | 2.5 h / 3.9 CU |
+
+每一段的上界都低于 12 h，合计上界低于 40 CU。不需要把 2a 和 2b 放进同一个 session。
+
+### 12.4 Bundle（不上传）
+
+清单：`results/analysis/expansion_20261016/round2_bundle.json`。
+
+* 已在 `gdrive:DAC27/colab/`：`data_000688_subM.tar.zst`、`data_000688_subC.tar.zst`（30 个 primary sub-C NWB）、`ckpts.tar.zst`、`expansion_out_round1.tgz`。没有新的 NWB。
+* 需要重新打的 code tar：本 commit 的 repo（外加 runbook 里的 `.tools/mamba_official`）。扩展专用文件列表 `colab_bundle_code_files.txt`，合计 **543,077 B**。
+* 还不在 Drive 上的小数据：`results/causal_main_20261019/select/`，**1,947,673 B**，42 个文件。这是 legacy selection episode，round 2 的池要读它。
+
+### 12.5 测试与 smoke
+
+* `tests/test_expansion_causal.py`：协议 (a)/(b) 丢掉不允许的 session / trunk（含 month==year 同一 trunk 的重复、days trunk 在 (b) 下整支退出、sc_0713 的 held-out 只在 trunk 早于 target 时投票、2016 与 final 不进池）；≥2 session 的门在只有一个日期时退回；新 stage 的 unit 可恢复；`--sync-tar` 原子替换；`causal-eval` 排在所有 chain 之后；B=8、α=0.75、η=1 的前缀扰动（query 和块内后缀都不改还不能读它们的 commit）。
+* CPU smoke：`scripts/smoke_expansion_causal_cpu.py`，GRU 代替 Mamba-3，sc_0713 / 20150714，B=8。第二遍 `causal-source` 跳过，`causal-eval` 不追加行。`h2_backward_calls=0`。R² 无意义。
+* GPU smoke（`cuda:0`，round-1 的真实 sc_0713 trunk，B=8，seed 0，latency 0，`--allow-incomplete-pool`，空的 legacy 目录）：`causal-source` 与 `causal-eval` 都跑完，19 行，`h2=0`，R2/R3 `replay=true`。再跑一遍 `causal-eval` 打印 `already complete`。这个 smoke 的 COMBO 行是 unavailable：只打了 α=0.5，而协议 (a) 选出的 α 不是 0.5。Colab 用完整 α grid，不会这样。
