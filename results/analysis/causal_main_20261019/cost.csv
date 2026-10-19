@@ -2,8 +2,9 @@ method,N,B_point,T_point,mac_per_bin,mac_per_commit,sram_bytes,rom_bytes,replay,
 p_prior,26,8,200,1820.0,91.125,6560.0,1040.0,False,"prefix PopStats only; prior table counted as ROM (electrode prior, not learned)"
 p0,26,8,200,1820.0,201435.125,6560.0,32164.0,False,one calibrator call per commit; MLP weights are ROM
 w_alpha_gap,26,8,200,2118.0,201695.125,7892.0,32164.0,False,P0 prefix plus the p0solve raw-moment accumulator as a stand-in for the CCA moments; not a separate CCA cost model
-s1_causal,26,8,200,11060.0,201344.0,12936.75,32824.0,False,FIR extra on the live forward; 3-bit ring; trunk state excluded; like_for_like_memory split into SRAM and ROM
-combo,26,8,200,11358.0,201604.0,14268.75,32824.0,False,S1-causal on a W_alpha base; moment accumulator added
+s1_causal,26,8,200,394808.0,201344.0,12936.75,32824.0,False,FIR extra plus one zero-state trunk pass per calibration bin (not the scored decode). 3-bit ring. Source selection scores the final table only.
+combo,26,8,200,395106.0,201604.0,14268.75,32824.0,False,"Same second trunk pass as S1, on a W_alpha base. Selection scores the final table only."
+cca_s1,26,8,200,393286.0,260.0,2580.0,660.0,False,CCA+S1: ridge-CCA base plus the same zero-state feedback pass. No P0 MLP.
 r1_stream,26,8,200,9855.53,254387.125,39781.0,0.0,False,"refine_cost r1s_full, trunk forward removed from the per-bin figure; full readout kind"
 r2,26,8,200,1180.4875,780.0,25660.0,660.0,True,"refine_cost r2, S=10, one replay pass's non-trunk MAC per bin"
 r3,26,8,200,384668.4875,76933697.5,58428.0,660.0,True,same replay as r2 plus one readout pass; see refine_cost r3_full for the split
@@ -12,8 +13,9 @@ p0_ui_reg,26,8,200,,,22200.0,32164.0,True,non-deployable backprop; no MAC model 
 p_prior,256,8,200,76800.0,867.375,180900.0,10240.0,False,"prefix PopStats only; prior table counted as ROM (electrode prior, not learned)"
 p0,256,8,200,76800.0,1983331.375,180900.0,32164.0,False,one calibrator call per commit; MLP weights are ROM
 w_alpha_gap,256,8,200,79168.0,1985891.375,191432.0,32164.0,False,P0 prefix plus the p0solve raw-moment accumulator as a stand-in for the CCA moments; not a separate CCA cost model
-s1_causal,256,8,200,161940.0,1982464.0,235893.0,32824.0,False,FIR extra on the live forward; 3-bit ring; trunk state excluded; like_for_like_memory split into SRAM and ROM
-combo,256,8,200,164308.0,1985024.0,246425.0,32824.0,False,S1-causal on a W_alpha base; moment accumulator added
+s1_causal,256,8,200,547988.0,1982464.0,235893.0,32824.0,False,FIR extra plus one zero-state trunk pass per calibration bin (not the scored decode). 3-bit ring. Source selection scores the final table only.
+combo,256,8,200,550356.0,1985024.0,246425.0,32824.0,False,"Same second trunk pass as S1, on a W_alpha base. Selection scores the final table only."
+cca_s1,256,8,200,473556.0,2560.0,22820.0,660.0,False,CCA+S1: ridge-CCA base plus the same zero-state feedback pass. No P0 MLP.
 r1_stream,256,8,200,23644.17375,2035507.125,67151.0,0.0,False,"refine_cost r1s_full, trunk forward removed from the per-bin figure; full readout kind"
 r2,256,8,200,5784.8,7680.0,193100.0,660.0,True,"refine_cost r2, S=10, one replay pass's non-trunk MAC per bin"
 r3,256,8,200,389272.8,77854560.0,225868.0,660.0,True,same replay as r2 plus one readout pass; see refine_cost r3_full for the split

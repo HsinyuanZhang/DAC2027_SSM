@@ -1,0 +1,226 @@
+{
+ "b": {
+  "1": {
+   "or": {
+    "margin": 0.005,
+    "mode": "or",
+    "n_episodes": 2,
+    "base_key": "base",
+    "p0_source_r2": 0.6108379022932615,
+    "base_source_r2": -0.3134919953988782,
+    "eta": 0.0,
+    "rho": 0.0,
+    "fallback_base": true,
+    "n_viable": 0,
+    "source_gain": 0.0,
+    "source_se": null,
+    "best_rejected_gain": 0.0
+   },
+   "and": {
+    "margin": 0.005,
+    "mode": "and",
+    "n_episodes": 2,
+    "base_key": "base",
+    "p0_source_r2": 0.6108379022932615,
+    "base_source_r2": -0.3134919953988782,
+    "eta": 0.0,
+    "rho": 0.0,
+    "fallback_base": true,
+    "n_viable": 0,
+    "source_gain": 0.0,
+    "source_se": null,
+    "best_rejected_gain": 0.0
+   },
+   "n_episodes": 2,
+   "sessions": [
+    "20140307"
+   ]
+  },
+  "2": {
+   "or": {
+    "margin": 0.005,
+    "mode": "or",
+    "n_episodes": 2,
+    "base_key": "base",
+    "p0_source_r2": 0.6340672765610035,
+    "base_source_r2": 0.12679785328261406,
+    "eta": 0.0,
+    "rho": 0.0,
+    "fallback_base": true,
+    "n_viable": 0,
+    "source_gain": 0.0,
+    "source_se": null,
+    "best_rejected_gain": 0.0
+   },
+   "and": {
+    "margin": 0.005,
+    "mode": "and",
+    "n_episodes": 2,
+    "base_key": "base",
+    "p0_source_r2": 0.6340672765610035,
+    "base_source_r2": 0.12679785328261406,
+    "eta": 0.0,
+    "rho": 0.0,
+    "fallback_base": true,
+    "n_viable": 0,
+    "source_gain": 0.0,
+    "source_se": null,
+    "best_rejected_gain": 0.0
+   },
+   "n_episodes": 2,
+   "sessions": [
+    "20140307"
+   ]
+  },
+  "4": {
+   "or": {
+    "margin": 0.005,
+    "mode": "or",
+    "n_episodes": 2,
+    "base_key": "base",
+    "p0_source_r2": 0.696940667811705,
+    "base_source_r2": 0.4121580277721829,
+    "eta": 3.0,
+    "rho": 0.0,
+    "fallback_base": false,
+    "n_viable": 20,
+    "source_gain": 0.10297716609826668,
+    "source_se": 0.0,
+    "source_r2": 0.5151351938704496
+   },
+   "and": {
+    "margin": 0.005,
+    "mode": "and",
+    "n_episodes": 2,
+    "base_key": "base",
+    "p0_source_r2": 0.696940667811705,
+    "base_source_r2": 0.4121580277721829,
+    "eta": 3.0,
+    "rho": 0.0,
+    "fallback_base": false,
+    "n_viable": 20,
+    "source_gain": 0.10297716609826668,
+    "source_se": 0.0,
+    "source_r2": 0.5151351938704496
+   },
+   "n_episodes": 2,
+   "sessions": [
+    "20140307"
+   ]
+  },
+  "8": {
+   "or": {
+    "margin": 0.005,
+    "mode": "or",
+    "n_episodes": 2,
+    "base_key": "base",
+    "p0_source_r2": 0.7367684436676496,
+    "base_source_r2": 0.5918742128416954,
+    "eta": 3.0,
+    "rho": 0.3,
+    "fallback_base": false,
+    "n_viable": 20,
+    "source_gain": 0.07774461196228288,
+    "source_se": 0.0,
+    "source_r2": 0.6696188248039783
+   },
+   "and": {
+    "margin": 0.005,
+    "mode": "and",
+    "n_episodes": 2,
+    "base_key": "base",
+    "p0_source_r2": 0.7367684436676496,
+    "base_source_r2": 0.5918742128416954,
+    "eta": 3.0,
+    "rho": 0.3,
+    "fallback_base": false,
+    "n_viable": 20,
+    "source_gain": 0.07774461196228288,
+    "source_se": 0.0,
+    "source_r2": 0.6696188248039783
+   },
+   "n_episodes": 2,
+   "sessions": [
+    "20140307"
+   ]
+  },
+  "16": {
+   "or": {
+    "margin": 0.005,
+    "mode": "or",
+    "n_episodes": 2,
+    "base_key": "base",
+    "p0_source_r2": 0.7400334978999357,
+    "base_source_r2": 0.6490460938310384,
+    "eta": 1.0,
+    "rho": 0.03,
+    "fallback_base": false,
+    "n_viable": 20,
+    "source_gain": 0.04767733614422054,
+    "source_se": 0.0,
+    "source_r2": 0.6967234299752589
+   },
+   "and": {
+    "margin": 0.005,
+    "mode": "and",
+    "n_episodes": 2,
+    "base_key": "base",
+    "p0_source_r2": 0.7400334978999357,
+    "base_source_r2": 0.6490460938310384,
+    "eta": 1.0,
+    "rho": 0.03,
+    "fallback_base": false,
+    "n_viable": 17,
+    "source_gain": 0.04767733614422054,
+    "source_se": 0.0,
+    "source_r2": 0.6967234299752589
+   },
+   "n_episodes": 2,
+   "sessions": [
+    "20140307"
+   ]
+  },
+  "33": {
+   "or": {
+    "margin": 0.005,
+    "mode": "or",
+    "n_episodes": 2,
+    "base_key": "base",
+    "p0_source_r2": 0.7422580369009817,
+    "base_source_r2": 0.7152698786880592,
+    "eta": 0.3,
+    "rho": 0.01,
+    "fallback_base": false,
+    "n_viable": 15,
+    "source_gain": 0.023572090996205053,
+    "source_se": 0.0,
+    "source_r2": 0.7388419696842643
+   },
+   "and": {
+    "margin": 0.005,
+    "mode": "and",
+    "n_episodes": 2,
+    "base_key": "base",
+    "p0_source_r2": 0.7422580369009817,
+    "base_source_r2": 0.7152698786880592,
+    "eta": 0.3,
+    "rho": 0.01,
+    "fallback_base": false,
+    "n_viable": 13,
+    "source_gain": 0.023572090996205053,
+    "source_se": 0.0,
+    "source_r2": 0.7388419696842643
+   },
+   "n_episodes": 2,
+   "sessions": [
+    "20140307"
+   ]
+  }
+ },
+ "protocol": "causal_first_B",
+ "base_key": "base",
+ "primary_gate": "and",
+ "tag": "month",
+ "what": "cca_s1",
+ "gate_note": "Gain is versus the method's own base (W_alpha or ridge-CCA), not P0. Primary gate is AND; OR is sensitivity. eta=0 is on the grid."
+}

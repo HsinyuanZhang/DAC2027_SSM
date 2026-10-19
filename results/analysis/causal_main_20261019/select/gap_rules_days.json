@@ -1,0 +1,209 @@
+{
+ "stratum": "days",
+ "ref": "20150615",
+ "protocol": "causal_first_B",
+ "n_episodes": 120,
+ "schedule": {
+  "1": {
+   "le14": {
+    "alpha": 0.0,
+    "source_r2": 0.20560639510609863,
+    "n_episodes": 20,
+    "bin_used": "gt180",
+    "fallback_from": "le14",
+    "populated_bins": [
+     "gt180"
+    ]
+   },
+   "mid": {
+    "alpha": 0.0,
+    "source_r2": 0.20560639510609863,
+    "n_episodes": 20,
+    "bin_used": "gt180",
+    "fallback_from": "mid",
+    "populated_bins": [
+     "gt180"
+    ]
+   },
+   "gt180": {
+    "alpha": 0.0,
+    "source_r2": 0.20560639510609863,
+    "n_episodes": 20,
+    "bin_used": "gt180",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180"
+    ]
+   }
+  },
+  "2": {
+   "le14": {
+    "alpha": 0.0,
+    "source_r2": 0.24199803689720004,
+    "n_episodes": 20,
+    "bin_used": "gt180",
+    "fallback_from": "le14",
+    "populated_bins": [
+     "gt180"
+    ]
+   },
+   "mid": {
+    "alpha": 0.0,
+    "source_r2": 0.24199803689720004,
+    "n_episodes": 20,
+    "bin_used": "gt180",
+    "fallback_from": "mid",
+    "populated_bins": [
+     "gt180"
+    ]
+   },
+   "gt180": {
+    "alpha": 0.0,
+    "source_r2": 0.24199803689720004,
+    "n_episodes": 20,
+    "bin_used": "gt180",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180"
+    ]
+   }
+  },
+  "4": {
+   "le14": {
+    "alpha": 0.25,
+    "source_r2": 0.2816076119616984,
+    "n_episodes": 20,
+    "bin_used": "gt180",
+    "fallback_from": "le14",
+    "populated_bins": [
+     "gt180"
+    ]
+   },
+   "mid": {
+    "alpha": 0.25,
+    "source_r2": 0.2816076119616984,
+    "n_episodes": 20,
+    "bin_used": "gt180",
+    "fallback_from": "mid",
+    "populated_bins": [
+     "gt180"
+    ]
+   },
+   "gt180": {
+    "alpha": 0.25,
+    "source_r2": 0.2816076119616984,
+    "n_episodes": 20,
+    "bin_used": "gt180",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180"
+    ]
+   }
+  },
+  "8": {
+   "le14": {
+    "alpha": 0.75,
+    "source_r2": 0.3557310135388589,
+    "n_episodes": 20,
+    "bin_used": "gt180",
+    "fallback_from": "le14",
+    "populated_bins": [
+     "gt180"
+    ]
+   },
+   "mid": {
+    "alpha": 0.75,
+    "source_r2": 0.3557310135388589,
+    "n_episodes": 20,
+    "bin_used": "gt180",
+    "fallback_from": "mid",
+    "populated_bins": [
+     "gt180"
+    ]
+   },
+   "gt180": {
+    "alpha": 0.75,
+    "source_r2": 0.3557310135388589,
+    "n_episodes": 20,
+    "bin_used": "gt180",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180"
+    ]
+   }
+  },
+  "16": {
+   "le14": {
+    "alpha": 0.75,
+    "source_r2": 0.4305921419704303,
+    "n_episodes": 20,
+    "bin_used": "gt180",
+    "fallback_from": "le14",
+    "populated_bins": [
+     "gt180"
+    ]
+   },
+   "mid": {
+    "alpha": 0.75,
+    "source_r2": 0.4305921419704303,
+    "n_episodes": 20,
+    "bin_used": "gt180",
+    "fallback_from": "mid",
+    "populated_bins": [
+     "gt180"
+    ]
+   },
+   "gt180": {
+    "alpha": 0.75,
+    "source_r2": 0.4305921419704303,
+    "n_episodes": 20,
+    "bin_used": "gt180",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180"
+    ]
+   }
+  },
+  "33": {
+   "le14": {
+    "alpha": 0.75,
+    "source_r2": 0.4464472867492896,
+    "n_episodes": 20,
+    "bin_used": "gt180",
+    "fallback_from": "le14",
+    "populated_bins": [
+     "gt180"
+    ]
+   },
+   "mid": {
+    "alpha": 0.75,
+    "source_r2": 0.4464472867492896,
+    "n_episodes": 20,
+    "bin_used": "gt180",
+    "fallback_from": "mid",
+    "populated_bins": [
+     "gt180"
+    ]
+   },
+   "gt180": {
+    "alpha": 0.75,
+    "source_r2": 0.4464472867492896,
+    "n_episodes": 20,
+    "bin_used": "gt180",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180"
+    ]
+   }
+  }
+ },
+ "logistic": {
+  "intercept": 0.0,
+  "slope": 0.0
+ },
+ "combined": {
+  "intercept": 0.0,
+  "slope": 0.0
+ },
+ "note": "Only w_alpha_gap is used. Logistic fields are placeholders so alpha_for_target can run; they are not a fitted reliability model."
+}

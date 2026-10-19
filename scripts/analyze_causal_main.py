@@ -21,10 +21,14 @@ os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
 
 OUT = ROOT / "results/analysis/causal_main_20261019"
 RAW = ROOT / "results/causal_main_20261019/rows.jsonl"
-B_SHOW = (1, 8, 33)
-B_ALL = (1, 2, 4, 8, 16, 33)
-PRIMARY = ("p_prior", "p0", "w_alpha_gap", "s1_causal", "combo", "r1_stream")
-REFS = ("r2", "r3", "ridge_cca", "p0_ui_reg")
+B_SHOW = (1, 2, 4, 8, 16, 33)
+B_ALL = B_SHOW
+# S1 primary is the AND gate (s1_causal_and). s1_causal is the OR sensitivity.
+# COMBO primary is AND on the pooled alpha (method combo). combo_or is the sensitivity.
+PRIMARY = ("p_prior", "p0", "w_alpha_trunk", "w_alpha_pooled", "w_alpha_B", "ridge_cca",
+           "s1_causal_and", "cca_s1", "combo", "r1_stream")
+SENS = ("s1_causal", "combo_or", "cca_s1_or")
+REFS = ("r2", "r3", "p0_ui_reg")
 RNG = np.random.default_rng(0)
 
 
@@ -54,10 +58,17 @@ def _boot_mean(values, n_boot=4000):
 
 
 def per_target(df: pd.DataFrame) -> pd.DataFrame:
-    """Seed-mean per (stratum, backbone, target, method, B, latency)."""
-    g = (df.groupby(["stratum", "backbone", "target", "date", "method", "B", "latency"], dropna=False)
-         .r2.mean().reset_index())
-    return g
+    """Seed-mean per (stratum, backbone, target, method, B, latency), plus |seed0-seed1|."""
+    keys = ["stratum", "backbone", "target", "date", "method", "B", "latency"]
+    wide = df.pivot_table(index=keys, columns="seed", values="r2", aggfunc="mean")
+    wide = wide.reset_index()
+    s0 = wide[0] if 0 in wide.columns else np.nan
+    s1 = wide[1] if 1 in wide.columns else np.nan
+    wide["r2"] = np.nanmean(np.vstack([np.asarray(s0, float), np.asarray(s1, float)]), axis=0)
+    wide["seed_spread"] = np.abs(np.asarray(s0, float) - np.asarray(s1, float))
+    wide["r2_seed0"] = s0
+    wide["r2_seed1"] = s1
+    return wide
 
 
 def cells(pt: pd.DataFrame) -> pd.DataFrame:
@@ -66,8 +77,9 @@ def cells(pt: pd.DataFrame) -> pd.DataFrame:
     for key, block in pt.groupby(keys, dropna=False):
         mean, lo, hi, kind = _boot_mean(block.r2.to_numpy())
         rec = dict(zip(keys, key))
+        spread = float(np.nanmean(block.seed_spread.to_numpy())) if "seed_spread" in block else np.nan
         rec.update({"n_targets": int(block.target.nunique()), "r2": mean, "ci_lo": lo, "ci_hi": hi,
-                    "ci": kind})
+                    "ci": kind, "seed_spread": spread})
         rows.append(rec)
     return pd.DataFrame(rows)
 
@@ -193,17 +205,24 @@ def cost_table() -> pd.DataFrame:
             stats + norm + table + solve["accumulator_bytes_fp32"], rom_cal, False,
             "P0 prefix plus the p0solve raw-moment accumulator as a stand-in for the CCA moments; "
             "not a separate CCA cost model")
-        add("s1_causal", fir["total"] + p0m["accumulate_macs"] / nb,
+        trunk_bin = trunk["fixed_weight_macs"] + trunk["act_x_act_macs"] + k * n
+        # The scored decode is the inference forward. S1/COMBO/CCA+S1 also run a second
+        # trunk pass on each calibration trial from the zero state to form the step.
+        # Source selection scores only that final table, not the within-block commit schedule.
+        add("s1_causal", fir["total"] + p0m["accumulate_macs"] / nb + trunk_bin,
             cal["fixed_weight_macs_per_call"],
             mem["s1_causal_3bit_ring_without_trunk_state"] - rom_cal - rom_j,
             rom_cal + rom_j, False,
-            "FIR extra on the live forward; 3-bit ring; trunk state excluded; "
-            "like_for_like_memory split into SRAM and ROM")
-        add("combo", fir["total"] + p0m["accumulate_macs"] / nb + solve["macs_per_bin"]["total_full_G"],
+            "FIR extra plus one zero-state trunk pass per calibration bin (not the scored decode). "
+            "3-bit ring. Source selection scores the final table only.")
+        add("combo", fir["total"] + p0m["accumulate_macs"] / nb + trunk_bin + solve["macs_per_bin"]["total_full_G"],
             cal["fixed_weight_macs_per_call"] + k * n,
             mem["s1_causal_3bit_ring_without_trunk_state"] - rom_cal - rom_j + solve["accumulator_bytes_fp32"],
             rom_cal + rom_j, False,
-            "S1-causal on a W_alpha base; moment accumulator added")
+            "Same second trunk pass as S1, on a W_alpha base. Selection scores the final table only.")
+        add("cca_s1", fir["total"] + solve["macs_per_bin"]["total_full_G"] + trunk_bin,
+            k * n, solve["accumulator_bytes_fp32"] + table + norm, rom_j, False,
+            "CCA+S1: ridge-CCA base plus the same zero-state feedback pass. No P0 MLP.")
         # R1-stream: streaming forward includes the trunk. Report the non-trunk part per bin.
         r1_bin = (r1["macs_total"] - nb * (trunk["fixed_weight_macs"] + trunk["act_x_act_macs"] + k * n)) / nb
         add("r1_stream", max(r1_bin, 0.0),
@@ -240,14 +259,15 @@ def markdown_tables(cell, paired_df, lat_df, proto) -> str:
     lines = ["# Causal-first-B tables (generated)", ""]
     main = cell[(cell.latency == 0) & (cell.B.isin(B_SHOW))]
     strata = ["days", "month", "year", "drift", "subc_month"]
-    methods = list(PRIMARY) + list(REFS) + ["s1_causal_and", "combo_and"]
+    methods = list(PRIMARY) + list(SENS) + list(REFS)
     for stratum in strata:
         lines.append(f"## {stratum}")
         lines.append("")
-        lines.append("| method | B=1 | B=8 | B=33 |")
-        lines.append("|---|---:|---:|---:|")
+        lines.append("| method | " + " | ".join(f"B={B}" for B in B_SHOW) + " |")
+        lines.append("|---|" + "---:|" * len(B_SHOW))
         sub = main[main.stratum == stratum]
-        # Average across backbones for the stratum headline (sub-C has two).
+        # Sub-C is not pooled here: each backbone is its own block below the stratum name via the
+        # per-target file. This headline averages backbones and is labelled as such in the README.
         for method in methods:
             vals = []
             for B in B_SHOW:
@@ -304,19 +324,57 @@ def markdown_tables(cell, paired_df, lat_df, proto) -> str:
     return "\n".join(lines)
 
 
+def write_per_target(pt: pd.DataFrame, path: Path):
+    """One latency-0 table per backbone and method. Columns are every B."""
+    lines = [
+        "# Per-target query R², latency 0",
+        "",
+        "Drift 的 12 个 target 共用一个 month backbone 和同一个 source selection session（20140307）。"
+        "Month 行就是其中的 20140626，不是独立重复。Year 是 1 个 target。Days 是 2 个 target，"
+        "target-cluster CI 没有意义，只反映这两个 session 的差别。seed spread 是 |seed 0 − seed 1|。",
+        "",
+    ]
+    sub = pt[pt.latency == 0]
+    for stratum in ("days", "month", "year", "drift", "subc_month"):
+        block = sub[sub.stratum == stratum]
+        if block.empty:
+            continue
+        lines.append(f"## {stratum}")
+        lines.append("")
+        for (bb, method), g in block.groupby(["backbone", "method"]):
+            lines.append(f"### {bb} / {method}")
+            lines.append("")
+            lines.append("| target | " + " | ".join(f"B={B}" for B in B_SHOW) + " | spread B=8 |")
+            lines.append("|---|" + "---:|" * len(B_SHOW) + "---:|")
+            for target, tg in g.groupby("target"):
+                vals = []
+                for B in B_SHOW:
+                    hit = tg[tg.B == B]
+                    vals.append(f"{float(hit.r2.iloc[0]):.3f}" if len(hit) and np.isfinite(hit.r2.iloc[0]) else "—")
+                sp = tg[tg.B == 8]
+                spread = f"{float(sp.seed_spread.iloc[0]):.3f}" if len(sp) and np.isfinite(sp.seed_spread.iloc[0]) else "—"
+                lines.append(f"| {target[-8:]} | " + " | ".join(vals) + f" | {spread} |")
+            lines.append("")
+    path.write_text("\n".join(lines))
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     df = load_rows()
     df.to_csv(OUT / "rows_long.csv", index=False)
     pt = per_target(df)
     pt.to_csv(OUT / "per_target.csv", index=False)
+    write_per_target(pt, OUT / "per_target.md")
     cell = cells(pt)
     cell.to_csv(OUT / "cells.csv", index=False)
     contrasts = []
-    for a, b in (("p0", "p_prior"), ("w_alpha_gap", "p0"), ("s1_causal", "p0"),
-                 ("s1_causal", "w_alpha_gap"), ("combo", "w_alpha_gap"), ("combo", "s1_causal"),
-                 ("r1_stream", "p0"), ("s1_causal_and", "s1_causal"), ("combo_and", "combo"),
-                 ("r2", "p0"), ("r3", "p0"), ("ridge_cca", "p0"), ("p0_ui_reg", "p0")):
+    for a, b in (("p0", "p_prior"), ("w_alpha_pooled", "p0"), ("w_alpha_trunk", "p0"),
+                 ("w_alpha_B", "p0"), ("w_alpha_pooled", "ridge_cca"), ("ridge_cca", "p0"),
+                 ("s1_causal_and", "p0"), ("s1_causal", "s1_causal_and"),
+                 ("combo", "w_alpha_pooled"), ("combo", "ridge_cca"), ("combo", "p0"),
+                 ("combo_or", "combo"), ("cca_s1", "ridge_cca"), ("cca_s1", "combo"),
+                 ("cca_s1_or", "cca_s1"), ("r1_stream", "p0"),
+                 ("r2", "p0"), ("r3", "p0"), ("p0_ui_reg", "p0")):
         part = paired(pt, a, b, 0)
         if len(part):
             contrasts.append(part)

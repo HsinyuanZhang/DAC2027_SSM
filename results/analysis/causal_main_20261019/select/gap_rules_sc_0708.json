@@ -6,8 +6,8 @@
  "schedule": {
   "1": {
    "le14": {
-    "alpha": 0.0,
-    "source_r2": 0.43174736936043734,
+    "alpha": 0.25,
+    "source_r2": 0.44739660533185366,
     "n_episodes": 2,
     "bin_used": "le14",
     "fallback_from": null,
@@ -16,8 +16,8 @@
     ]
    },
    "mid": {
-    "alpha": 0.0,
-    "source_r2": 0.43174736936043734,
+    "alpha": 0.25,
+    "source_r2": 0.44739660533185366,
     "n_episodes": 2,
     "bin_used": "le14",
     "fallback_from": "mid",
@@ -26,8 +26,8 @@
     ]
    },
    "gt180": {
-    "alpha": 0.0,
-    "source_r2": 0.43174736936043734,
+    "alpha": 0.25,
+    "source_r2": 0.44739660533185366,
     "n_episodes": 2,
     "bin_used": "le14",
     "fallback_from": "gt180",
@@ -38,8 +38,8 @@
   },
   "4": {
    "le14": {
-    "alpha": 0.0,
-    "source_r2": 0.4684183265974599,
+    "alpha": 0.25,
+    "source_r2": 0.4732229030788695,
     "n_episodes": 2,
     "bin_used": "le14",
     "fallback_from": null,
@@ -48,8 +48,8 @@
     ]
    },
    "mid": {
-    "alpha": 0.0,
-    "source_r2": 0.4684183265974599,
+    "alpha": 0.25,
+    "source_r2": 0.4732229030788695,
     "n_episodes": 2,
     "bin_used": "le14",
     "fallback_from": "mid",
@@ -58,8 +58,8 @@
     ]
    },
    "gt180": {
-    "alpha": 0.0,
-    "source_r2": 0.4684183265974599,
+    "alpha": 0.25,
+    "source_r2": 0.4732229030788695,
     "n_episodes": 2,
     "bin_used": "le14",
     "fallback_from": "gt180",
@@ -70,8 +70,8 @@
   },
   "8": {
    "le14": {
-    "alpha": 0.0,
-    "source_r2": 0.4702670841334975,
+    "alpha": 0.25,
+    "source_r2": 0.4741271283787061,
     "n_episodes": 2,
     "bin_used": "le14",
     "fallback_from": null,
@@ -80,8 +80,8 @@
     ]
    },
    "mid": {
-    "alpha": 0.0,
-    "source_r2": 0.4702670841334975,
+    "alpha": 0.25,
+    "source_r2": 0.4741271283787061,
     "n_episodes": 2,
     "bin_used": "le14",
     "fallback_from": "mid",
@@ -90,8 +90,8 @@
     ]
    },
    "gt180": {
-    "alpha": 0.0,
-    "source_r2": 0.4702670841334975,
+    "alpha": 0.25,
+    "source_r2": 0.4741271283787061,
     "n_episodes": 2,
     "bin_used": "le14",
     "fallback_from": "gt180",
@@ -102,8 +102,8 @@
   },
   "16": {
    "le14": {
-    "alpha": 0.0,
-    "source_r2": 0.4602307929625858,
+    "alpha": 0.25,
+    "source_r2": 0.4639689594358524,
     "n_episodes": 2,
     "bin_used": "le14",
     "fallback_from": null,
@@ -112,8 +112,8 @@
     ]
    },
    "mid": {
-    "alpha": 0.0,
-    "source_r2": 0.4602307929625858,
+    "alpha": 0.25,
+    "source_r2": 0.4639689594358524,
     "n_episodes": 2,
     "bin_used": "le14",
     "fallback_from": "mid",
@@ -122,8 +122,8 @@
     ]
    },
    "gt180": {
-    "alpha": 0.0,
-    "source_r2": 0.4602307929625858,
+    "alpha": 0.25,
+    "source_r2": 0.4639689594358524,
     "n_episodes": 2,
     "bin_used": "le14",
     "fallback_from": "gt180",
@@ -134,8 +134,8 @@
   },
   "33": {
    "le14": {
-    "alpha": 0.0,
-    "source_r2": 0.43908688832843296,
+    "alpha": 0.25,
+    "source_r2": 0.4434619008092623,
     "n_episodes": 2,
     "bin_used": "le14",
     "fallback_from": null,
@@ -144,8 +144,8 @@
     ]
    },
    "mid": {
-    "alpha": 0.0,
-    "source_r2": 0.43908688832843296,
+    "alpha": 0.25,
+    "source_r2": 0.4434619008092623,
     "n_episodes": 2,
     "bin_used": "le14",
     "fallback_from": "mid",
@@ -154,8 +154,8 @@
     ]
    },
    "gt180": {
-    "alpha": 0.0,
-    "source_r2": 0.43908688832843296,
+    "alpha": 0.25,
+    "source_r2": 0.4434619008092623,
     "n_episodes": 2,
     "bin_used": "le14",
     "fallback_from": "gt180",

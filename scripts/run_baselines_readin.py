@@ -36,7 +36,7 @@ sys.path.insert(0, str(ROOT))
 from scripts.run_labeled_calibration import D1_POOLS                       # noqa: E402
 from scripts.run_population_calib import World, draw_trials, r2_physical   # noqa: E402
 from ssm_decode import published_baselines as pb                           # noqa: E402
-from ssm_decode.dandi688_data import dandi688_subm_root                    # noqa: E402
+from ssm_decode.dandi688_data import dandi688_subject_root, session_subject  # noqa: E402
 from ssm_decode.electrode_align import N_ELECTRODES, pool_counts, pool_matrix   # noqa: E402
 
 OUT = Path(os.environ.get("BL_OUT", str(ROOT / "results/baselines_20261016")))
@@ -50,12 +50,21 @@ _META_CACHE: dict = {}
 
 # ---------------------------------------------------------------- data ----
 
+def nwb_path_for_session(session: str) -> Path:
+    """NWB path for a sub-M or sub-C session. The subject directory follows the session id.
+
+    A previous version always joined ``dandi688_subm_root()``, so a sub-C reference day was
+    opened as ``.../sub-M/sub-C_ses-...nwb`` and ridge-CCA on sub-C never ran.
+    """
+    return dandi688_subject_root(session_subject(session)) / f"{session}_behavior+ecephys.nwb"
+
+
 def trial_meta(session: str, record) -> dict:
     """(start_bin, stop_bin) -> (reach-direction angle (rad), go-cue bin) from the NWB trials table (task metadata)."""
     if session in _META_CACHE:
         return _META_CACHE[session]
     from pynwb import NWBHDF5IO
-    path = dandi688_subm_root() / f"{session}_behavior+ecephys.nwb"
+    path = nwb_path_for_session(session)
     with NWBHDF5IO(str(path), "r", load_namespaces=True) as io:
         df = io.read().intervals["trials"].to_dataframe()
     edges = np.asarray(record.bin_edges)

@@ -6,9 +6,10 @@ import pytest
 import torch
 from torch import nn
 
-from ssm_decode.causal_protocol import (COLD, INITIAL, AffineMap, assert_segment_causal,
-                                        calibration_indices, calibration_spans, commit_segments,
-                                        latent_from_maps, margin_pick, query_bins_on_commit,
+from ssm_decode.causal_protocol import (COLD, INITIAL, AffineMap, assert_prefix_idx,
+                                        assert_segment_causal, calibration_indices,
+                                        calibration_spans, commit_segments, latent_from_maps,
+                                        margin_pick, measured_read_bin, query_bins_on_commit,
                                         query_indices, run_rebased_many)
 from ssm_decode.stream_f7 import rebased_feedback_loop
 
@@ -179,6 +180,87 @@ def test_rebased_history_matches_return_and_eta0_is_prefix_p0():
     assert torch.allclose(hist[-1]["delta"], torch.zeros_like(hist[-1]["delta"]), atol=1e-6)
 
 
+def test_measured_read_bin_follows_the_indices_not_the_budget_name():
+    spans = [(0, 10), (20, 40), (50, 70)]
+    assert measured_read_bin(spans, [0]) == 9
+    assert measured_read_bin(spans, [0, 1]) == 39
+    # A caller that names a later trial cannot hide behind "this is commit 1".
+    assert measured_read_bin(spans, [0, 2]) == 69
+    with pytest.raises(AssertionError):
+        assert_prefix_idx([0, 2], 1)
+    assert_prefix_idx([0, 1], 2)
+
+
+def test_gate_gain_is_against_the_methods_own_base():
+    # P0 is weak, the closed-form base is already strong. A small step over the base
+    # must not pass just because it beats P0.
+    def ep(step):
+        return {"p0": 0.10, "base": 0.50,
+                "rebase": [{"eta": 0.0, "rho": 0.0, "r2": 0.50},
+                           {"eta": 1.0, "rho": 0.0, "r2": 0.50 + step}]}
+    rows = [ep(0.001) for _ in range(8)]
+    vs_p0 = margin_pick(rows, "rebase", eta_r2=1.0, mode="and", base_key="p0")
+    vs_base = margin_pick(rows, "rebase", eta_r2=1.0, mode="and", base_key="base")
+    assert vs_p0["fallback_base"] is False and vs_p0["eta"] == 1.0
+    assert vs_base["fallback_base"] is True and vs_base["eta"] == 0.0
+
+
+def test_query_and_prefix_perturbation_of_a_measured_prefix():
+    """Same contract as the reviewer's leak.py / leak_prefix.py, on a pure prefix statistic.
+
+    The statistic of commit k is the mean of the neural bins of trials 0..k-1, plus a
+    bias that is zero unless a caller illegally adds a future-bin feature. Perturbing
+    bins after trial J-1 leaves commits k<=J unchanged and can change later commits.
+    """
+    spans = [(0, 4), (6, 10), (12, 16), (20, 24)]
+    rng = np.random.default_rng(0)
+    x = rng.normal(size=(30, 2))
+
+    def commits(arr):
+        out = {}
+        for k in range(1, 5):
+            idx = list(range(k))
+            assert_prefix_idx(idx, k)
+            read = measured_read_bin(spans, idx)
+            acc = np.zeros(2)
+            n = 0
+            for i in idx:
+                a, b = spans[i]
+                acc += arr[a:b].sum(0)
+                n += b - a
+            # Bias path: a constant plus nothing from bins after `read`.
+            bias = np.array([0.25, -0.1])
+            out[k] = (acc / n, bias, read)
+        return out
+
+    base = commits(x)
+    # Query perturbation: everything after the calibration block (B=2).
+    q = x.copy()
+    q[spans[1][1]:] = 99.0
+    got = commits(q)
+    for k in (1, 2):
+        assert np.allclose(base[k][0], got[k][0])
+        assert np.allclose(base[k][1], got[k][1])
+    # In-block prefix perturbation at J=2: commits 1 stays, commit 2 moves, commit 3 may move.
+    mid = x.copy()
+    mid[spans[1][0]:spans[1][1]] += 5.0
+    got2 = commits(mid)
+    assert np.allclose(base[1][0], got2[1][0])
+    assert not np.allclose(base[2][0], got2[2][0])
+    assert base[1][2] == spans[0][1] - 1
+    assert base[2][2] == spans[1][1] - 1
+
+
+def test_subc_nwb_path_is_not_under_subm():
+    from scripts.run_baselines_readin import nwb_path_for_session
+    path = nwb_path_for_session("sub-C_ses-CO-20150319")
+    assert path.parts[-2] == "sub-C"
+    assert path.is_file()
+    path_m = nwb_path_for_session("sub-M_ses-CO-20140626")
+    assert path_m.parts[-2] == "sub-M"
+    assert path_m.is_file()
+
+
 def test_batched_rebased_matches_scalar_loop():
     torch.manual_seed(1)
     base = _TinyTrunk()
@@ -196,3 +278,112 @@ def test_batched_rebased_matches_scalar_loop():
         assert torch.allclose(got["table"], ans["table"], atol=1e-5, rtol=1e-5)
         assert torch.allclose(got["bias"], ans["bias"], atol=1e-5, rtol=1e-5)
         assert torch.allclose(got["mean"], ans["mean"], atol=1e-6)
+
+
+def _map_delta(a, b, fields=("weight", "bias", "mean", "std")):
+    worst = 0.0
+    for f in fields:
+        worst = max(worst, float(np.max(np.abs(getattr(a, f) - getattr(b, f)))))
+    return worst
+
+
+@pytest.mark.skipif(__import__("os").environ.get("CAUSAL_LEAK") != "1", reason="set CAUSAL_LEAK=1")
+def test_real_query_and_prefix_perturbation():
+    """Reviewer leak.py / leak_prefix.py on one short target, including the COMBO bias path.
+
+    Covers P0, W_alpha, S1, COMBO, CCA+S1, R1, R2, R3 and ui_reg. Query bins and, separately,
+    bins after an in-block prefix must not move commits that were not allowed to read them.
+    """
+    import dataclasses
+    import os
+    os.environ.setdefault("PC_OUT", "/home/xinyuan/Work_host/SSM/results/population_calib_p3_20261016/fix")
+    from scripts import run_causal_main as rcm
+    from scripts import run_pc3_refine as pc
+    from scripts import run_population_calib as rpc
+    from ssm_decode.population_calib import SessionData
+
+    pc.set_variant("base")
+    dev = torch.device("cuda:0")
+    world = rpc.World("days", "O", dev, load_sessions=False)
+    p0 = pc.load_p0(world, "days")
+    p3 = rcm.load_p3("days")
+    B, J = 2, 1
+    L = int(p3["r2"][str(B)]["cfg"]["L"])
+    jb = pc.jbar_for("days", L)
+    fix = rcm.load_fix_rules("days")
+    rules = rcm.load_s1_rules("days")[0]
+    s1 = rules["b"][str(B)]["and"]
+    date = "20150616"
+    alphas = rcm.alpha_bundle(fix["trunk"], fix["pooled"], date, B)
+    sd, prior = world.target(rcm.PREFIX + date)
+    spans = [(int(a), int(b)) for a, b in sd.trials]
+    basis = pc.load_basis("days")
+    k1 = __import__("scripts.run_drift_curve", fromlist=["pick_kind"]).pick_kind(p3, "r1s", B)
+    lam1 = p3[f"r1s_{k1}"][str(B)]["cfg"]["lam"]
+    r2_cfg = p3["r2"][str(B)]["cfg"]
+    k3 = __import__("scripts.run_drift_curve", fromlist=["pick_kind"]).pick_kind(p3, "r3", B)
+    lam3 = p3[f"r3_{k3}"][str(B)]["cfg"]["lam"]
+    ui_block, _ui_spec = rcm.load_ui("days")
+    ui = ui_block[str(B)]
+
+    def build(s):
+        cache = rcm.prefix_cache(s, prior, p0, B, world, "days")
+        cold, initial = rcm.cold_and_initial(rcm.to_cpu(prior), cache, spans)
+        base = world.adapter.model.base
+        out = {}
+        out["p0"], _ = rcm.p0_commits(cache, 0, spans, B, cold, initial)
+        out["wa"], _, _ = rcm.alpha_commits(cache, 0, spans, B, alphas["pooled"], cold, initial)
+        out["s1"], _, _ = rcm.loop_commits(base, s, prior, cache, 0, spans, B, eta=s1["eta"], rho=s1["rho"],
+                                           jbar=jb, alpha=0.0, kind="p0")
+        out["combo"], _, _ = rcm.loop_commits(
+            base, s, prior, cache, 0, spans, B, eta=float(fix["combo"][0]["b"][str(B)]["and"]["eta"]),
+            rho=float(fix["combo"][0]["b"][str(B)]["and"]["rho"]), jbar=jb,
+            alpha=alphas["pooled"], kind="p0" if alphas["pooled"] == 0 else "w_alpha")
+        out["cca_s1"], _, _ = rcm.loop_commits(
+            base, s, prior, cache, 0, spans, B, eta=float(fix["cca_s1"][0]["b"][str(B)]["and"]["eta"]),
+            rho=float(fix["cca_s1"][0]["b"][str(B)]["and"]["rho"]), jbar=jb, alpha=1.0, kind="cca")
+        body, reads, _ = rcm.r1_commits(world, s, prior, p0[0], cache, 0, spans, B, lam1, k1, basis)
+        out["r1"] = body
+        idx = rcm.calibration_indices(s.bank.n_trials, B)
+        ep = pc.p0_episode(world, s, prior, p0[0], idx)
+        tab = ep.refine(jb, r2_cfg["eta"], r2_cfg["rho"], [r2_cfg["S"]])[r2_cfg["S"]]
+        out["r2"] = {B: rcm.final_reference_map(rcm.to_cpu(tab), None, rcm.to_cpu(ep.mean), rcm.to_cpu(ep.std),
+                                                rcm._end(cache, B))}
+        st3 = ep.stats(tab)
+        v = ep.v_from(st3, lam3, k3, basis).detach().cpu().numpy()
+        out["r3"] = {B: rcm.final_reference_map(rcm.to_cpu(tab), None, rcm.to_cpu(ep.mean), rcm.to_cpu(ep.std),
+                                                rcm._end(cache, B), readout=v)}
+        from scripts import run_pc3_uiref as uiref
+        ut = uiref.run_traj(world, s, ep, ui["lam"], ui["lr"], (ui["steps"],))[ui["steps"]]
+        out["ui"] = {B: rcm.final_reference_map(ut, None, rcm.to_cpu(ep.mean), rcm.to_cpu(ep.std), rcm._end(cache, B))}
+        # COMBO bias path: eta=0 must reproduce the W_alpha bias on the final commit.
+        pure, _, _ = rcm.loop_commits(base, s, prior, cache, 0, spans, B, eta=0.0, rho=0.0, jbar=jb,
+                                      alpha=alphas["pooled"], kind="p0" if alphas["pooled"] == 0 else "w_alpha")
+        out["combo_eta0"] = pure
+        return out
+
+    def corrupt(s, start):
+        rng = np.random.default_rng(1)
+        neu = np.array(s.record.neural, copy=True)
+        beh = np.array(s.record.behavior, copy=True)
+        neu[start:] = rng.poisson(neu[start:].mean(0, keepdims=True) * 3 + 0.5, size=neu[start:].shape)
+        beh[start:] = rng.normal(size=beh[start:].shape) * 50
+        rec = dataclasses.replace(s.record, neural=neu, behavior=beh)
+        return SessionData(rec, world.label_stats, dev, name=s.name, usable=s.trials)
+
+    orig = build(sd)
+    # eta=0 COMBO final bias matches the closed-form base (the bias path is not dropped).
+    assert np.allclose(orig["combo_eta0"][B].weight, orig["wa"][B].weight, atol=1e-5)
+    assert np.allclose(orig["combo_eta0"][B].bias, orig["wa"][B].bias, atol=1e-5)
+    query = build(corrupt(sd, spans[B - 1][1]))
+    for name in ("p0", "wa", "s1", "combo", "cca_s1", "r1", "r2", "r3", "ui"):
+        for k, amap in orig[name].items():
+            if k in (COLD, INITIAL):
+                continue
+            assert _map_delta(amap, query[name][k]) < 1e-6, name
+    prefix = build(corrupt(sd, spans[J - 1][1]))
+    for name in ("p0", "wa", "s1", "combo", "cca_s1", "r1"):
+        for k, amap in orig[name].items():
+            if k in (COLD, INITIAL) or k > J:
+                continue
+            assert _map_delta(amap, prefix[name][k]) < 1e-6, (name, k)

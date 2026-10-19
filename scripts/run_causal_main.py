@@ -42,8 +42,9 @@ from scripts.run_p0solve_adapt import alpha_for_target, load_gap_rules  # noqa: 
 from ssm_decode import fwd_refine as fr                         # noqa: E402
 from ssm_decode import stream_f7 as sf                          # noqa: E402
 from ssm_decode.causal_protocol import (COLD, INITIAL, AffineMap,  # noqa: E402
-                                        assert_segment_causal, calibration_indices,
-                                        commit_segments, margin_pick, query_bins_on_commit,
+                                        assert_prefix_idx, assert_segment_causal,
+                                        calibration_indices, commit_segments, margin_pick,
+                                        measured_read_bin, query_bins_on_commit,
                                         run_rebased_many)
 from ssm_decode.population_calib import PopStats, norm_stats    # noqa: E402
 from ssm_decode.p0solve import shrink_tables                    # noqa: E402
@@ -57,11 +58,12 @@ SUBC_B = (1, 4, 8, 16, 33)
 SEEDS = (0, 1)
 LATENCIES = (0, 1)
 SIM_MAX = pc.SIM_MAX_BINS
-ETAS = (0.1, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0, 300.0, 1000.0)
+ETAS = (0.0, 0.1, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0, 300.0, 1000.0)
 RHOS = (0.0, 0.01, 0.03, 0.1, 0.3)
-ANYTIME = ("p_prior", "p0", "w_alpha_gap", "s1_causal", "s1_causal_and",
-           "combo", "combo_and", "r1_stream")
-REFERENCES = ("r2", "r3", "ridge_cca", "p0_ui_reg")
+ANYTIME = ("p_prior", "p0", "w_alpha_trunk", "w_alpha_pooled", "w_alpha_B",
+           "ridge_cca", "s1_causal", "s1_causal_and",
+           "combo", "combo_or", "cca_s1", "cca_s1_or", "r1_stream")
+REFERENCES = ("r2", "r3", "p0_ui_reg")
 SEED_FREE = {"p_prior", "ridge_cca"}
 DRIFT_DATES = list(TARGET_DATES)
 
@@ -153,17 +155,22 @@ def _episodes(path: Path) -> list[dict]:
     return rows
 
 
-def _rules_from_episodes(episodes: list[dict], eta_of_B) -> dict:
-    """Both gates from stored per-episode grids. ``eta_of_B(B)`` is the R2 eta (tie break)."""
+def _rules_from_episodes(episodes: list[dict], eta_of_B, base_key: str = "p0") -> dict:
+    """Both gates from stored per-episode grids. ``eta_of_B(B, group)`` is the R2 eta (tie break).
+
+    ``base_key`` is the column the gain is measured against. S1 uses ``p0``. COMBO and
+    CCA+S1 use ``base`` (their own closed-form table).
+    """
     by = {}
     for r in episodes:
         by.setdefault(int(r["B"]), []).append(r)
-    out = {"b": {}, "protocol": episodes[0].get("protocol", "random_draw_legacy") if episodes else "empty"}
+    out = {"b": {}, "protocol": episodes[0].get("protocol", "random_draw_legacy") if episodes else "empty",
+           "base_key": base_key, "primary_gate": "and"}
     for B, group in sorted(by.items()):
         eta_r2 = float(eta_of_B(B, group))
         out["b"][str(B)] = {
-            "or": margin_pick(group, "rebase", eta_r2, mode="or"),
-            "and": margin_pick(group, "rebase", eta_r2, mode="and"),
+            "or": margin_pick(group, "rebase", eta_r2, mode="or", base_key=base_key),
+            "and": margin_pick(group, "rebase", eta_r2, mode="and", base_key=base_key),
             "n_episodes": len(group),
             "sessions": sorted({g["session"][-8:] for g in group}),
         }
@@ -215,10 +222,17 @@ def load_ui(stratum_key: str) -> dict:
 # ---------------------------------------------------------------- prefix cache ----
 
 def prefix_cache(sd, prior, calibs: dict, k_max: int, world, cca_stratum: str):
-    """P0 table per (seed, k), shared norm, and seed-free CCA in that norm. k = 1..k_max."""
-    norm, tables, cca = {}, {s: {} for s in calibs}, {}
+    """P0 table per (seed, k), shared norm, and seed-free CCA in that norm. k = 1..k_max.
+
+    ``read_bin[k]`` is the measured last bin of the trial indices actually passed to the
+    statistics (the prefix ``0 .. k-1``), not a hard-coded ``spans[k - 1]``.
+    """
+    spans = [(int(a), int(b)) for a, b in sd.trials]
+    norm, tables, cca, read_bin = {}, {s: {} for s in calibs}, {}, {}
     for k in range(1, int(k_max) + 1):
         idx = calibration_indices(sd.bank.n_trials, k)
+        assert_prefix_idx(idx, k)
+        read_bin[k] = measured_read_bin(spans, idx)
         stats = PopStats.from_trials(sd.bank, idx)
         mean_t, std_t = norm_stats(stats)
         norm[k] = (to_cpu(mean_t), to_cpu(std_t))
@@ -241,7 +255,7 @@ def prefix_cache(sd, prior, calibs: dict, k_max: int, world, cca_stratum: str):
                       {kk: info.get(kk) for kk in ("n_common_conditions", "d_eff", "family")})
         if k == 1 or k == int(k_max) or k % 8 == 0:
             print(f"[cache] k={k}/{k_max} cca={'no' if not isinstance(cca[k], tuple) else 'yes'}", flush=True)
-    return {"norm": norm, "p0": tables, "cca": cca}
+    return {"norm": norm, "p0": tables, "cca": cca, "read_bin": read_bin}
 
 
 def w_alpha_of(cache, seed: int, k: int, alpha: float):
@@ -257,11 +271,17 @@ def w_alpha_of(cache, seed: int, k: int, alpha: float):
     return w, b, mean, std, {"alpha": float(alpha), "cca": got[2]}
 
 
+def _end(cache, k: int) -> int:
+    """Measured last bin of the prefix that built commit ``k``."""
+    return int(cache["read_bin"][int(k)])
+
+
 def cold_and_initial(prior_np, cache, spans):
     n = prior_np.shape[1]
     cold = np_map(prior_np, None, np.zeros(n), np.ones(n), -1)
     mean, std = cache["norm"][1]
-    initial = np_map(prior_np, None, mean, std, spans[0][1] - 1, staged=True)
+    # Trial-0 staging reads exactly the bins that built norm of prefix 1.
+    initial = np_map(prior_np, None, mean, std, _end(cache, 1), staged=True)
     return cold, initial
 
 
@@ -272,7 +292,7 @@ def p0_commits(cache, seed, spans, B, cold, initial):
     for k in range(1, B + 1):
         w = cache["p0"][seed][k]
         mean, std = cache["norm"][k]
-        maps[k] = np_map(w, None, mean, std, spans[k - 1][1] - 1)
+        maps[k] = np_map(w, None, mean, std, _end(cache, k))
         reads[k] = maps[k].max_bin_read
     offline = cache["p0"][seed][B]
     if not np.allclose(maps[B].weight, offline):
@@ -285,7 +305,7 @@ def prior_commits(prior_np, cache, spans, B, cold, initial):
     reads = {COLD: -1, INITIAL: initial.max_bin_read}
     for k in range(1, B + 1):
         mean, std = cache["norm"][k]
-        maps[k] = np_map(prior_np, None, mean, std, spans[k - 1][1] - 1)
+        maps[k] = np_map(prior_np, None, mean, std, _end(cache, k))
         reads[k] = maps[k].max_bin_read
     if not np.allclose(maps[B].weight, prior_np):
         raise AssertionError("P-prior final table is not the electrode prior")
@@ -309,7 +329,7 @@ def alpha_commits(cache, seed, spans, B, alpha, cold, initial):
         if got is None:
             return None, None, {"unavailable": True, "alpha": float(alpha), "k": k}
         w, b, mean, std, info = got
-        maps[k] = np_map(w, b, mean, std, spans[k - 1][1] - 1)
+        maps[k] = np_map(w, b, mean, std, _end(cache, k))
         reads[k] = maps[k].max_bin_read
     # Offline on the first B is commit B by construction (same shrink of the same P0 and CCA).
     return maps, reads, info
@@ -322,29 +342,39 @@ def cca_final_only(cache, spans, B, cold, initial):
         return None, None, {"unavailable": True, "reason": got}
     w, b, info = got
     mean, std = cache["norm"][B]
-    final = np_map(w, b, mean, std, spans[B - 1][1] - 1)
+    final = np_map(w, b, mean, std, _end(cache, B))
     maps = {COLD: cold, INITIAL: initial, B: final}
     reads = {COLD: -1, INITIAL: initial.max_bin_read, B: final.max_bin_read}
     return maps, reads, info
 
 
-def _base_bias_fn(cache, seed, alpha, device):
-    """CCA bias of the prefix W_alpha. Not used on the trial-0 prior forward."""
+def _base_bias_fn(cache, seed, alpha, device, kind="w_alpha"):
+    """Affine bias of the closed-form base. Not used on the trial-0 prior forward."""
 
     def base_bias(k, closed):
         if not closed and int(k) == 0:
             return None
         nprefix = int(k) + 1 if closed else int(k)
-        got = w_alpha_of(cache, seed, nprefix, alpha)
-        if got is None:
-            raise RuntimeError(f"W_alpha unavailable at prefix {nprefix}")
-        return torch.as_tensor(np.asarray(got[1], np.float32), device=device)
+        if kind == "cca":
+            got = cache["cca"][nprefix]
+            if not isinstance(got, tuple):
+                raise RuntimeError(f"CCA unavailable at prefix {nprefix}")
+            bias = got[1]
+        else:
+            built = w_alpha_of(cache, seed, nprefix, alpha)
+            if built is None:
+                raise RuntimeError(f"W_alpha unavailable at prefix {nprefix}")
+            bias = built[1]
+        return torch.as_tensor(np.asarray(bias, np.float32), device=device)
 
     return base_bias
 
 
 def _prepare_from(cache, seed, base_kind: str, alpha: float, device):
-    """``prepare(k, closed)`` for the rebased loop. ``base_kind`` is ``p0`` or ``w_alpha``."""
+    """``prepare(k, closed)`` for the rebased loop.
+
+    ``base_kind`` is ``p0`` (S1), ``w_alpha`` (COMBO) or ``cca`` (CCA+S1).
+    """
 
     def as_t(arr):
         return torch.as_tensor(np.asarray(arr, np.float32), device=device)
@@ -354,6 +384,13 @@ def _prepare_from(cache, seed, base_kind: str, alpha: float, device):
         if base_kind == "p0":
             mean, std = cache["norm"][nprefix]
             table = None if (not closed and k == 0) else as_t(cache["p0"][seed][nprefix])
+            return as_t(mean), as_t(std), table
+        if base_kind == "cca":
+            got = cache["cca"][nprefix]
+            if not isinstance(got, tuple):
+                raise RuntimeError(f"CCA unavailable at prefix {nprefix}")
+            mean, std = cache["norm"][nprefix]
+            table = None if (not closed and k == 0) else as_t(got[0])
             return as_t(mean), as_t(std), table
         got = w_alpha_of(cache, seed, nprefix, alpha)
         if got is None:
@@ -384,20 +421,33 @@ def loop_commits(base, sd, prior_t, cache, seed, spans, B, *, eta, rho, jbar, al
             for k in range(1, B + 1):
                 w = cache["p0"][seed][k]
                 mean, std = cache["norm"][k]
-                maps[k] = np_map(w, None, mean, std, spans[k - 1][1] - 1)
+                maps[k] = np_map(w, None, mean, std, _end(cache, k))
                 reads[k] = maps[k].max_bin_read
             return maps, reads, {"eta": 0.0, "rho": 0.0, "fallback_base": True, "n_commits": 0}
+        if kind == "cca":
+            maps, reads = {}, {}
+            for k in range(1, B + 1):
+                got = cache["cca"][k]
+                if not isinstance(got, tuple):
+                    raise RuntimeError(f"CCA unavailable at prefix {k}")
+                mean, std = cache["norm"][k]
+                maps[k] = np_map(got[0], got[1], mean, std, _end(cache, k))
+                reads[k] = maps[k].max_bin_read
+            return maps, reads, {"eta": 0.0, "rho": 0.0, "fallback_base": True, "base": "ridge_cca"}
         maps, reads, info = alpha_commits(cache, seed, spans, B, alpha, None, None)
         # alpha_commits included cold/initial; the caller overwrites those.
         only = {k: maps[k] for k in range(1, B + 1)}
         return only, {k: reads[k] for k in only}, {**info, "eta": 0.0, "rho": 0.0, "fallback_base": True}
 
     idx = calibration_indices(sd.bank.n_trials, B)
+    assert_prefix_idx(idx, B)
     raw = [(sd.x32[a:b], sd.y_norm[a:b].to(dtype=sd.x32.dtype), sd.valid[a:b].to(dtype=sd.x32.dtype))
            for a, b in (sd.trials[int(i)] for i in idx)]
     prepare = _prepare_from(cache, seed, kind, alpha, device)
     hist = []
-    bias_fn = _base_bias_fn(cache, seed, alpha, device) if kind == "w_alpha" and float(alpha) != 0.0 else None
+    bias_fn = None
+    if kind == "cca" or (kind == "w_alpha" and float(alpha) != 0.0):
+        bias_fn = _base_bias_fn(cache, seed, alpha, device, kind if kind == "cca" else "w_alpha")
     ans = sf.rebased_feedback_loop(base, raw, prior_t.float(), float(eta), float(rho), prepare,
                                    mode="rebase", kind="fir", jbar=jbar, history=hist,
                                    base_bias=bias_fn)
@@ -409,14 +459,14 @@ def loop_commits(base, sd, prior_t, cache, seed, spans, B, *, eta, rho, jbar, al
     for item in hist:
         k = int(item["k"]) + 1
         bias = to_cpu(item["bias"])
-        if kind == "w_alpha" and float(alpha) != 0.0:
-            # Base weight already contains W_alpha. Its CCA bias was not inside the
-            # loop (the loop's bias is the correction). Add the shrinkage bias in
-            # the same coordinates: b_alpha lives in the prefix norm of commit k.
+        if kind == "cca":
+            bias = bias + np.asarray(cache["cca"][k][1], np.float64)
+        elif kind == "w_alpha" and float(alpha) != 0.0:
+            # Shrinkage bias is part of the base, not of Delta. Add it in the prefix norm.
             got = w_alpha_of(cache, seed, k, alpha)
             bias = bias + np.asarray(got[1], np.float64)
         maps[k] = np_map(to_cpu(item["table"]), bias, to_cpu(item["mean"]), to_cpu(item["std"]),
-                         spans[k - 1][1] - 1)
+                         _end(cache, k))
         reads[k] = maps[k].max_bin_read
     return maps, reads, {"eta": float(eta), "rho": float(rho), "fallback_base": False, "n_commits": B}
 
@@ -425,6 +475,7 @@ def r1_commits(world, sd, prior, calib, cache, seed, spans, B, lam, kind, basis)
     """P3 ``stream_stats`` anytime: after trial k, P0 of trials <= k plus the ridge so far."""
     base = world.adapter.model.base
     idx = calibration_indices(sd.bank.n_trials, B)
+    assert_prefix_idx(idx, B)
     tot = None
     maps, reads = {}, {}
     v0 = fr.head_matrix(base).double()
@@ -454,14 +505,14 @@ def r1_commits(world, sd, prior, calib, cache, seed, spans, B, lam, kind, basis)
         k = j + 1
         w_k = cache["p0"][seed][k]
         mean_k, std_k = cache["norm"][k]
-        maps[k] = np_map(w_k, None, mean_k, std_k, spans[k - 1][1] - 1, readout=readout)
+        maps[k] = np_map(w_k, None, mean_k, std_k, _end(cache, k), readout=readout)
         reads[k] = maps[k].max_bin_read
     return maps, reads, {"kind": kind, "lam": float(lam), "streaming_passes": 1}
 
 
-def final_reference_map(weight, bias, mean, std, spans, B, readout=None):
-    final = np_map(weight, bias, mean, std, spans[B - 1][1] - 1, readout=readout)
-    return final
+def final_reference_map(weight, bias, mean, std, read_bin, readout=None):
+    """One replay/backprop table. ``read_bin`` is measured from the calibration indices."""
+    return np_map(weight, bias, mean, std, int(read_bin), readout=readout)
 
 
 # ---------------------------------------------------------------- decode ----
@@ -613,20 +664,19 @@ def eval_target(world, p0, sd, prior, cache, spec_rules, jbars, basis, *,
         if B > len(spans):
             print(f"[skip] {target} B={B} only {len(spans)} usable", flush=True)
             continue
-        alpha_info = gap_info_of(B)
-        raw_alpha = None if alpha_info is None else alpha_info.get("w_alpha_gap")
-        alpha = None if raw_alpha is None else float(raw_alpha)
+        alpha_info = gap_info_of(B) or {}
+        alpha_trunk = alpha_info.get("trunk")
+        alpha_pooled = alpha_info.get("pooled")
+        alpha_B = alpha_info.get("by_B")
         s1_or = _choice(spec_rules["s1"], B, "or")
         s1_and = _choice(spec_rules["s1"], B, "and")
         combo_rules = spec_rules["combo"]
-        # alpha 0 => combo is S1. Reuse the S1 gate instead of a second source grid.
-        if alpha == 0.0 and combo_rules is None:
-            combo_or, combo_and = s1_or, s1_and
-            combo_proto = spec_rules["s1_proto"] + "+alpha0_equals_s1"
-        else:
-            combo_or = _choice(combo_rules, B, "or")
-            combo_and = _choice(combo_rules, B, "and")
-            combo_proto = spec_rules["combo_proto"]
+        combo_or = _choice(combo_rules, B, "or")
+        combo_and = _choice(combo_rules, B, "and")
+        combo_proto = spec_rules["combo_proto"]
+        cca_rules = spec_rules.get("cca_s1")
+        cca_or = _choice(cca_rules, B, "or")
+        cca_and = _choice(cca_rules, B, "and")
         p3 = spec_rules["p3"]
         r2_cfg = p3["r2"][str(B)]["cfg"]
         k1 = pick_kind(p3, "r1s", B)
@@ -649,24 +699,26 @@ def eval_target(world, p0, sd, prior, cache, spec_rules, jbars, basis, *,
             built = {}
             notes = {}
 
-            def add_anytime(name, body, reads_body, cfg):
-                maps, reads = install_maps(body, cold, initial, B)
-                for lat, _m in ((lat, name) for name, lat in need if name == name):
-                    pass
-                built[name] = (maps, reads, "anytime", cfg)
-
             if any(m == "p_prior" for m, _ in need):
                 maps, reads = prior_commits(prior_np, cache, spans, B, cold, initial)
                 built["p_prior"] = (maps, reads, "anytime", {})
             if any(m == "p0" for m, _ in need):
                 maps, reads = p0_commits(cache, seed, spans, B, cold, initial)
                 built["p0"] = (maps, reads, "anytime", {})
-            if any(m == "w_alpha_gap" for m, _ in need):
-                maps, reads, info = alpha_commits(cache, seed, spans, B, alpha, cold, initial)
+            for label, aval, src in (("w_alpha_trunk", alpha_trunk, "per_trunk"),
+                                     ("w_alpha_pooled", alpha_pooled, "pooled_gap"),
+                                     ("w_alpha_B", alpha_B, "pooled_B")):
+                if not any(m == label for m, _ in need):
+                    continue
+                if aval is None:
+                    notes[label] = {"unavailable": True, "reason": "no causal alpha"}
+                    continue
+                maps, reads, info = alpha_commits(cache, seed, spans, B, float(aval), cold, initial)
                 if maps is None:
-                    notes["w_alpha_gap"] = info
+                    notes[label] = info
                 else:
-                    built["w_alpha_gap"] = (maps, reads, "anytime", info)
+                    built[label] = (maps, reads, "anytime", {**(info or {}), "alpha_source": src,
+                                                             "protocol": "causal_first_B"})
             if any(m == "ridge_cca" for m, _ in need):
                 maps, reads, info = cca_final_only(cache, spans, B, cold, initial)
                 if maps is None:
@@ -699,31 +751,50 @@ def eval_target(world, p0, sd, prior, cache, spec_rules, jbars, basis, *,
                         s1_body(s1_and, "s1_causal_and")
                 else:
                     s1_body(s1_and, "s1_causal_and")
-            if any(m in ("combo", "combo_and") for m, _ in need):
-                for label, choice in (("combo", combo_or), ("combo_and", combo_and)):
-                    if not any(m == label for m, _ in need):
-                        continue
-                    if choice is None or alpha is None:
-                        notes[label] = {"unavailable": True, "reason": "no combo selection or alpha"}
-                        continue
-                    if label == "combo_and" and combo_or is not None and (
-                            float(choice["eta"]), float(choice["rho"])) == (
-                            float(combo_or["eta"]), float(combo_or["rho"])) and "combo" in built:
-                        built["combo_and"] = built["combo"]
-                        continue
-                    try:
-                        body, reads, info = loop_commits(
-                            base, sd, prior, cache, seed, spans, B,
-                            eta=float(choice["eta"]), rho=float(choice["rho"]), jbar=jb,
-                            alpha=float(alpha), kind="p0" if alpha == 0.0 else "w_alpha")
-                    except RuntimeError as exc:
-                        notes[label] = {"unavailable": True, "reason": str(exc)}
-                        continue
-                    info = {**info, "alpha": alpha, "gate": choice.get("mode"),
-                            "source_gain": choice.get("source_gain"),
-                            "fallback_base": choice.get("fallback_base", choice.get("fallback_p0"))}
-                    built[label] = (install_maps(body, cold, initial, B)[0],
-                                    {**reads, COLD: -1, INITIAL: initial.max_bin_read}, "anytime", info)
+            def refine_body(choice, label, kind, alpha_v):
+                if choice is None or (kind == "w_alpha" and alpha_v is None):
+                    notes[label] = {"unavailable": True, "reason": "no selection or alpha"}
+                    return
+                try:
+                    body, reads, info = loop_commits(
+                        base, sd, prior, cache, seed, spans, B,
+                        eta=float(choice["eta"]), rho=float(choice["rho"]), jbar=jb,
+                        alpha=0.0 if alpha_v is None else float(alpha_v),
+                        kind=kind)
+                except RuntimeError as exc:
+                    notes[label] = {"unavailable": True, "reason": str(exc)}
+                    return
+                info = {**info, "alpha": None if alpha_v is None else float(alpha_v),
+                        "gate": choice.get("mode"), "source_gain": choice.get("source_gain"),
+                        "source_se": choice.get("source_se"),
+                        "base_key": choice.get("base_key"),
+                        "fallback_base": choice.get("fallback_base", choice.get("fallback_p0")),
+                        "protocol": "causal_first_B",
+                        "step_forward": "per-trial zero state (separate from the scored contiguous decode)"}
+                built[label] = (install_maps(body, cold, initial, B)[0],
+                                {**reads, COLD: -1, INITIAL: initial.max_bin_read}, "anytime", info)
+
+            # Primary COMBO / CCA+S1 use the AND gate. OR is the sensitivity row.
+            if any(m == "combo" for m, _ in need):
+                refine_body(combo_and, "combo", "p0" if alpha_pooled == 0 else "w_alpha", alpha_pooled)
+            if any(m == "combo_or" for m, _ in need):
+                if combo_or is not None and combo_and is not None and "combo" in built and (
+                        float(combo_or["eta"]), float(combo_or["rho"])) == (
+                        float(combo_and["eta"]), float(combo_and["rho"])):
+                    maps_c, reads_c, inst_c, cfg_c = built["combo"]
+                    built["combo_or"] = (maps_c, reads_c, inst_c, {**cfg_c, "gate": "or", "alias_of": "combo"})
+                else:
+                    refine_body(combo_or, "combo_or", "p0" if alpha_pooled == 0 else "w_alpha", alpha_pooled)
+            if any(m == "cca_s1" for m, _ in need):
+                refine_body(cca_and, "cca_s1", "cca", 1.0)
+            if any(m == "cca_s1_or" for m, _ in need):
+                if cca_or is not None and cca_and is not None and "cca_s1" in built and (
+                        float(cca_or["eta"]), float(cca_or["rho"])) == (
+                        float(cca_and["eta"]), float(cca_and["rho"])):
+                    maps_c, reads_c, inst_c, cfg_c = built["cca_s1"]
+                    built["cca_s1_or"] = (maps_c, reads_c, inst_c, {**cfg_c, "gate": "or", "alias_of": "cca_s1"})
+                else:
+                    refine_body(cca_or, "cca_s1_or", "cca", 1.0)
             if any(m == "r1_stream" for m, _ in need):
                 body, reads, info = r1_commits(world, sd, prior, p0[seed], cache, seed, spans, B,
                                               lam1, k1, basis)
@@ -737,14 +808,15 @@ def eval_target(world, p0, sd, prior, cache, spec_rules, jbars, basis, *,
                     tab = ep.refine(jb, r2_cfg["eta"], r2_cfg["rho"], [r2_cfg["S"]])[r2_cfg["S"]]
                     mean_b, std_b = to_cpu(ep.mean), to_cpu(ep.std)
                     if any(m == "r2" for m, _ in need):
-                        final = final_reference_map(to_cpu(tab), None, mean_b, std_b, spans, B)
+                        assert_prefix_idx(ep.idx, B)
+                        final = final_reference_map(to_cpu(tab), None, mean_b, std_b, _end(cache, B))
                         maps = {COLD: cold, INITIAL: initial, B: final}
                         reads = {k: m.max_bin_read for k, m in maps.items()}
                         built["r2"] = (maps, reads, "final_only", dict(r2_cfg))
                     if any(m == "r3" for m, _ in need):
                         st3 = ep.stats(tab)
                         v = ep.v_from(st3, lam3, k3, basis).detach().cpu().numpy()
-                        final = final_reference_map(to_cpu(tab), None, mean_b, std_b, spans, B, readout=v)
+                        final = final_reference_map(to_cpu(tab), None, mean_b, std_b, _end(cache, B), readout=v)
                         maps = {COLD: cold, INITIAL: initial, B: final}
                         reads = {k: m.max_bin_read for k, m in maps.items()}
                         built["r3"] = (maps, reads, "final_only", {**r2_cfg, "kind": k3, "lam": lam3})
@@ -752,7 +824,7 @@ def eval_target(world, p0, sd, prior, cache, spec_rules, jbars, basis, *,
                     from scripts import run_pc3_uiref as uiref
                     tab = uiref.run_traj(world, sd, ep, ui["lam"], ui["lr"], (ui["steps"],))[ui["steps"]]
                     mean_b, std_b = to_cpu(ep.mean), to_cpu(ep.std)
-                    final = final_reference_map(tab, None, mean_b, std_b, spans, B)
+                    final = final_reference_map(tab, None, mean_b, std_b, _end(cache, B))
                     maps = {COLD: cold, INITIAL: initial, B: final}
                     reads = {k: m.max_bin_read for k, m in maps.items()}
                     built["p0_ui_reg"] = (maps, reads, "final_only",
@@ -775,8 +847,14 @@ def eval_target(world, p0, sd, prior, cache, spec_rules, jbars, basis, *,
             rows = []
             for (method, lat, on_final, n_q, install), r2 in zip(job_meta, scores):
                 _maps, _reads, _inst, cfg = built[method]
-                proto = spec_rules["s1_proto"] if method.startswith("s1") else (
-                    combo_proto if method.startswith("combo") else spec_rules["others_proto"])
+                if method.startswith("s1"):
+                    proto = spec_rules["s1_proto"]
+                elif method.startswith(("combo", "cca_s1", "w_alpha")):
+                    proto = "causal_first_B"
+                elif method == "ridge_cca" and stratum == "subc_month":
+                    proto = "causal_first_B"
+                else:
+                    proto = spec_rules["others_proto"]
                 rows.append({
                     "stratum": stratum, "backbone": backbone, "target": target, "date": date,
                     "gap_days": None if alpha_info is None else alpha_info.get("elapsed"),
@@ -827,6 +905,35 @@ def gap_lookup(rules, date, B):
     return alpha_for_target(rules, int(B), elapsed_days(date, rules["ref"]), c=0.0)
 
 
+def load_fix_rules(tag: str) -> dict:
+    """Causal-first-B alpha rules and the COMBO / CCA+S1 grids for one trunk tag."""
+    def one(what):
+        path = OUT / "select" / f"{what}_{tag}.json"
+        if not path.exists():
+            return None, "missing"
+        return json.loads(path.read_text()), "causal_first_B"
+    trunk_p = OUT / "select" / f"gap_rules_{tag}.json"
+    pooled_p = OUT / "select" / "gap_rules_pooled.json"
+    return {"trunk": json.loads(trunk_p.read_text()) if trunk_p.exists() else None,
+            "pooled": json.loads(pooled_p.read_text()) if pooled_p.exists() else None,
+            "combo": one("combo"), "cca_s1": one("cca_s1")}
+
+
+def alpha_bundle(trunk, pooled, date: str, B: int):
+    """Per-trunk gap alpha, pooled gap alpha, and pooled alpha(B) for one target."""
+    from ssm_decode.p0solve import gap_bin_name
+    if not trunk or not pooled:
+        return None
+    elapsed = elapsed_days(date, trunk["ref"])
+    bname = gap_bin_name(elapsed)
+    return {"elapsed": int(elapsed), "bin": bname,
+            "trunk": float(trunk["schedule"][str(B)][bname]["alpha"]),
+            "pooled": float(pooled["schedule"][str(B)][bname]["alpha"]),
+            "by_B": float(pooled["by_B"][str(B)]["alpha"]),
+            "trunk_fallback": trunk["schedule"][str(B)][bname].get("fallback_from"),
+            "pooled_fallback": pooled["schedule"][str(B)][bname].get("fallback_from")}
+
+
 def cmd_eval(args):
     require_gpu()
     pc.set_variant("base")
@@ -847,14 +954,16 @@ def cmd_eval(args):
         dates = spec["dates"] if not args.targets else args.targets.split(",")
         src = [s[-8:] for s in D1_POOLS[spec["world"]]["sources"].split(",")]
         dates = validate_targets(dates, src)
-        rules_gap = load_gap_rules(spec["gap"])
-        need_s1 = any(m.startswith("s1") or m.startswith("combo") for m in methods)
+        fix = load_fix_rules(spec["s1"])
+        need_s1 = any(m.startswith("s1") or m.startswith("combo") or m.startswith("cca_s1") for m in methods)
         if need_s1:
             s1_rules, s1_proto = load_s1_rules(spec["s1"])
-            combo_rules, combo_proto = load_combo_rules(spec["s1"])
+            combo_rules, combo_proto = fix["combo"]
+            cca_rules, _cca_proto = fix["cca_s1"]
         else:
             s1_rules, s1_proto = {"b": {}}, "not_requested"
             combo_rules, combo_proto = None, "not_requested"
+            cca_rules = None
         p3 = load_p3(stratum)
         ui_block, ui_spec = load_ui(stratum)
         world = rpc.World(spec["world"], "O", device, load_sessions=False)
@@ -865,8 +974,9 @@ def cmd_eval(args):
         jbars = {L: pc.jbar_for(spec["world"], L) for L in lags}
         hash0 = world.adapter._hash()
         bundle = {"s1": s1_rules, "s1_proto": s1_proto, "combo": combo_rules, "combo_proto": combo_proto,
-                  "p3": p3, "ui": (ui_block, ui_spec),
+                  "cca_s1": cca_rules, "p3": p3, "ui": (ui_block, ui_spec),
                   "others_proto": "random_draw_legacy"}
+        trunk_rules, pooled_rules = fix["trunk"], fix["pooled"]
         for date in dates:
             if not torch.cuda.is_available():
                 raise SystemExit("GPU disappeared; stopping")
@@ -877,7 +987,8 @@ def cmd_eval(args):
             cache = prefix_cache(sd, prior, p0, k_max, world, spec["cca"])
             eval_target(world, p0, sd, prior, cache, bundle, jbars, basis,
                         stratum=stratum, backbone=spec["world"], date=date,
-                        gap_info_of=lambda B, date=date, rules_gap=rules_gap: gap_lookup(rules_gap, date, B),
+                        gap_info_of=lambda B, date=date, trunk=trunk_rules, pooled=pooled_rules:
+                        alpha_bundle(trunk, pooled, date, B),
                         seen=seen, path=path, methods=methods, Bs=Bs, seeds=seeds, latencies=latencies)
             if world.adapter._hash() != hash0:
                 raise SystemExit("trunk weights changed during eval")
@@ -906,9 +1017,9 @@ def _eval_subc(args, path, seen, methods, Bs, seeds, latencies, device):
             raise SystemExit(f"{bid} forbidden sessions {bad}")
         sel = json.loads((EXP_OUT / "select" / f"{bid}.json").read_text())
         s1_rules, s1_proto = load_s1_rules(bid)
-        combo_rules, combo_proto = load_combo_rules(bid)
-        gap_path = OUT / "select" / f"gap_rules_{bid}.json"
-        gap_rules = json.loads(gap_path.read_text()) if gap_path.exists() else None
+        fix = load_fix_rules(bid)
+        combo_rules, combo_proto = fix["combo"]
+        cca_rules, _cca_proto = fix["cca_s1"]
         basis = torch.load(EXP_OUT / f"basis/{bid}.pt", weights_only=False)["U"].to(device)
         lags = sorted({int(sel["b"][str(B)]["r2"]["L"]) for B in Bs})
         jbars = {L: ctx.jbar(L) for L in lags}
@@ -925,7 +1036,7 @@ def _eval_subc(args, path, seen, methods, Bs, seeds, latencies, device):
         ui_stub = ({str(B): {"lam": None, "lr": None, "steps": None} for B in Bs},
                    {"like_for_like": False, "note": "sub-C has no like-for-like ui_reg selection"})
         bundle = {"s1": s1_rules, "s1_proto": s1_proto, "combo": combo_rules, "combo_proto": combo_proto,
-                  "p3": p3, "ui": ui_stub, "others_proto": "random_draw_legacy"}
+                  "cca_s1": cca_rules, "p3": p3, "ui": ui_stub, "others_proto": "random_draw_legacy"}
         month_targets = [t for t in bb.targets if t.stratum == "month"]
         for t in month_targets:
             date = t.session[-8:]
@@ -954,10 +1065,8 @@ def _eval_subc(args, path, seen, methods, Bs, seeds, latencies, device):
                                 "selection_protocol": "not_run"}])
                             seen.add(key)
 
-            def gap_of(B, date=date, gap_rules=gap_rules, t=t):
-                if gap_rules is None:
-                    return {"elapsed": int(t.gap_days), "bin": None, "w_alpha_gap": None}
-                return gap_lookup(gap_rules, date, B)
+            def gap_of(B, date=date, trunk=fix["trunk"], pooled=fix["pooled"]):
+                return alpha_bundle(trunk, pooled, date, B)
 
             eval_target(ctx.world, ctx.p0, sd, prior, cache, bundle, jbars, basis,
                         stratum="subc_month", backbone=bid, date=date, gap_info_of=gap_of,
@@ -1076,12 +1185,32 @@ def _select_tag(tag: str, what: str, limit: int | None):
                     continue
                 alpha = 0.0
                 kind = "p0"
+                base_r2 = p0_r2
                 if what == "combo":
-                    info = alpha_for_target(gap, B, elapsed_days(name, gap["ref"]), c=0.0)
-                    alpha = float(info["w_alpha_gap"])
+                    alpha, _gdays = source_alpha(tag, name, B, "pooled")
                     kind = "p0" if alpha == 0.0 else "w_alpha"
+                    got = w_alpha_of(cache, seed, B, alpha)
+                    if got is None:
+                        print(f"[select-combo] {name[-8:]} B={B} CCA missing", flush=True)
+                        continue
+                    w, b, mean_a, std_a, _ = got
+                    scb = _score_np(world, sd, mean_a, std_a, [w], [b], idx)
+                    if scb is None:
+                        continue
+                    base_r2 = float(scb[0])
+                elif what == "cca_s1":
+                    kind = "cca"
+                    alpha = 1.0
+                    got = cache["cca"][B]
+                    if not isinstance(got, tuple):
+                        print(f"[select-cca] {name[-8:]} B={B} CCA missing", flush=True)
+                        continue
+                    scb = _score_np(world, sd, mean, std, [got[0]], [got[1]], idx)
+                    if scb is None:
+                        continue
+                    base_r2 = float(scb[0])
                 prepare = _prepare_from(cache, seed, kind, alpha, device)
-                bias_fn = _base_bias_fn(cache, seed, alpha, device) if kind == "w_alpha" else None
+                bias_fn = _base_bias_fn(cache, seed, alpha, device, kind) if kind in ("w_alpha", "cca") else None
                 raw = [(sd.x32[a:b], sd.y_norm[a:b].to(dtype=sd.x32.dtype),
                         sd.valid[a:b].to(dtype=sd.x32.dtype))
                        for a, b in (sd.trials[int(i)] for i in idx)]
@@ -1094,14 +1223,20 @@ def _select_tag(tag: str, what: str, limit: int | None):
                     if kind == "w_alpha":
                         extra = w_alpha_of(cache, seed, B, alpha)[1]
                         bias = bias + np.asarray(extra, np.float64)
+                    elif kind == "cca":
+                        bias = bias + np.asarray(cache["cca"][B][1], np.float64)
                     tables.append(to_cpu(ans["table"]))
                     biases.append(bias)
                 scores = _score_np(world, sd, mean, std, tables, biases, idx)
                 rebase = [{"eta": float(e), "rho": float(r), "r2": float(sc)}
                           for (e, r), sc in zip(configs, scores)]
+                zero = next((s["r2"] for s in rebase if s["eta"] == 0.0 and s["rho"] == 0.0), None)
+                if zero is not None and abs(zero - base_r2) > 1e-3:
+                    print(f"[select] WARN eta=0 score {zero:.4f} != base {base_r2:.4f} on {name[-8:]} B={B}",
+                          flush=True)
                 append_jsonl(path, [{"tag": tag, "session": name, "seed": int(seed), "B": int(B),
-                                     "protocol": "causal_first_B", "p0": p0_r2, "alpha": float(alpha),
-                                     "rebase": rebase, "eta_r2": eta_r2_of(B)}])
+                                     "protocol": "causal_first_B", "p0": p0_r2, "base": base_r2,
+                                     "alpha": float(alpha), "rebase": rebase, "eta_r2": eta_r2_of(B)}])
                 done += 1
                 print(f"[select-{what}] {tag} {name[-8:]} B={B} s{seed} p0={p0_r2:.3f} "
                       f"{time.perf_counter() - t1:.1f}s", flush=True)
@@ -1118,10 +1253,14 @@ def _write_select_summary(tag, what, path, eta_r2_of):
     if not eps:
         print(f"[select] no scored episodes in {path}", flush=True)
         return
-    rules = _rules_from_episodes(eps, lambda B, group: group[0].get("eta_r2", eta_r2_of(B)))
+    base_key = "base" if what in ("combo", "cca_s1") else "p0"
+    rules = _rules_from_episodes(eps, lambda B, group: group[0].get("eta_r2", eta_r2_of(B)),
+                                 base_key=base_key)
     rules["tag"] = tag
     rules["what"] = what
     rules["protocol"] = "causal_first_B"
+    rules["gate_note"] = ("Gain is versus the method's own base (W_alpha or ridge-CCA), not P0. "
+                           "Primary gate is AND; OR is sensitivity. eta=0 is on the grid.")
     dest = OUT / "select" / f"{what}_{tag}.json"
     dest.write_text(json.dumps(rules, indent=1))
     brief = {b: {"or": rules["b"][b]["or"]["eta"], "and": rules["b"][b]["and"]["eta"],
@@ -1193,6 +1332,82 @@ def _ref_for_alpha(tag, rows):
     return ref.strftime("%Y%m%d")
 
 
+def source_alpha(tag: str, session: str, B: int, which: str = "pooled"):
+    """α for a source episode from the causal-first-B rule (pooled gap bin, or this trunk)."""
+    from ssm_decode.p0solve import gap_bin_name
+    if which == "pooled":
+        rules = json.loads((OUT / "select" / "gap_rules_pooled.json").read_text())
+    else:
+        rules = json.loads((OUT / "select" / f"gap_rules_{tag}.json").read_text())
+    trunk = json.loads((OUT / "select" / f"gap_rules_{tag}.json").read_text())
+    gap_days = elapsed_days(session, trunk["ref"])
+    spec = rules["schedule"][str(int(B))][gap_bin_name(gap_days)]
+    return float(spec["alpha"]), int(gap_days)
+
+
+def cmd_pool_alpha(_args):
+    """Pre-registered α(B) and α(B, gap bin) on the union of causal-first-B source episodes."""
+    from ssm_decode.p0solve import ALPHAS, gap_bin_name, resolve_gap_bin
+    rows = []
+    for tag in ("days", "month", "year", "sc_0629", "sc_0708"):
+        path = OUT / "select" / f"alpha_{tag}_episodes.jsonl"
+        if not path.exists():
+            raise SystemExit(f"missing {path}; run select --what alpha first")
+        rows.extend(_episodes(path))
+    by_bin = {}
+    by_b = {}
+    for r in rows:
+        if r.get("gap_days") is None:
+            raise SystemExit(f"alpha episode without gap_days: {r.get('session')} B={r.get('B')}")
+        bname = gap_bin_name(int(r["gap_days"]))
+        by_bin.setdefault((int(r["B"]), bname), []).append(r)
+        by_b.setdefault(int(r["B"]), []).append(r)
+
+    def best_alpha(group):
+        means = {}
+        for alpha in ALPHAS:
+            vals = []
+            for ep in group:
+                hit = next(a["r2"] for a in ep["alphas"] if float(a["alpha"]) == float(alpha))
+                if hit is not None and float(hit) > -0.5:
+                    vals.append(float(hit))
+            means[float(alpha)] = float(np.mean(vals)) if vals else -1.0
+        # Prefer the smaller alpha on an exact tie so we do not deploy shrinkage for free.
+        winner = sorted(means, key=lambda a: (means[a], -a), reverse=True)[0]
+        return winner, means[winner], len(group)
+
+    populated = {b for (_, b) in by_bin}
+    schedule = {}
+    for B in sorted(by_b):
+        schedule[str(B)] = {}
+        have = {b for (bb, b) in by_bin if bb == B}
+        for want in ("le14", "mid", "gt180"):
+            used, fell = resolve_gap_bin(want, have or populated)
+            block = by_bin.get((B, used), [])
+            alpha, score, n = best_alpha(block) if block else (0.0, -1.0, 0)
+            schedule[str(B)][want] = {"alpha": alpha, "source_r2": score, "n_episodes": n,
+                                      "bin_used": used, "fallback_from": fell,
+                                      "populated_bins": sorted(have)}
+    by_B = {}
+    for B, group in sorted(by_b.items()):
+        alpha, score, n = best_alpha(group)
+        by_B[str(B)] = {"alpha": alpha, "source_r2": score, "n_episodes": n}
+    # ref is unused for binning (each episode already carries its trunk gap). Keep a label.
+    out = {"stratum": "pooled", "protocol": "causal_first_B", "n_episodes": len(rows),
+           "tags": sorted({r["tag"] for r in rows}), "schedule": schedule, "by_B": by_B,
+           "ref": "per-episode trunk gap",
+           "logistic": {"intercept": 0.0, "slope": 0.0},
+           "combined": {"intercept": 0.0, "slope": 0.0},
+           "note": "α(B, gap) is schedule; α(B) ignoring the gap is by_B. Both are source-only "
+                   "and pre-registered before any target query is read. Primary W_alpha and COMBO "
+                   "use schedule. w_alpha_B reports by_B."}
+    dest = OUT / "select" / "gap_rules_pooled.json"
+    dest.write_text(json.dumps(out, indent=1))
+    brief = {b: {k: v["alpha"] for k, v in s.items()} for b, s in schedule.items()}
+    print(f"[pool-alpha] gap {json.dumps(brief)} by_B {json.dumps({b: v['alpha'] for b, v in by_B.items()})}",
+          flush=True)
+
+
 def cmd_select(args):
     _select_tag(args.tag, args.what, args.limit)
 
@@ -1202,7 +1417,8 @@ def main():
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("select")
     s.add_argument("--tag", required=True, help="days|month|year|sc_0629|sc_0708")
-    s.add_argument("--what", required=True, choices=("s1", "combo", "alpha"))
+    s.add_argument("--what", required=True, choices=("s1", "combo", "cca_s1", "alpha"))
+    p_pool = sub.add_parser("pool-alpha")
     s.add_argument("--limit", type=int, default=None, help="stop after this many new episodes")
     e = sub.add_parser("eval")
     e.add_argument("--stratum", required=True, help="days,drift,year,subc (comma list)")
@@ -1214,6 +1430,8 @@ def main():
     args = p.parse_args()
     if args.cmd == "select":
         cmd_select(args)
+    elif args.cmd == "pool-alpha":
+        cmd_pool_alpha(args)
     else:
         cmd_eval(args)
 

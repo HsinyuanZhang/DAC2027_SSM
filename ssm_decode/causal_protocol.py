@@ -200,12 +200,37 @@ def latent_from_maps(x: np.ndarray, segments, maps: dict) -> np.ndarray:
     return z
 
 
-def margin_pick(episodes, score_key: str, eta_r2: float, *, margin: float = MARGIN_R2,
-                mode: str = "or") -> dict:
-    """Source-only (eta, rho) pick. ``mode='or'`` is the pre-registered gate.
+def measured_read_bin(spans, idx) -> int:
+    """Inclusive last bin of the trials actually named by ``idx``.
 
-    OR: paired gain >= margin OR gain > 2 SE. AND (sensitivity): both.
-    Ties prefer the eta closest to the R2 rule. A non-positive gain never deploys.
+    This is not ``spans[k - 1]``: it is the max end among the indices the caller passed.
+    An index outside the prefix therefore moves the returned bin.
+    """
+    idx = [int(i) for i in np.asarray(idx).tolist()]
+    if not idx:
+        return -1
+    if any(i < 0 or i >= len(spans) for i in idx):
+        raise AssertionError(f"trial index {idx} outside {len(spans)} usable trials")
+    return int(max(spans[i][1] for i in idx) - 1)
+
+
+def assert_prefix_idx(idx, k: int) -> None:
+    """Commit k may name only usable trials ``0 .. k-1``."""
+    got = [int(i) for i in np.asarray(idx).tolist()]
+    extra = sorted(set(got) - set(range(int(k))))
+    if extra or sorted(got) != list(range(int(k))):
+        raise AssertionError(f"commit {k} used trials {got}, expected 0..{int(k) - 1}")
+
+
+def margin_pick(episodes, score_key: str, eta_r2: float, *, margin: float = MARGIN_R2,
+                mode: str = "and", base_key: str = "p0") -> dict:
+    """Source-only (eta, rho) pick. Primary gate is AND; OR is the sensitivity.
+
+    Gain is ``score - episode[base_key]``. For S1 the base is P0. For COMBO and
+    CCA+S1 the base is that method's own closed-form table, not P0.
+    AND: paired gain >= margin AND > 2 SE. OR: either condition.
+    Ties prefer the eta closest to the R2 rule. A non-positive gain never deploys,
+    so η = 0 (no refinement) wins only as the fallback.
     """
     if mode not in ("or", "and"):
         raise ValueError(mode)
@@ -218,7 +243,7 @@ def margin_pick(episodes, score_key: str, eta_r2: float, *, margin: float = MARG
         for ep in episodes:
             sc = next(s["r2"] for s in ep[score_key]
                       if (float(s["eta"]), float(s["rho"])) == key)
-            diffs.append(float(sc) - float(ep["p0"]))
+            diffs.append(float(sc) - float(ep[base_key]))
         diffs_a = np.asarray(diffs, dtype=np.float64)
         mean = float(diffs_a.mean())
         se = float(diffs_a.std(ddof=1) / np.sqrt(len(diffs_a))) if len(diffs_a) > 1 else float("inf")
@@ -229,8 +254,11 @@ def margin_pick(episodes, score_key: str, eta_r2: float, *, margin: float = MARG
         gate = (above and se_ok) if mode == "and" else (above or se_ok)
         return st["mean_gain"] > 0.0 and gate
     viable = [k for k, st in stats.items() if _ok(st)]
+    base_vals = [float(e[base_key]) for e in episodes]
     base = {"margin": float(margin), "mode": mode, "n_episodes": len(episodes),
-            "p0_source_r2": float(np.mean([float(e["p0"]) for e in episodes]))}
+            "base_key": base_key,
+            "p0_source_r2": float(np.mean([float(e["p0"]) for e in episodes])),
+            "base_source_r2": float(np.mean(base_vals))}
     if not viable:
         return {**base, "eta": 0.0, "rho": 0.0, "fallback_base": True, "n_viable": 0,
                 "source_gain": 0.0, "source_se": None,
@@ -240,7 +268,7 @@ def margin_pick(episodes, score_key: str, eta_r2: float, *, margin: float = MARG
     eta, rho = min(tied, key=lambda k: (abs(k[0] - float(eta_r2)), k[0], k[1]))
     return {**base, "eta": eta, "rho": rho, "fallback_base": False, "n_viable": len(viable),
             "source_gain": stats[(eta, rho)]["mean_gain"], "source_se": stats[(eta, rho)]["se"],
-            "source_r2": base["p0_source_r2"] + stats[(eta, rho)]["mean_gain"]}
+            "source_r2": base["base_source_r2"] + stats[(eta, rho)]["mean_gain"]}
 
 
 def run_rebased_many(base, raw_trials, prior, configs, prepare, *, mode: str = "rebase",

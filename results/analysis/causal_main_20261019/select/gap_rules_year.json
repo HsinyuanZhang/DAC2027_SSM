@@ -1,0 +1,245 @@
+{
+ "stratum": "year",
+ "ref": "20140306",
+ "protocol": "causal_first_B",
+ "n_episodes": 48,
+ "schedule": {
+  "1": {
+   "le14": {
+    "alpha": 0.0,
+    "source_r2": 0.6108379022932615,
+    "n_episodes": 2,
+    "bin_used": "le14",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180",
+     "le14",
+     "mid"
+    ]
+   },
+   "mid": {
+    "alpha": 0.0,
+    "source_r2": 0.26576379524852417,
+    "n_episodes": 2,
+    "bin_used": "mid",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180",
+     "le14",
+     "mid"
+    ]
+   },
+   "gt180": {
+    "alpha": 0.0,
+    "source_r2": 0.1486798140864193,
+    "n_episodes": 4,
+    "bin_used": "gt180",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180",
+     "le14",
+     "mid"
+    ]
+   }
+  },
+  "2": {
+   "le14": {
+    "alpha": 0.0,
+    "source_r2": 0.6340672765610035,
+    "n_episodes": 2,
+    "bin_used": "le14",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180",
+     "le14",
+     "mid"
+    ]
+   },
+   "mid": {
+    "alpha": 0.0,
+    "source_r2": 0.317259058578363,
+    "n_episodes": 2,
+    "bin_used": "mid",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180",
+     "le14",
+     "mid"
+    ]
+   },
+   "gt180": {
+    "alpha": 0.25,
+    "source_r2": 0.1655669567427278,
+    "n_episodes": 4,
+    "bin_used": "gt180",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180",
+     "le14",
+     "mid"
+    ]
+   }
+  },
+  "4": {
+   "le14": {
+    "alpha": 0.25,
+    "source_r2": 0.7158373566352302,
+    "n_episodes": 2,
+    "bin_used": "le14",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180",
+     "le14",
+     "mid"
+    ]
+   },
+   "mid": {
+    "alpha": 0.5,
+    "source_r2": 0.4098256240541614,
+    "n_episodes": 2,
+    "bin_used": "mid",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180",
+     "le14",
+     "mid"
+    ]
+   },
+   "gt180": {
+    "alpha": 0.5,
+    "source_r2": 0.21183797998050619,
+    "n_episodes": 4,
+    "bin_used": "gt180",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180",
+     "le14",
+     "mid"
+    ]
+   }
+  },
+  "8": {
+   "le14": {
+    "alpha": 0.25,
+    "source_r2": 0.7584769442338792,
+    "n_episodes": 2,
+    "bin_used": "le14",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180",
+     "le14",
+     "mid"
+    ]
+   },
+   "mid": {
+    "alpha": 0.75,
+    "source_r2": 0.5995356498916016,
+    "n_episodes": 2,
+    "bin_used": "mid",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180",
+     "le14",
+     "mid"
+    ]
+   },
+   "gt180": {
+    "alpha": 0.75,
+    "source_r2": 0.4119326077974331,
+    "n_episodes": 4,
+    "bin_used": "gt180",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180",
+     "le14",
+     "mid"
+    ]
+   }
+  },
+  "16": {
+   "le14": {
+    "alpha": 0.25,
+    "source_r2": 0.7641569925532259,
+    "n_episodes": 2,
+    "bin_used": "le14",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180",
+     "le14",
+     "mid"
+    ]
+   },
+   "mid": {
+    "alpha": 0.75,
+    "source_r2": 0.6331055165735078,
+    "n_episodes": 2,
+    "bin_used": "mid",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180",
+     "le14",
+     "mid"
+    ]
+   },
+   "gt180": {
+    "alpha": 0.75,
+    "source_r2": 0.46079976730986255,
+    "n_episodes": 4,
+    "bin_used": "gt180",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180",
+     "le14",
+     "mid"
+    ]
+   }
+  },
+  "33": {
+   "le14": {
+    "alpha": 0.5,
+    "source_r2": 0.7843039614896075,
+    "n_episodes": 2,
+    "bin_used": "le14",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180",
+     "le14",
+     "mid"
+    ]
+   },
+   "mid": {
+    "alpha": 0.5,
+    "source_r2": 0.6335559777496946,
+    "n_episodes": 2,
+    "bin_used": "mid",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180",
+     "le14",
+     "mid"
+    ]
+   },
+   "gt180": {
+    "alpha": 0.75,
+    "source_r2": 0.4800788198296344,
+    "n_episodes": 4,
+    "bin_used": "gt180",
+    "fallback_from": null,
+    "populated_bins": [
+     "gt180",
+     "le14",
+     "mid"
+    ]
+   }
+  }
+ },
+ "logistic": {
+  "intercept": 0.0,
+  "slope": 0.0
+ },
+ "combined": {
+  "intercept": 0.0,
+  "slope": 0.0
+ },
+ "note": "Only w_alpha_gap is used. Logistic fields are placeholders so alpha_for_target can run; they are not a fitted reliability model."
+}
