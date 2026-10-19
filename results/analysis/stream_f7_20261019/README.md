@@ -1,6 +1,66 @@
 # Streaming fixed-feedback refinement（F7-J 求和重排，2026-10-19）
 
-单遍、不重放的 read-in 更新。冻结 trunk，只使用 B 个有标签 calibration trial。Source 上拟合固定反馈核，target 端只有前向、FIR / eligibility trace 累加和 trial 边界的 shrinkage。没有 target backprop（11,040 行 streaming 记录的 `h2_backward_calls` 全是 0）。没有使用 final session（20150623 / 0625 / 0626），20140307 只作为 month 的 source selection session，不是 target。
+## 审查后修正
+
+独立审查之后补跑。旧行保留，方法名不变，下面正文里把它们叫成 causal 的句子作废。新行在 `rows_*_fix.jsonl`，选择在 `select_*_fix.json`。
+
+**S1 旧行不是跨 trial 因果的。** 归一化和 P0 都用全部 B 个 trial（`Ep.table0` / `Ep.xz_all`），trial k 看得到后面的 trial。新的 **S1-causal** 对齐 `pc.stream_stats`：trial 0 用 prior 表，归一化只用 trial 0（一个 trial 的 staging）；trial k>0 的前向只用 trials `< k` 的 P0 和归一化。Commit 时把本 trial 的 F7 step 按 `std_new/std_old` 逐列换到新坐标，加在重新算出的 P0 上，再以 ρ 收缩到这个 P0。均值的变化不进 K×N 修正，由新的 P0 承担。`commit_on_p0` 在 std 和 P0 不变时等于原来的 `apply_update`。旧的 `s1_r1s` 改称 noncausal readout；因果 readout 叫 `s1c_ridge`，避免和 P3 的 R1-stream 重名。
+
+**η 和 ρ 在 source 上联合选**（η 加了 0.1、0.3；ρ 含 0 和 0.01）。Source 分数低于该 B 的 P0 就部署 P0。Month 的因果规则因此在 B=1、B=2 退回 P0（source 0.568 / 0.700 < P0 0.601 / 0.709）。非因果联合选择把 drift 上 S1 占 R2 增益的比例从只选 η 的 0.54 / 0.73 提到 **0.80 / 0.85**（B=8 / B=33）。Year B=33 的非因果单遍从 0.307（沿用 R2 的 η=10 时是 0.148）升到 **0.406**。
+
+**Trace 的塌缩是无限尾巴，不是过拟合。** sc_0629、L=8、M=8：head Frobenius 0.098，tail 1.396，DC gain 0.264 vs 无限 DC 9.30，max|C|=64.7（`fit.csv`）。确定性探针上，截断 trace 与这 L 个 tap 的 FIR 余弦是 1.000，无限 trace 只有 0.336。部署改为 `s_t - ρ^L s_{t-L}`。sub-C B=1 的 M8 从旧的 0.179 回到截断后的 0.226（与非因果 S1 重合）。
+
+subm_month（20140626）和 subm_year（20150511）的 **session 都在 12 个 drift target 里**，不是另一批动物。subm_month 用的就是 drift 的 month 规则；subm_year 是同一天换成 year OOS 规则，不能当成第 13 个独立 target。
+
+### S1-causal headline（query R²）
+
+| 层 | B | P0 | R2 | R3 | S1-causal | +ridge |
+|---|---:|---:|---:|---:|---:|---:|
+| subm_month | 1 | 0.466 | 0.488 | 0.492 | 0.466（fallback P0） | 0.466 |
+|  | 8 | 0.565 | 0.626 | 0.630 | 0.606 | 0.610 |
+|  | 33 | 0.566 | 0.670 | 0.679 | 0.650 | 0.665 |
+| subm_year | 1 | 0.198 | 0.219 | 0.219 | 0.198（fallback P0） | 0.198 |
+|  | 8 | 0.256 | 0.336 | 0.334 | 0.284 | 0.281 |
+|  | 33 | 0.315 | 0.361 | 0.435 | 0.393 | 0.393 |
+| subm_drift（12） | 1 | 0.153 | 0.170 | 0.165 | 0.153（fallback） | 0.153 |
+|  | 8 | 0.212 | 0.345 | 0.348 | 0.286 | 0.289 |
+|  | 33 | 0.211 | 0.406 | 0.412 | 0.353 | 0.361 |
+| subc_month（12） | 1 | 0.222 | 0.226 | 0.224 | 0.129 | 0.118 |
+|  | 8 | 0.301 | 0.362 | 0.361 | 0.255 | 0.253 |
+|  | 33 | 0.322 | 0.415 | 0.416 | 0.317 | 0.317 |
+
+Drift 上 S1-causal 占 R2 增益的比例：B=4 **0.58** [0.51, 0.65]，B=8 **0.56** [0.52, 0.60]，B=16 **0.72** [0.67, 0.75]，B=33 **0.73** [0.67, 0.77]。B=1 和 B=2 是 fallback，比例为 0。它仍低于非因果的联合选择（drift B=8 非因果 joint 0.319，比例 0.80）：那部分差距就是「先看完全部 B 个 trial」带来的。sub-C 上因果版 **低于 P0**（B=8：−0.046，比例 −0.75 [−1.17, −0.24]，12 个 session）。只看过去 trial 的 P0 在这套 backbone 上站不住，F7 补不回来。
+
+### 保留比例，全部 B
+
+旧的非因果、只选 η 的 S1（含审查点名的负数）。分母 |R2−P0|<0.02 标成不稳定。
+
+| 层 | B=1 | 2 | 4 | 8 | 16 | 33 |
+|---|---:|---:|---:|---:|---:|---:|
+| subm_drift | −0.03 | 0.56 | 0.88 | 0.54 | 0.73 | 0.73 |
+| subm_year | −0.14 | −2.27（分母 0.015，不稳定） | 0.39 | 0.71 | 0.69 | −0.18 |
+| subc_month | 1.00（分母 0.004，不稳定） | — | 1.18 | 0.79 | 0.61 | 0.71 |
+
+联合 ηρ 之后，非因果 S1 在 drift 上是 −0.03 / 0.80 / 0.88 / 0.80 / 0.87 / 0.85，year B=33 从 −0.18 变成 **1.97**（绝对 R² 0.406，高于 R2 的 0.361，仍低于 R3 的 0.435）。S1-causal 的全部 B 见 `retained.csv` 的 `s1c`。
+
+### Like-for-like SRAM（B=8，T=200，L=33 taps，fp32 累加；KB）
+
+Trunk state 是 16,384 × 16 bit = 32,768 B，两列都给。P0 的前缀累加（含 N×N Gram）两边都算。J̄ ROM 是 int8。Ring 同时给 3-bit count 和 32-bit 归一化激活。非因果 S1 加上它实际依赖的 **全部 B trial 原始缓冲**；因果 S1 只有一个 trial 的 staging。
+
+| | N=26 不含 state | N=26 含 state | N=256 不含 state | N=256 含 state |
+|---|---:|---:|---:|---:|
+| R2（replay + delay line + ROM + P0 stats） | 32.3 | 64.3 | 482 | 514 |
+| S1 非因果（同样的 raw buffer + 32-bit ring） | 35.5 | 67.5 | 515 | 547 |
+| S1-causal，3-bit ring | 13.5 | 45.5 | 348 | 380 |
+| S1-causal，32-bit ring | 16.5 | 48.5 | 378 | 410 |
+
+N=26 的 3-bit ring 只有 0.31 KB，32-bit ring 3.4 KB；B-trial raw buffer 是 21.7 / 156 KB（N=26 / 256）。N=256 的 P0 Gram 本身就有约 292 KB，因果版省下的是 raw replay，不是统计量。
+
+下面原文是审查前的记录，和本节冲突时以本节为准。余弦「约 0.99」没有对应的存档探针，删掉；现在的探针在 `fit.csv` 的 `cosine_truncated` / `cosine_infinite`。
+
+---
+
+单遍、不重放的 read-in 更新。冻结 trunk，只使用 B 个有标签 calibration trial。Source 上拟合固定反馈核，target 端只有前向、FIR / eligibility trace 累加和 trial 边界的 shrinkage。没有 target backprop（streaming 行的 `h2_backward_calls` 全是 0）。没有使用 final session（20150623 / 0625 / 0626），20140307 只作为 month 的 source selection session，不是 target。
 
 代码：`ssm_decode/stream_f7.py`，`scripts/run_stream_f7.py`，`scripts/analyze_stream_f7.py`，`tests/test_stream_f7.py`（8 个测试通过）。原始行在 `results/stream_f7_20261019/`（gitignored）。本目录是汇总。
 
@@ -97,7 +157,7 @@ Trace 与 FIR 在 B≥8 上几乎重合（drift B=33：M4/M8 都是 0.353，S1 �
 | sc_0629 | 0.110 | 0.036 | 0.031 | 0.008 |
 | sc_0708 | 0.082 | 0.024 | 0.026 | 0.006 |
 
-M=8 把 L=32 的核拟合到约 3–4%，数据项方向与 FIR 的余弦在随机探针上约 0.99，所以 R² 贴着 S1 是预期结果，不是独立的增益。没有约束的极点会挤在一起，系数到 \(10^3\)，float32 trace 不稳定；那一版没有采用。
+M=8 把 L=32 的核拟合到约 3–4%。审查前写的「数据项余弦约 0.99」没有存档，已作废；见文首的 tail / cosine 数字。真正让 sub-C B=1 的 M8 塌掉的是无限尾巴，不是极点个数。
 
 负面结果：sub-C B=1 的 trace-M8 平均 0.179，低于 P0 0.222（差 −0.043 [−0.079, −0.007]，12 个 session 里 3 个为正）。拆开看，sc_0629 的 B=1 均值从 P0 的 0.136 掉到 0.050，sc_0708 的 0.308 与 P0 持平。短核（L=8）上 8 个极点过拟合 source 核，B=1 没有第二步可以收回。
 

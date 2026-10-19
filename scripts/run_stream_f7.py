@@ -17,9 +17,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import sys
 import time
+
+import numpy as np
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -28,11 +31,16 @@ import torch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 P3_FIX = ROOT / "results/population_calib_p3_20261016/fix"
-os.environ["PC_OUT"] = str(P3_FIX)
+# Do not export PC_OUT here.  run_pc3_refine binds its own OUT at import; we point
+# that attribute at the fix directory after import and log the override.
 
 from scripts import run_drift_curve as drift                      # noqa: E402
 from scripts import run_pc3_refine as pc                          # noqa: E402
 from scripts import run_population_calib as rpc                   # noqa: E402
+
+_pc_out_default = pc.OUT
+pc.OUT = P3_FIX
+print(f"[stream_f7] pc.OUT {_pc_out_default} -> {pc.OUT}", flush=True)
 from ssm_decode import fwd_refine as fr                           # noqa: E402
 from ssm_decode import stream_f7 as sf                            # noqa: E402
 from ssm_decode.atomic_jsonl import append_jsonl, read_jsonl      # noqa: E402
@@ -78,12 +86,18 @@ def apply_readout(h, v_aug):
 
 
 def score_table(ep, table, readout=None, kind=None, lam=None, basis=None) -> float:
+    if table is None or not torch.isfinite(table).all():
+        return -1.0
     if readout is None:
         pred, _ = decode_prefix(ep, table, want_h=False)
-        return r2_of_pred(ep, pred)
-    _, h = decode_prefix(ep, table, want_h=True)
-    v = ep.v_from(readout, lam, kind, basis)
-    return r2_of_pred(ep, apply_readout(h, v))
+    else:
+        _, h = decode_prefix(ep, table, want_h=True)
+        v = ep.v_from(readout, lam, kind, basis)
+        pred = apply_readout(h, v)
+    if pred is None or not torch.isfinite(pred).all():
+        return -1.0
+    r2 = r2_of_pred(ep, pred)
+    return r2 if math.isfinite(r2) else -1.0
 
 
 def disjoint(ep) -> bool:
@@ -678,8 +692,415 @@ def cmd_cost(_args):
                 ),
             })
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / "cost.json").write_text(json.dumps({"trunk": trunk, "rows": rows}, indent=1))
+    like = []
+    for N in (26, 256):
+        mem = sf.like_for_like_memory(n=N, k=K, d=D, n_lags=taps, n_modes=4, replay_bins=B * T,
+                                      staging_bins=T, state_elems=trunk["state_elems"])
+        mem["N"] = N
+        like.append(mem)
+    (OUT / "cost.json").write_text(json.dumps({"trunk": trunk, "rows": rows, "like_for_like": like}, indent=1))
     print(f"[cost] wrote {OUT / 'cost.json'}", flush=True)
+
+
+ETAS_J = (0.1, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0, 300.0, 1000.0)
+RHOS_J = (0.0, 0.01, 0.03, 0.1, 0.3)
+
+
+def _raw_trials(sd, idx):
+    idx = np.sort(np.asarray(idx))
+    return [(sd.x32[a:b], sd.y_norm[a:b].to(dtype=sd.x32.dtype),
+             sd.valid[a:b].to(dtype=sd.x32.dtype)) for a, b in (sd.trials[int(i)] for i in idx)]
+
+
+def _prepare_causal(sd, prior, calib, idx):
+    """stream_stats convention: trial 0 uses its own norm; later trials use the prefix."""
+    from ssm_decode.population_calib import PopStats, norm_stats
+    idx = np.sort(np.asarray(idx))
+    cache = {}
+
+    def _calib(nprefix):
+        if nprefix not in cache:
+            cache[nprefix] = calib.calibrate(PopStats.from_trials(sd.bank, idx[:nprefix]), prior)
+        return cache[nprefix]
+
+    def prepare(k, closed):
+        if not closed and k == 0:
+            mean, std = norm_stats(PopStats.from_trials(sd.bank, idx[:1]))
+            return mean, std, None
+        res = _calib(k + 1 if closed else k)
+        return res.mean, res.std, res.table
+
+    return prepare
+
+
+def _forward_normed(ep, table, mean, std):
+    if table is None or mean is None or not torch.isfinite(table).all():
+        return None, None
+    xz = (ep.sd.x32[:ep.nb] - mean.to(dtype=ep.sd.x32.dtype)) / std.to(dtype=ep.sd.x32.dtype).clamp_min(1e-8)
+    with torch.no_grad():
+        y, h = fr.run_trunk(ep.base, xz.unsqueeze(0), table, want_h=True)
+    return y[0], h[0]
+
+
+def _r2_or_neg(ep, pred) -> float:
+    if pred is None or not torch.isfinite(pred).all():
+        return -1.0
+    r2 = r2_of_pred(ep, pred)
+    return r2 if math.isfinite(r2) else -1.0
+
+
+def _score_normed(ep, table, mean, std, readout=None, kind=None, lam=None, basis=None) -> float:
+    pred, h = _forward_normed(ep, table, mean, std)
+    if readout is not None and h is not None:
+        pred = apply_readout(h, ep.v_from(readout, lam, kind, basis))
+    return _r2_or_neg(ep, pred)
+
+
+def _best_eta_rho(rows):
+    means, _ = _mean_groups(rows, lambda it: (float(it["eta"]), float(it["rho"])))
+    return _best(means), means
+
+
+def _fallback(best_r2, p0_r2):
+    return bool(best_r2 < p0_r2)
+
+
+def _run_select_fix(tag, episode_iter, path_jsonl, fit_blob, rule_of_B, n_expected):
+    seen = {(r["session"], r["seed"], r["B"], r["draw"]) for r in read_jsonl(path_jsonl)}
+    t0 = time.perf_counter()
+    for session, seed, B, draw, ep, prior, calib, jb_cache in episode_iter():
+        if (session, seed, B, draw) in seen:
+            continue
+        rule = rule_of_B(B)
+        L, rho_r2 = int(rule["L"]), float(rule["rho"])
+        jb = jb_cache[L]
+        trials = trials_from_episode(ep)
+        raw = _raw_trials(ep.sd, ep.idx)
+        prepare = _prepare_causal(ep.sd, prior, calib, ep.idx)
+        p0 = float(ep.r2(ep.table0))
+        s1 = []
+        for eta in ETAS_J:
+            for rho in RHOS_J:
+                ans = sf.stream_refine(ep.base, trials, ep.table0, eta, rho, kind="fir", jbar=jb)
+                s1.append({"eta": float(eta), "rho": float(rho), "r2": score_table(ep, ans["table"])})
+        s1c, ridge = [], []
+        for eta in ETAS_J:
+            for rho in RHOS_J:
+                ans = sf.causal_feedback_loop(ep.base, raw, prior.float(), eta, rho, prepare, kind="fir",
+                                              jbar=jb, collect_readout=True)
+                pred, h = _forward_normed(ep, ans["table"], ans["mean"], ans["std"])
+                s1c.append({"eta": float(eta), "rho": float(rho), "r2": _r2_or_neg(ep, pred)})
+                for kind_r in pc.READOUT_KINDS:
+                    for lam in pc.RIDGE_LAMS:
+                        v = ep.v_from(ans["readout"], lam, kind_r, ep._basis)
+                        ridge.append({"eta": float(eta), "rho": float(rho), "kind": kind_r, "lam": float(lam),
+                                      "r2": _r2_or_neg(ep, apply_readout(h, v))})
+        rec = {"tag": tag, "session": session, "seed": int(seed), "B": int(B), "draw": int(draw),
+               "L": L, "rho_r2": rho_r2, "eta_r2": float(rule["eta"]), "p0": p0,
+               "s1_joint": s1, "s1c": s1c, "s1c_ridge": ridge}
+        append_jsonl(path_jsonl, [rec])
+        seen.add((session, seed, B, draw))
+        print(f"[select-fix {tag}] {str(session)[-8:]} B={B} s{seed} d{draw} p0={p0:.3f} "
+              f"t={time.perf_counter() - t0:.0f}s", flush=True)
+    _write_selection_fix(tag, read_jsonl(path_jsonl), path_jsonl.with_name(f"select_{tag}_fix.json"), n_expected)
+
+
+def _write_selection_fix(tag, rows, path, n_expected):
+    byB = {}
+    for r in rows:
+        byB.setdefault(int(r["B"]), []).append(r)
+    out = {"tag": tag, "grid": {"eta": list(ETAS_J), "rho": list(RHOS_J)},
+           "n_episodes": {str(B): len(v) for B, v in sorted(byB.items())}, "b": {}}
+    for B, group in sorted(byB.items()):
+        if n_expected is not None and len(group) != n_expected:
+            raise SystemExit(f"{tag} B={B}: {len(group)} episodes, expected {n_expected}")
+        p0 = float(sum(r["p0"] for r in group) / len(group))
+
+        def pack(key):
+            items = [it for r in group for it in r[key]]
+            (eta, rho), means = _best_eta_rho(items)
+            src = means[(float(eta), float(rho))]
+            return {"eta": float(eta), "rho": float(rho), "source_r2": src,
+                    "fallback_p0": _fallback(src, p0),
+                    "grid": {f"{a}|{b}": v for (a, b), v in sorted(means.items())}}
+
+        ridge_items = [it for r in group for it in r["s1c_ridge"]]
+        m1, _ = _mean_groups(ridge_items, lambda it: (float(it["eta"]), float(it["rho"]), it["kind"], float(it["lam"])))
+        eta, rho, kind, lam = _best(m1)
+        src = m1[(float(eta), float(rho), kind, float(lam))]
+        out["b"][str(B)] = {
+            "L": int(group[0]["L"]), "eta_r2": float(group[0]["eta_r2"]), "rho_r2": float(group[0]["rho_r2"]),
+            "p0_source_r2": p0, "sessions": sorted({r["session"] for r in group}),
+            "s1_joint": pack("s1_joint"), "s1c": pack("s1c"),
+            "s1c_ridge": {"eta": float(eta), "rho": float(rho), "kind": kind, "lam": float(lam),
+                          "source_r2": src, "fallback_p0": _fallback(src, p0)},
+        }
+    path.write_text(json.dumps(out, indent=1))
+    print(f"[select-fix {tag}] wrote {path}", flush=True)
+
+
+def _need_np():
+    import numpy as np
+    return np
+
+
+def cmd_select_fix(args):
+    gpu_ok()
+    pc.set_variant("base")
+    OUT.mkdir(parents=True, exist_ok=True)
+    which = args.which
+    if which in ("month", "all"):
+        _select_fix_stratum("month", "oosc")
+    if which in ("year", "all"):
+        _select_fix_stratum("year", "oos")
+
+
+def _select_fix_stratum(stratum, sim_set):
+    rules = r2_rules(stratum, sim_set)
+    world, names = pc.sim_world(stratum, sim_set)
+    p0 = pc.load_p0(world, stratum)
+    basis = pc.load_basis(stratum)
+    jb_cache = {L: pc.jbar_for(stratum, L) for L in (8, 16, 32)}
+    # Causal selection uses the same P0 calibrator the non-causal path starts from.
+    def episodes(world=world, names=names, p0=p0, basis=basis, jb_cache=jb_cache):
+        for name in names:
+            sd, prior = world.sessions[name], world.priors[name]
+            for seed in pc.SEEDS:
+                for B in rpc.B_GRID:
+                    for draw in range(pc.SEL_DRAWS):
+                        idx = pc.draw_sim(name, f"p3sel-s{seed}", B, draw, sd)
+                        ep = _basis_on(pc.p0_episode(world, sd, prior, p0[seed], idx, pc.SIM_MAX_BINS), basis)
+                        yield name, seed, B, draw, ep, prior, p0[seed], jb_cache
+    n = len(names) * len(pc.SEEDS) * pc.SEL_DRAWS
+    _run_select_fix(stratum, episodes, OUT / f"select_{stratum}_fix_episodes.jsonl", None,
+                    lambda B, rules=rules: rules[str(B)]["cfg"], n)
+
+
+def cmd_select_subc_fix(_args):
+    gpu_ok()
+    from scripts.run_expansion import average_jbar
+    OUT.mkdir(parents=True, exist_ok=True)
+    for bid in ("sc_0629", "sc_0708"):
+        ctxs = _subc_contexts([bid])
+        bb, ctx = ctxs[bid]
+        sel = json.loads((EXP_OUT / "select" / f"{bid}.json").read_text())
+        basis = torch.load(EXP_OUT / f"basis/{bid}.pt", weights_only=False)["U"].to(ctx.device)
+        blob = torch.load(EXP_OUT / f"jacobian/{bid}.pt", weights_only=False)
+        lags = sorted({int(sel["b"][str(B)]["r2"]["L"]) for B in sel["b"]})
+        jb_cache = {L: average_jbar(blob, L).to(ctx.device) for L in lags}
+        name = bb.val_session
+        sd, prior = ctx.world.sessions[name], ctx.world.priors[name]
+        n_draw = int(sel["grid"]["sel_draws"])
+
+        def episodes(name=name, sd=sd, prior=prior, ctx=ctx, basis=basis, jb_cache=jb_cache, n_draw=n_draw):
+            for seed in (0, 1):
+                for B in (1, 4, 8, 16, 33):
+                    for draw in range(n_draw):
+                        idx = pc.draw_sim(name, f"expsel-s{seed}", B, draw, sd)
+                        ep = _basis_on(pc.p0_episode(ctx.world, sd, prior, ctx.p0[seed], idx, pc.SIM_MAX_BINS), basis)
+                        yield name, seed, B, draw, ep, prior, ctx.p0[seed], jb_cache
+
+        def rule_of(B, sel=sel):
+            r = sel["b"][str(B)]["r2"]
+            return {"L": r["L"], "eta": r["eta"], "rho": r["rho"], "S": r["S"]}
+
+        _run_select_fix(bid, episodes, OUT / f"select_{bid}_fix_episodes.jsonl", None, rule_of, n_draw * 2)
+
+
+def _eval_fix_episode(ep, prior, calib, specs):
+    """specs: method, mode in {noncausal, causal}, eta, rho, kind, jbar/poles, fallback."""
+    trials = trials_from_episode(ep)
+    raw = _raw_trials(ep.sd, ep.idx)
+    prepare = _prepare_causal(ep.sd, prior, calib, ep.idx)
+    rows = []
+    for spec in specs:
+        if spec.get("fallback_p0"):
+            rows.append({"method": spec["method"], "r2": score_table(ep, ep.table0), "cfg": spec["cfg"],
+                         "n_commits": 0})
+            continue
+        if spec["mode"] == "noncausal":
+            ans = sf.stream_refine(ep.base, trials, ep.table0, spec["eta"], spec["rho"], kind=spec["kind"],
+                                   jbar=spec.get("jbar"), poles=spec.get("poles"), coeff=spec.get("coeff"),
+                                   n_lags=spec.get("n_lags"))
+            r2 = score_table(ep, ans["table"])
+        else:
+            ans = sf.causal_feedback_loop(ep.base, raw, prior.float(), spec["eta"], spec["rho"], prepare,
+                                         kind=spec["kind"], jbar=spec.get("jbar"), poles=spec.get("poles"),
+                                         coeff=spec.get("coeff"), n_lags=spec.get("n_lags"),
+                                         collect_readout=bool(spec.get("readout")))
+            if spec.get("readout"):
+                r2 = _score_normed(ep, ans["table"], ans["mean"], ans["std"], ans["readout"],
+                                   spec["readout_kind"], spec["lam"], spec["basis"])
+            else:
+                r2 = _score_normed(ep, ans["table"], ans["mean"], ans["std"])
+        rows.append({"method": spec["method"], "r2": r2, "cfg": spec["cfg"], "n_commits": len(ep.idx)})
+    return rows
+
+
+def _specs_fix(ep, rule, chosen, fit_blob, basis):
+    L = int(rule["L"])
+    jb = chosen["jbar"]
+    specs = []
+    for key, method, mode in (("s1_joint", "s1_joint", "noncausal"), ("s1c", "s1c", "causal")):
+        block = chosen[key]
+        specs.append({"method": method, "mode": mode, "kind": "fir", "eta": block["eta"], "rho": block["rho"],
+                      "jbar": jb, "fallback_p0": block["fallback_p0"],
+                      "cfg": {"L": L, "eta": block["eta"], "rho": block["rho"], "fallback_p0": block["fallback_p0"],
+                              "source_r2": block["source_r2"], "protocol": mode, "selected": "eta_rho_joint"}})
+    ridge = chosen["s1c_ridge"]
+    specs.append({"method": "s1c_ridge", "mode": "causal", "kind": "fir", "eta": ridge["eta"], "rho": ridge["rho"],
+                  "jbar": jb, "readout": True, "readout_kind": ridge["kind"], "lam": ridge["lam"], "basis": basis,
+                  "fallback_p0": ridge["fallback_p0"],
+                  "cfg": {"L": L, "eta": ridge["eta"], "rho": ridge["rho"], "kind": ridge["kind"],
+                          "lam": ridge["lam"], "fallback_p0": ridge["fallback_p0"],
+                          "source_r2": ridge["source_r2"], "protocol": "causal", "selected": "eta_rho_kind_lam"}})
+    # Truncated traces share the FIR (eta, rho): the truncated kernel targets the same U.
+    for m, mode, method, src in ((4, "noncausal", "tr4_trunc", "s1_joint"), (8, "noncausal", "tr8_trunc", "s1_joint"),
+                                 (4, "causal", "tr4c", "s1c"), (8, "causal", "tr8c", "s1c")):
+        poles, coeff, rel = poles_of(fit_blob, L, m)
+        block = chosen[src]
+        specs.append({"method": method, "mode": mode, "kind": "trace", "eta": block["eta"], "rho": block["rho"],
+                      "poles": poles, "coeff": coeff, "n_lags": int(jb.shape[0]),
+                      "fallback_p0": block["fallback_p0"],
+                      "cfg": {"L": L, "M": m, "eta": block["eta"], "rho": block["rho"], "fit_rel": rel,
+                              "n_lags": int(jb.shape[0]), "truncated": True, "fallback_p0": block["fallback_p0"],
+                              "protocol": mode, "selected": "shared_with_" + src}})
+    return specs
+
+
+def _eval_fix_driver(path, jobs):
+    seen = {(r["method"], r["target"], r["B"], r["draw"], r["seed"]) for r in read_jsonl(path)}
+    t0 = time.perf_counter()
+    n = 0
+    for meta, ep, prior, calib, specs in jobs:
+        need = [s for s in specs if (s["method"], meta["target"], meta["B"], meta["draw"], meta["seed"]) not in seen]
+        if not need:
+            continue
+        base = {"h4_budget": int(meta["B"]), "h4_query_disjoint": disjoint(ep),
+                "n_query_bins": int(ep.q.sum()), "h2_backward_calls": 0}
+        for row in _eval_fix_episode(ep, prior, calib, need):
+            rec = {**meta, **base, **row}
+            append_jsonl(path, [rec])
+            seen.add((rec["method"], rec["target"], rec["B"], rec["draw"], rec["seed"]))
+        n += 1
+        if n % 4 == 0:
+            print(f"[eval-fix] {meta['target'][-8:]} B={meta['B']} d={meta['draw']} s{meta['seed']} "
+                  f"t={time.perf_counter() - t0:.0f}s", flush=True)
+
+
+def cmd_eval_drift_fix(args):
+    gpu_ok()
+    pc.set_variant("base")
+    dates = drift.validate_targets(drift.TARGET_DATES, ["20140203", "20140217", "20140218", "20140303",
+                                                        "20140304", "20140306"])
+    sel = json.loads(pc.selection_file("month", "oosc").read_text())
+    chosen = json.loads((OUT / "select_month_fix.json").read_text())["b"]
+    fit_blob = load_fit(OUT / "fit_subm.pt")
+    world = pc.load_world("month", False)
+    p0 = pc.load_p0(world, "month")
+    basis = pc.load_basis("month")
+    jb_cache = {}
+    path = OUT / "rows_drift_fix.jsonl"
+
+    def jobs():
+        for d in dates:
+            if d in FINAL_DATES or d == "20140307":
+                raise SystemExit(d)
+            target = drift.PREFIX + d
+            sd, prior = world.target(target)
+            for B in rpc.B_GRID:
+                rule = sel["r2"][str(B)]["cfg"]
+                L = int(rule["L"])
+                if L not in jb_cache:
+                    jb_cache[L] = pc.jbar_for("month", L)
+                block = dict(chosen[str(B)])
+                block["jbar"] = jb_cache[L]
+                for draw in range(args.draws):
+                    idx = rpc.draw_trials(target, B, draw, sd.bank.n_trials)
+                    for seed in pc.SEEDS:
+                        ep = _basis_on(pc.p0_episode(world, sd, prior, p0[seed], idx), basis)
+                        meta = {"stratum": "subm_drift", "bid": "month", "target": target, "date": d,
+                                "B": B, "draw": draw, "seed": seed, "rule_set": "month_oosc", "fix": "causal_v2"}
+                        yield meta, ep, prior, p0[seed], _specs_fix(ep, rule, block, fit_blob, basis)
+            del sd, prior
+
+    _eval_fix_driver(path, jobs())
+
+
+def cmd_eval_year_fix(args):
+    gpu_ok()
+    pc.set_variant("base")
+    sel = json.loads(pc.selection_file("year", "oos").read_text())
+    chosen = json.loads((OUT / "select_year_fix.json").read_text())["b"]
+    fit_blob = load_fit(OUT / "fit_subm.pt")
+    world = pc.load_world("year", False)
+    p0 = pc.load_p0(world, "year")
+    basis = pc.load_basis("year")
+    target = "sub-M_ses-CO-" + YEAR_CORE
+    sd, prior = world.target(target)
+    jb_cache = {}
+    path = OUT / "rows_year_fix.jsonl"
+
+    def jobs():
+        for B in rpc.B_GRID:
+            rule = sel["r2"][str(B)]["cfg"]
+            L = int(rule["L"])
+            if L not in jb_cache:
+                jb_cache[L] = pc.jbar_for("year", L)
+            block = dict(chosen[str(B)])
+            block["jbar"] = jb_cache[L]
+            for draw in range(args.draws):
+                idx = rpc.draw_trials(target, B, draw, sd.bank.n_trials)
+                for seed in pc.SEEDS:
+                    ep = _basis_on(pc.p0_episode(world, sd, prior, p0[seed], idx), basis)
+                    meta = {"stratum": "subm_year", "bid": "year", "target": target, "date": YEAR_CORE,
+                            "B": B, "draw": draw, "seed": seed, "rule_set": "year_oos", "fix": "causal_v2"}
+                    yield meta, ep, prior, p0[seed], _specs_fix(ep, rule, block, fit_blob, basis)
+
+    _eval_fix_driver(path, jobs())
+
+
+def cmd_eval_subc_fix(args):
+    gpu_ok()
+    from scripts.run_expansion import average_jbar
+    for bid in ("sc_0629", "sc_0708"):
+        ctxs = _subc_contexts([bid])
+        bb, ctx = ctxs[bid]
+        sel = json.loads((EXP_OUT / "select" / f"{bid}.json").read_text())
+        chosen_all = json.loads((OUT / f"select_{bid}_fix.json").read_text())["b"]
+        fit_blob = load_fit(OUT / f"fit_{bid}.pt")
+        basis = torch.load(EXP_OUT / f"basis/{bid}.pt", weights_only=False)["U"].to(ctx.device)
+        blob = torch.load(EXP_OUT / f"jacobian/{bid}.pt", weights_only=False)
+        jb_cache = {}
+        targets = [t for t in bb.targets if t.stratum == "month"]
+        path = OUT / f"rows_{bid}_fix.jsonl"
+
+        def jobs(bid=bid, ctx=ctx, sel=sel, chosen_all=chosen_all, fit_blob=fit_blob, basis=basis,
+                 blob=blob, targets=targets):
+            for t in targets:
+                date = t.session[-8:]
+                if date in FINAL_DATES or date == "20140307":
+                    raise SystemExit(date)
+                sd, prior = ctx.world.target(t.session)
+                for B in (1, 4, 8, 16, 33):
+                    r = sel["b"][str(B)]["r2"]
+                    rule = {"L": r["L"], "eta": r["eta"], "rho": r["rho"], "S": r["S"]}
+                    L = int(rule["L"])
+                    if L not in jb_cache:
+                        jb_cache[L] = average_jbar(blob, L).to(ctx.device)
+                    block = dict(chosen_all[str(B)])
+                    block["jbar"] = jb_cache[L]
+                    for draw in range(args.draws):
+                        idx = rpc.draw_trials(t.session, B, draw, sd.bank.n_trials)
+                        for seed in (0, 1):
+                            ep = _basis_on(pc.p0_episode(ctx.world, sd, prior, ctx.p0[seed], idx), basis)
+                            meta = {"stratum": "subc_month", "bid": bid, "target": t.session, "date": date,
+                                    "B": B, "draw": draw, "seed": seed, "rule_set": sel["selection_session"],
+                                    "fix": "causal_v2"}
+                            yield meta, ep, prior, ctx.p0[seed], _specs_fix(ep, rule, block, fit_blob, basis)
+                del sd, prior
+
+        _eval_fix_driver(path, jobs())
 
 
 def main():
@@ -699,10 +1120,18 @@ def main():
     c = sub.add_parser("eval-subc")
     c.add_argument("--draws", type=int, default=8)
     sub.add_parser("cost")
+    sf = sub.add_parser("select-fix")
+    sf.add_argument("--which", default="all", choices=("month", "year", "all"))
+    sub.add_parser("select-subc-fix")
+    for name in ("eval-drift-fix", "eval-year-fix", "eval-subc-fix"):
+        e = sub.add_parser(name)
+        e.add_argument("--draws", type=int, default=8)
     args = p.parse_args()
     {"exactness": cmd_exactness, "fit": cmd_fit, "select": cmd_select, "select-subc": cmd_select_subc,
      "eval-drift": cmd_eval_drift, "eval-year": cmd_eval_year, "eval-subc": cmd_eval_subc,
-     "cost": cmd_cost}[args.cmd](args)
+     "cost": cmd_cost, "select-fix": cmd_select_fix, "select-subc-fix": cmd_select_subc_fix,
+     "eval-drift-fix": cmd_eval_drift_fix, "eval-year-fix": cmd_eval_year_fix,
+     "eval-subc-fix": cmd_eval_subc_fix}[args.cmd](args)
 
 
 if __name__ == "__main__":

@@ -61,25 +61,21 @@ def test_reordering_matches_temporal_feedback_to_1e_9():
 def test_reordering_matches_fj_gradient_including_mask_and_padding():
     base = LinTrunk()
     _, _, _, wins, X, Y, M, table, jbar = _episode(1)
-    # Kernel longer than every trial, so end-padding of the residual matters.
+    # jbar has 6 lags; the trials are longer.  End-of-row padding still matters because
+    # the batch convolution zero-fills residuals past each row.
     g, q, n, r = fr.fj_gradient(base, X, Y, M, table, jbar)
     U = sf.fir_data_term(X, r, jbar)
     torch.testing.assert_close(U, g * n, rtol=1e-9, atol=1e-9)
     n2, x2 = sf.valid_sum_x2(X, M)
     torch.testing.assert_close(x2 / n2, q, rtol=1e-9, atol=1e-9)
-    # Unpadded trials (the streaming boundary) equal the padded batch.
-    xz = X.new_zeros(wins[-1][1] + 5, N)
-    # Rebuild from the padded rows directly: padding is a zero mask at the end, and a
-    # causal trunk's prefix does not depend on it.  Compare row-wise data terms.
+    # Drop trailing mask-zero padding on each row and sum.  Those bins have zero residual,
+    # so they do not change U.  This is not a second forward of the unpadded windows.
     parts = []
     for i in range(X.shape[0]):
-        # drop only the trailing padded bins (mask stays zero there; internal gaps stay)
-        length = int(M[i].sum().item())  # NOT the window length when internal bins are invalid
-        # use the true padded width minus trailing zeros of the mask
         nz = int((M[i] > 0).nonzero()[-1]) + 1 if int(M[i].sum()) else 0
         parts.append(sf.fir_data_term(X[i, :nz], r[i, :nz], jbar))
     torch.testing.assert_close(sum(parts), U, rtol=1e-9, atol=1e-9)
-    assert wins  # windows are part of the fixture; the padded path above is the one R2 uses
+    assert wins
 
 
 def test_frozen_one_commit_matches_one_fj_step():
@@ -195,10 +191,76 @@ def test_streaming_commit_does_not_read_later_trials_and_runs_under_no_grad():
     assert not torch.allclose(seen2[1], seen[1])
 
 
+def test_truncated_trace_matches_finite_fir_and_drops_the_tail():
+    g = torch.Generator().manual_seed(7)
+    rho = torch.tensor([0.9, -0.4], dtype=torch.float64)
+    c = torch.randn(2, D, K, generator=g, dtype=torch.float64)
+    x = torch.randn(30, N, generator=g, dtype=torch.float64)
+    r = torch.randn(30, D, generator=g, dtype=torch.float64)
+    lags = 6
+    j_trunc = sf.exponential_jbar(rho, c, lags)
+    torch.testing.assert_close(sf.trace_data_term(x, r, rho, c, n_lags=lags),
+                               sf.fir_data_term(x, r, j_trunc), rtol=1e-8, atol=1e-8)
+    # The infinite recursion keeps lags >= 6 and is a different update.
+    gap = (sf.trace_data_term(x, r, rho, c, n_lags=None) - sf.fir_data_term(x, r, j_trunc)).abs().max()
+    assert float(gap) > 1e-3
+
+
+def test_rescale_and_commit_reduce_to_the_fixed_p0_update():
+    g = torch.Generator().manual_seed(8)
+    table = torch.randn(K, N, generator=g, dtype=torch.float64)
+    u = torch.randn(K, N, generator=g, dtype=torch.float64)
+    x2 = torch.rand(N, generator=g, dtype=torch.float64) + 0.2
+    n = torch.tensor(12.0, dtype=torch.float64)
+    std = torch.ones(N, dtype=torch.float64)
+    step = sf.feedback_step(u, x2, n)
+    got = sf.commit_on_p0(table, step, table, std, std, 0.4, 0.1)
+    expect = sf.apply_update(table, table, u, x2, n, 0.4, 0.1)
+    torch.testing.assert_close(got, expect, rtol=1e-12, atol=1e-12)
+    std_new = torch.tensor([2.0, 0.5, 1.0, 4.0, 1.0, 0.25, 3.0], dtype=torch.float64)
+    scaled = sf.rescale_columns(table, std, std_new)
+    torch.testing.assert_close(scaled / std_new, table / std, rtol=1e-12, atol=1e-12)
+
+
+def test_causal_loop_does_not_read_later_trials():
+    base = LinTrunk(9)
+    xz, y, valid, wins, _, _, _, table, jbar = _episode(9, lens=(10, 12))
+    raw = [(xz[a:b], y[a:b], valid[a:b].to(xz.dtype)) for a, b in wins]
+    std = torch.ones(N, dtype=torch.float64)
+    p0 = table.clone()
+
+    def prepare(k, closed, raw=raw):
+        # Closed or not, this fake prefix never looks at other trials' values.
+        return std, std, p0
+
+    a = sf.causal_feedback_loop(base, raw, table, 0.3, 0.05, prepare, kind="fir", jbar=jbar)
+    raw2 = [raw[0], (raw[1][0], raw[1][1] * 4, raw[1][2])]
+    # Commit of trial 0 is internal; re-run only trial 0 and compare to the two-trial
+    # pass stopped after the first commit by feeding a prepare that is identical and
+    # checking the final table CHANGES when trial 1 changes, while a one-trial pass matches
+    # the first commit of a hooked run.
+    seen = []
+
+    def prepare_rec(k, closed, seen=seen):
+        return std, std, p0
+
+    # Monkeypatch commit to record.  Re-call the loop on one trial vs two.
+    one = sf.causal_feedback_loop(base, raw[:1], table, 0.3, 0.05, prepare_rec, kind="fir", jbar=jbar)
+    two = sf.causal_feedback_loop(base, raw2, table, 0.3, 0.05, prepare_rec, kind="fir", jbar=jbar)
+    # Trial 0's forward and commit do not depend on trial 1, so repeating the loop with a
+    # different trial 1 must still start from the same first commit.  We check that by
+    # running trial 0 alone and then applying trial 1 on top of that table: same final table.
+    second = sf.causal_feedback_loop(base, raw2[1:], one["table"], 0.3, 0.05, prepare_rec,
+                                     kind="fir", jbar=jbar)
+    torch.testing.assert_close(second["table"], two["table"], rtol=1e-8, atol=1e-8)
+    assert not torch.allclose(one["table"], two["table"])
+    assert not any(base.grad_enabled_during_forward)
+
+
 def test_causality_statements_and_cost_identity():
-    for key in ("r2_replay", "fir_reorder", "s1_fir", "trace", "s1_r1s"):
+    for key in ("r2_replay", "fir_reorder", "s1_fir", "s1_causal", "trace", "s1_r1s"):
         text = sf.CAUSALITY[key]
-        assert "future" in text or "Future" in text
+        assert "future" in text or "Future" in text or "NOT causal" in text or "truncated" in text
     # Design note: N=256, K=10, D=2, M=4 -> 11,344 MACs / bin.
     mac = sf.trace_bin_macs(4, 2, 10, 256)
     assert mac["total"] == 11344

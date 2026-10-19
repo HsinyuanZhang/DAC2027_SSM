@@ -23,10 +23,17 @@ P3 = ROOT / "results/population_calib_p3_20261016"
 P3_FIX = P3 / "fix"
 EXP = ROOT / "results/expansion_round1/x/expansion_out"
 B_HEAD = (1, 8, 33)
-STREAM = ("s1_r2eta", "s1", "s1_r1s", "tr4", "tr8")
+STREAM = ("s1_r2eta", "s1", "s1_r1s", "tr4", "tr8",
+          "s1_joint", "s1c", "s1c_ridge", "tr4_trunc", "tr8_trunc", "tr4c", "tr8c")
 BASE = ("p0", "r2", "r3")
-LABEL = {"p0": "P0", "r2": "R2", "r3": "R3", "s1_r2eta": "S1-FIR (R2 eta)", "s1": "S1-FIR",
-         "s1_r1s": "S1-FIR+R1s", "tr4": "trace-M4", "tr8": "trace-M8"}
+LABEL = {"p0": "P0", "r2": "R2", "r3": "R3",
+         "s1_r2eta": "S1 noncausal (R2 eta)", "s1": "S1 noncausal (eta only)",
+         "s1_r1s": "S1 noncausal + readout (old name R1s)",
+         "tr4": "trace-M4 infinite (old)", "tr8": "trace-M8 infinite (old)",
+         "s1_joint": "S1 noncausal (joint eta, rho)", "s1c": "S1-causal",
+         "s1c_ridge": "S1-causal + ridge", "tr4_trunc": "trace-M4 truncated noncausal",
+         "tr8_trunc": "trace-M8 truncated noncausal", "tr4c": "trace-M4 causal truncated",
+         "tr8c": "trace-M8 causal truncated"}
 
 
 def _jl(path: Path) -> list[dict]:
@@ -42,12 +49,20 @@ def _best_kind(sel, prefix, B):
 
 def load_stream() -> pd.DataFrame:
     rows = []
-    for name in ("rows_drift.jsonl", "rows_year.jsonl", "rows_sc_0629.jsonl", "rows_sc_0708.jsonl"):
+    names = ["rows_drift.jsonl", "rows_year.jsonl", "rows_sc_0629.jsonl", "rows_sc_0708.jsonl",
+             "rows_drift_fix.jsonl", "rows_year_fix.jsonl", "rows_sc_0629_fix.jsonl", "rows_sc_0708_fix.jsonl"]
+    for name in names:
         rows += _jl(RAW / name)
     if not rows:
         raise SystemExit(f"no streaming rows in {RAW}")
     df = pd.DataFrame(rows)
     df["r2"] = df.r2.astype(float)
+    if not np.isfinite(df.r2.to_numpy()).all():
+        raise SystemExit("non-finite streaming r2; refusing to average or drop it")
+    keys = ["stratum", "bid", "target", "B", "draw", "seed", "method"]
+    dup = df.duplicated(keys)
+    if dup.any():
+        raise SystemExit(f"duplicate streaming rows: {int(dup.sum())}")
     return df
 
 
@@ -62,12 +77,15 @@ def load_stored() -> pd.DataFrame:
                          "B": int(r["B"]), "draw": int(r["draw"]), "seed": int(r["seed"]),
                          "method": r["method"], "r2": float(r["r2"])})
     # Year core, year OOS rules.  R3 kind is the source-selected one (same rule as analyze_pc3.best_kind).
-    sel = json.loads((P3_FIX / "select/selection_year_oos.json").read_text())
-    if not sel:
-        sel = json.loads((P3 / "select/selection_year_oos.json").read_text())
+    sel_path = P3_FIX / "select/selection_year_oos.json"
+    if not sel_path.exists():
+        sel_path = P3 / "select/selection_year_oos.json"
+        print(f"[analyze] year selection fallback {sel_path}", flush=True)
+    sel = json.loads(sel_path.read_text())
     year_path = P3_FIX / "eval/eval_year_oos.jsonl"
     if not year_path.exists():
         year_path = P3 / "eval/eval_year_oos.jsonl"
+        print(f"[analyze] year eval is not in the fix dir; using {year_path}", flush=True)
     wanted_r3 = {B: f"r3_{_best_kind(sel, 'r3', B)}" for B in (1, 2, 4, 8, 16, 33)}
     for r in _jl(year_path):
         m = r["method"]
@@ -103,8 +121,11 @@ def _session_of(df):
 
 def pivot(df: pd.DataFrame) -> pd.DataFrame:
     idx = ["stratum", "bid", "target", "B", "draw", "seed"]
-    # p0 is repeated conceptually; streaming rows don't carry it.  Outer-join methods.
-    pv = df.pivot_table(index=idx, columns="method", values="r2", aggfunc="mean").reset_index()
+    if df.duplicated(idx + ["method"]).any():
+        raise SystemExit("duplicate (cell, method) rows")
+    if not np.isfinite(df.r2.to_numpy()).all():
+        raise SystemExit("non-finite r2")
+    pv = df.pivot(index=idx, columns="method", values="r2").reset_index()
     return pv
 
 
@@ -144,7 +165,7 @@ def cells_and_paired(pv: pd.DataFrame):
             for t, g in sub.groupby("target"):
                 mat = g.pivot(index="draw", columns="seed", values=m)
                 if mat.isna().any().any():
-                    continue
+                    raise SystemExit(f"missing {m} cells for {t} B={B} ({stratum})")
                 means.append((t, float(mat.values.mean()), mat.values))
             tmean[m] = means
             if n_t == 1 and means:
@@ -187,9 +208,9 @@ def cells_and_paired(pv: pd.DataFrame):
                               "n_pos": int((d_r2 > 0).sum())})
             gain_r = np.array([r2m[t] - p0[t] for t in both])
             gain_m = d_p0
+            denom = float(gain_r.mean())
+            frac = float(gain_m.mean() / denom) if abs(denom) > 1e-8 else float("nan")
             if n_t == 1:
-                frac = float(gain_m.mean() / gain_r.mean()) if abs(float(gain_r.mean())) >= 0.01 else float("nan")
-                # draw bootstrap of the ratio
                 g = sub[sub.target == both[0]]
                 mp = g.pivot(index="draw", columns="seed", values=m).values
                 pp = g.pivot(index="draw", columns="seed", values="p0").values
@@ -198,27 +219,21 @@ def cells_and_paired(pv: pd.DataFrame):
                 ix = rng.integers(0, d, size=(10000, d))
                 gm = (mp - pp)[ix].mean(axis=(1, 2))
                 gr = (rp - pp)[ix].mean(axis=(1, 2))
-                ok = np.abs(gr) >= 0.01
-                if ok.any():
-                    frs = gm[ok] / gr[ok]
-                    flo, fhi = float(np.percentile(frs, 2.5)), float(np.percentile(frs, 97.5))
-                else:
-                    flo = fhi = float("nan")
             else:
-                if abs(float(gain_r.mean())) < 0.01:
-                    frac = flo = fhi = float("nan")
-                else:
-                    frac = float(gain_m.mean() / gain_r.mean())
-                    n = len(both)
-                    ix = rng.integers(0, n, size=(10000, n))
-                    gr = gain_r[ix].mean(1)
-                    gm = gain_m[ix].mean(1)
-                    ok = np.abs(gr) >= 0.01
-                    frs = gm[ok] / gr[ok]
-                    flo, fhi = float(np.percentile(frs, 2.5)), float(np.percentile(frs, 97.5))
+                n = len(both)
+                ix = rng.integers(0, n, size=(10000, n))
+                gm = gain_m[ix].mean(1)
+                gr = gain_r[ix].mean(1)
+            ok = np.abs(gr) > 1e-8
+            if ok.any():
+                frs = gm[ok] / gr[ok]
+                flo, fhi = float(np.percentile(frs, 2.5)), float(np.percentile(frs, 97.5))
+            else:
+                flo = fhi = float("nan")
             retain_rows.append({"stratum": stratum, "B": int(B), "method": m, "n_sessions": len(both),
-                                "gain": float(gain_m.mean()), "r2_gain": float(gain_r.mean()),
-                                "fraction": frac, "frac_lo": flo, "frac_hi": fhi})
+                                "gain": float(gain_m.mean()), "r2_gain": denom,
+                                "fraction": frac, "frac_lo": flo, "frac_hi": fhi,
+                                "unstable_denom": bool(abs(denom) < 0.02)})
     return pd.DataFrame(cell_rows), pd.DataFrame(pair_rows), pd.DataFrame(retain_rows)
 
 
@@ -238,11 +253,27 @@ def fit_table() -> pd.DataFrame:
         if not path.exists():
             continue
         blob = __import__("torch").load(path, weights_only=False)
+        import torch
+        from ssm_decode.stream_f7 import (exponential_jbar, kernel_tail_metrics,
+                                          probe_data_term_cosine)
         for L, modes in blob["modes"].items():
             for m, block in modes.items():
+                rho = torch.tensor(block["rho"], dtype=torch.float64)
+                c = block["C"].double()
+                n_lags = int(block["n_lags"])
+                jhat = exponential_jbar(rho, c, n_lags)
+                tail = kernel_tail_metrics(jhat, rho, c)
+                cos = probe_data_term_cosine(jhat, rho, c, seed=0)
                 rows.append({"tag": tag, "L": int(L), "M": int(m), "rel_frobenius": block["rel_frobenius"],
                              "rho_abs_max": block["rho_abs_max"],
-                             "rho": " ".join(f"{v:.4f}" for v in block["rho"])})
+                             "rho": " ".join(f"{v:.4f}" for v in block["rho"]),
+                             "head_frobenius": tail["head_frobenius"],
+                             "tail_frobenius": tail["tail_frobenius"],
+                             "dc_gain_head": tail["dc_gain_head"],
+                             "dc_gain_infinite": tail["dc_gain_infinite"],
+                             "max_abs_C": tail["max_abs_C"],
+                             "cosine_truncated": cos["cosine_truncated_trace"],
+                             "cosine_infinite": cos["cosine_infinite_trace"]})
     return pd.DataFrame(rows)
 
 
