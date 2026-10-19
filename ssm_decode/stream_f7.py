@@ -53,12 +53,15 @@ CAUSALITY = {
         "on future trials. Kept only as a labeled non-causal baseline."
     ),
     "s1_causal": (
-        "Trial k is forwarded with normalisation and the running table known from trials "
-        "< k only. Trial 0 matches pc.stream_stats: the prior table, and normalisation from "
-        "trial 0 alone (one-trial buffer). After the trial, P0 is recomputed on the prefix "
-        "including it and the F7 step, rescaled by std_new/std_old, is applied on top of "
-        "that P0 with shrinkage toward it. It does not read a future trial. "
-        "Later trials do not change earlier commits."
+        "Re-based. Trial k>0 is forwarded as T = P0 of trials < k plus a separate "
+        "correction Delta. Trial 0 is trial-causal, not bin-causal: the whole trial is "
+        "staged for its own normalisation and the table is the prior (pc.stream_stats). "
+        "After trial k, Delta <- (1-rho)*rescale(Delta) + eta*rescale(step), including "
+        "the latent bias that keeps the affine map when the mean changes. The final "
+        "table is P0 of all B trials plus Delta. eta=0, rho=0 returns that P0 exactly. "
+        "The staged variant instead forwards trial k with P0 of trials <= k (same "
+        "one-trial staging). Neither reads a future trial. The old prior-anchored "
+        "commit is superseded."
     ),
     "trace": (
         "Same trial schedule as the FIR variant it is attached to. Deployed traces are "
@@ -165,23 +168,35 @@ def feedback_step(U, sum_x2, n, eps=EPS_Q):
 
 
 def rescale_columns(mat: torch.Tensor, std_old: torch.Tensor, std_new: torch.Tensor) -> torch.Tensor:
-    """Map a K x N table between per-unit std normalisations.
+    """Column scaling that preserves raw-count gain: T_new[:, i] = T_old[:, i] * std_new[i] / std_old[i].
 
-    z = (x - mean) / std, latent += z @ T.T.  Column i of T multiplies unit i.
-    T_new[:, i] = T_old[:, i] * std_new[i] / std_old[i] keeps the gain on raw counts
-    (x_i / std_old) * T_old = (x_i / std_new) * T_new.  A mean change is not a K x N
-    update; the recomputed P0 carries it.
+    This does not by itself preserve the affine map when the mean changes.  Use
+    ``shift_correction``, which also updates the latent bias.
     """
-    scale = (std_new.to(dtype=mat.dtype, device=mat.device) / std_old.to(dtype=mat.dtype, device=mat.device).clamp_min(1e-8))
+    scale = (std_new.to(dtype=mat.dtype, device=mat.device)
+             / std_old.to(dtype=mat.dtype, device=mat.device).clamp_min(1e-8))
     return mat * scale.unsqueeze(0)
 
 
-def commit_on_p0(table_used, step, p0_new, std_used, std_new, eta, rho):
-    """T = rescale(T_used) + eta * rescale(step) - rho * (rescale(T_used) - P0_new).
+def shift_correction(delta, bias, mean_old, std_old, mean_new, std_new):
+    """Move a latent correction (delta [K,N], bias [K]) into a new normalisation.
 
-    ``step`` is ``feedback_step`` in the coordinates of the forward (``std_used``).
-    ``p0_new`` and ``std_new`` are the prefix P0 AFTER the trial just consumed.
-    If std and P0 do not change and ``table_used`` is that P0, this equals ``apply_update``.
+    The map delta @ ((x - mean_old) / std_old) + bias is unchanged.  Column scaling
+    keeps the gain on raw x; the bias picks up gain @ (mean_new - mean_old).
+    """
+    delta_r = rescale_columns(delta, std_old, std_new)
+    gain = delta / std_old.to(dtype=delta.dtype, device=delta.device).clamp_min(1e-8).unsqueeze(0)
+    extra = gain @ (mean_new - mean_old).to(dtype=delta.dtype, device=delta.device).unsqueeze(-1)
+    bias_r = bias.to(dtype=delta.dtype, device=delta.device) + extra.squeeze(-1)
+    return delta_r, bias_r
+
+
+def commit_on_p0(table_used, step, p0_new, std_used, std_new, eta, rho):
+    """SUPERSEDED prior-anchored update.  Not used for deployment.
+
+    T = rescale(T_used) + eta * rescale(step) - rho * (rescale(T_used) - P0_new)
+    carries the previous table, so the prior keeps weight (1-rho)^B and rho=0 never
+    installs P0.  Kept so the bug stays testable.  Deployment is ``rebased_feedback_loop``.
     """
     table_r = rescale_columns(table_used, std_used, std_new)
     step_r = rescale_columns(step, std_used, std_new)
@@ -421,21 +436,12 @@ def _residual(yhat: torch.Tensor, y: torch.Tensor, mask: torch.Tensor) -> torch.
 
 def causal_feedback_loop(base, raw_trials, table_start, eta, rho, prepare, *, kind, jbar=None,
                          poles=None, coeff=None, n_lags=None, collect_readout=False, eps=EPS_Q):
-    """One causal calibration pass.
+    """SUPERSEDED prior-anchored pass.  Deployment is ``rebased_feedback_loop``.
 
-    ``prepare(k)`` returns ``(mean, std, p0)`` for the forward of trial k.  For k = 0, ``p0``
-    may be None and ``table_start`` (the prior) is used; ``mean, std`` are trial 0's own
-    stats (the ``stream_stats`` one-trial buffer).  For k > 0, ``mean, std, p0`` come from
-    trials < k and the running table is already in those coordinates.
-
-    After the forward, ``prepare_after(k)`` is not used: ``prepare`` is called again as
-    ``prepare(k, closed=True)`` for the prefix that includes trial k.  See the callable
-    contract below.
-
-    ``prepare(k, closed)``:
-      closed=False -> stats allowed before the trial (trial 0: own norm, table is prior).
-      closed=True  -> P0 and std of the prefix that includes trial k.
-    Returns (mean [N], std [N], p0 [K,N] or None).
+    ``prepare(k, closed)`` returns ``(mean, std, p0)``.  ``closed=False`` is the state
+    before trial k (trial 0: its own normalisation, prior table).  ``closed=True`` is the
+    prefix that includes trial k.  This pass folds the previous table forward, so the
+    prior is never replaced by P0 when rho is 0.
     """
     table = table_start
     readout = None
@@ -464,6 +470,84 @@ def causal_feedback_loop(base, raw_trials, table_start, eta, rho, prepare, *, ki
                          "R": (r.double().T @ hb.double()), "n": float(n)}
                 readout = block if readout is None else fr.add_readout_stats(readout, block)
     return {"table": table, "mean": last_mean, "std": last_std, "readout": readout}
+
+
+def _forward_biased(base, xz, table, bias, want_h=False):
+    """Trunk forward with an optional latent bias added after the read-in table."""
+    z = xz @ table.to(dtype=xz.dtype).T
+    if bias is not None:
+        z = z + bias.to(dtype=z.dtype, device=z.device)
+    if not want_h:
+        return base(z), None
+    store = {}
+    handle = base.out_proj.register_forward_pre_hook(lambda m, i: store.__setitem__("h", i[0]))
+    try:
+        y = base(z)
+    finally:
+        handle.remove()
+    return y, store["h"]
+
+
+def rebased_feedback_loop(base, raw_trials, prior, eta, rho, prepare, *, mode="rebase", kind="fir",
+                          jbar=None, poles=None, coeff=None, n_lags=None, eps=EPS_Q):
+    """S1 with the correction stored separately from P0.
+
+    ``mode='rebase'`` (strict prefix): trial k>0 is forwarded as P0 of trials < k plus
+    Delta.  Trial 0 is trial-causal, not bin-causal: the whole trial is staged only to
+    compute its own normalisation, and the table is the prior.
+
+    ``mode='staged'`` (trial-causal): trial k is forwarded as P0 of trials <= k plus
+    Delta.  That uses the same one-trial staging as trial-0 normalisation.  It is not
+    bin-causal: the trial is buffered before its first bin is decoded.
+
+    After every trial, in the coordinates of the prefix that includes it,
+    Delta <- (1-rho) * shift(Delta) + eta * shift(step), and the latent bias is
+    updated the same way so a mean change does not drop an offset.  The returned
+    table is P0 of all B trials plus Delta.  eta=0 and rho=0 leaves Delta and the
+    bias at zero, so the table is exactly that P0.
+    """
+    if mode not in ("rebase", "staged"):
+        raise ValueError(mode)
+    delta = prior.new_zeros(prior.shape)
+    bias = prior.new_zeros(prior.shape[0])
+    coord = None
+    readout = None
+    with torch.no_grad():
+        for k, (x_raw, y, mask) in enumerate(raw_trials):
+            if mode == "staged":
+                mean, std, p0 = prepare(k, True)
+                base_table = p0
+            elif k == 0:
+                mean, std, _ = prepare(0, False)
+                base_table = prior
+            else:
+                mean, std, p0 = prepare(k, False)
+                base_table = p0
+            if coord is None:
+                d_use, b_use = delta, bias
+            else:
+                d_use, b_use = shift_correction(delta, bias, coord[0], coord[1], mean, std)
+            table = base_table + d_use
+            xz = (x_raw - mean.to(dtype=x_raw.dtype)) / std.to(dtype=x_raw.dtype).clamp_min(1e-8)
+            yhat, h = _forward_biased(base, xz.unsqueeze(0), table, b_use, want_h=True)
+            yhat, h = yhat[0], h[0]
+            r = _residual(yhat, y.to(dtype=yhat.dtype), mask)
+            if kind == "fir":
+                u = fir_data_term(xz, r, jbar)
+            else:
+                u = trace_data_term(xz, r, poles, coeff, n_lags=n_lags)
+            n, sum_x2 = valid_sum_x2(xz, mask)
+            step = feedback_step(u, sum_x2, n, eps) if float(n) > 0 else torch.zeros_like(delta)
+            mean_a, std_a, p0_a = prepare(k, True)
+            d_c, b_c = shift_correction(d_use, b_use, mean, std, mean_a, std_a)
+            s_c, b_s = shift_correction(step, torch.zeros_like(bias), mean, std, mean_a, std_a)
+            delta = (1.0 - float(rho)) * d_c + float(eta) * s_c
+            bias = (1.0 - float(rho)) * b_c + float(eta) * b_s
+            coord = (mean_a, std_a)
+            p0_final = p0_a
+    table = p0_final + delta
+    return {"table": table, "bias": bias, "mean": coord[0], "std": coord[1], "delta": delta,
+            "readout": readout}
 
 
 def stream_refine(base, trials, table0, eta, rho, *, kind: str, jbar=None, poles=None, coeff=None,
@@ -622,9 +706,25 @@ def p0_prefix_stat_bytes(n: int, acc_bits: int = 32) -> float:
     Shapes follow ``population_calib`` (AC_LAGS=3, CROSS_LAGS=5, D=2, DIR_BINS=8).
     """
     ac, cross, d, dirs = 3, 5, 2, 8
-    elems = (1 + n + n * n + 3 * ac * n + ac + cross * d + cross * d * n + cross
+    gram = n * (n + 1) // 2                         # symmetric Gram, stored once
+    elems = (1 + n + gram + 3 * ac * n + ac + cross * d + cross * d * n + cross
              + n * dirs + dirs + 3 + 9 + 3 * n + n + 2 * d * n + d)
     return elems * acc_bits / 8.0
+
+
+def p0_calibrator_cost(k: int, n: int, b_calls: int, hidden: int = 64) -> dict:
+    """Shared P0 calibrator ROM and how many times it is applied.
+
+    Weights are shared across units (one MLP).  MACs scale with N and with the
+    number of prefix solves: S1-causal solves once per trial (B times), R2 once.
+    """
+    from ssm_decode.population_calib import REL_DIM, desc_dim, mac_counts
+    fd = desc_dim(k)
+    params = ((fd * hidden + hidden) + (hidden * hidden + hidden) + (hidden * k + k)
+              + 2 * fd + 2 * REL_DIM + fd + REL_DIM)
+    macs = mac_counts("p0", n, 0, k, fd, hidden=hidden)["fixed_weight_macs"]
+    return {"weight_bytes": float(params * 4), "fixed_weight_macs_per_call": int(macs),
+            "calls": int(b_calls), "fixed_weight_macs": int(macs * b_calls)}
 
 
 def like_for_like_memory(*, n, k, d, n_lags, n_modes, replay_bins, staging_bins, bx=3, by=16,
@@ -652,13 +752,20 @@ def like_for_like_memory(*, n, k, d, n_lags, n_modes, replay_bins, staging_bins,
     ring3 = float(n_lags * n * bx / 8.0)
     ring32 = b(n_lags * n, 32)
     trace = b(n_modes * n, acc_bits)
+    # Truncation s_t - rho^L s_{t-L} keeps an L-deep delay of every trace, not M*N alone.
+    trace_delay = b(n_lags * n_modes * n, acc_bits)
     p0_stats = p0_prefix_stat_bytes(n, acc_bits)
-    # R2 from the same pieces the P3 model lists, plus ROM, with and without trunk state.
-    # P0 prefix sums are required before either method's first update (R2 starts from P0;
-    # non-causal S1 does too).  Count them on both sides.
-    r2_core = table * 2 + acc + raw + b((n_lags) * d, 16) + norm32 + rom_j + p0_stats
-    s1_nc = table * 2 + acc + raw + ring32 + norm32 + rom_j + p0_stats
-    s1_c = table * 2 + acc + one + ring32 + norm32 + rom_j + p0_stats
+    prior_rom = b(k * n, table_bits)
+    bias_b = b(k, acc_bits)
+    cal_once = p0_calibrator_cost(k, n, 1)
+    cal_b = p0_calibrator_cost(k, n, max(replay_bins // max(staging_bins, 1), 1))
+    # R2 and non-causal S1 both materialise P0 once.  Causal S1 recomputes it every trial.
+    r2_core = (table * 2 + acc + raw + b(n_lags * d, 16) + norm32 + rom_j + p0_stats
+               + prior_rom + cal_once["weight_bytes"])
+    s1_nc = (table * 2 + acc + raw + ring32 + norm32 + rom_j + p0_stats
+             + prior_rom + cal_once["weight_bytes"])
+    s1_c = (table * 2 + acc + one + ring32 + norm32 + rom_j + p0_stats
+            + prior_rom + cal_b["weight_bytes"] + bias_b)
     s1_c_ring3 = s1_c - ring32 + ring3
     return {
         "trunk_state_bytes": trunk,
@@ -669,6 +776,12 @@ def like_for_like_memory(*, n, k, d, n_lags, n_modes, replay_bins, staging_bins,
         "ring_3bit": ring3,
         "ring_32bit": ring32,
         "trace_state_32bit": trace,
+        "trace_delay_LxMxN": trace_delay,
+        "prior_table_bytes": prior_rom,
+        "latent_bias_bytes": bias_b,
+        "p0_calibrator_weight_bytes": cal_once["weight_bytes"],
+        "p0_calibrator_macs_once": cal_once["fixed_weight_macs"],
+        "p0_calibrator_macs_B_times": cal_b["fixed_weight_macs"],
         "B_trial_raw_buffer": raw,
         "one_trial_staging_3bit": one,
         "p0_prefix_stats": p0_stats,
@@ -680,7 +793,12 @@ def like_for_like_memory(*, n, k, d, n_lags, n_modes, replay_bins, staging_bins,
         "s1_causal_32bit_ring_with_trunk_state": s1_c + trunk,
         "s1_causal_3bit_ring_without_trunk_state": s1_c_ring3,
         "s1_causal_3bit_ring_with_trunk_state": s1_c_ring3 + trunk,
-        "s1_causal_trace_without_trunk_state": s1_c - ring32 + trace + rom_c - rom_j,
+        "s1_causal_trace_without_trunk_state": s1_c - ring32 + trace + trace_delay + rom_c - rom_j,
+        "fixed_point_note": (
+            "Truncated traces still multiply large cancelling C (float32 subtraction of the "
+            "tail was unstable).  A fixed-point accumulator would need extra fraction bits "
+            "or should form the L-tap FIR directly instead of s_t - rho^L s_{t-L}."
+        ),
     }
 
 

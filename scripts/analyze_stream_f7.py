@@ -24,16 +24,21 @@ P3_FIX = P3 / "fix"
 EXP = ROOT / "results/expansion_round1/x/expansion_out"
 B_HEAD = (1, 8, 33)
 STREAM = ("s1_r2eta", "s1", "s1_r1s", "tr4", "tr8",
-          "s1_joint", "s1c", "s1c_ridge", "tr4_trunc", "tr8_trunc", "tr4c", "tr8c")
+          "s1_joint", "s1c", "s1c_ridge", "tr4_trunc", "tr8_trunc", "tr4c", "tr8c",
+          "s1c_rebase", "s1c_staged")
 BASE = ("p0", "r2", "r3")
 LABEL = {"p0": "P0", "r2": "R2", "r3": "R3",
          "s1_r2eta": "S1 noncausal (R2 eta)", "s1": "S1 noncausal (eta only)",
          "s1_r1s": "S1 noncausal + readout (old name R1s)",
          "tr4": "trace-M4 infinite (old)", "tr8": "trace-M8 infinite (old)",
-         "s1_joint": "S1 noncausal (joint eta, rho)", "s1c": "S1-causal",
-         "s1c_ridge": "S1-causal + ridge", "tr4_trunc": "trace-M4 truncated noncausal",
-         "tr8_trunc": "trace-M8 truncated noncausal", "tr4c": "trace-M4 causal truncated",
-         "tr8c": "trace-M8 causal truncated"}
+         "s1_joint": "S1 noncausal (joint eta, rho)",
+         "s1c": "S1-causal prior-anchored (superseded)",
+         "s1c_ridge": "S1-causal prior-anchored + ridge (superseded)",
+         "tr4_trunc": "trace-M4 truncated noncausal",
+         "tr8_trunc": "trace-M8 truncated noncausal",
+         "tr4c": "trace-M4 prior-anchored truncated (superseded)",
+         "tr8c": "trace-M8 prior-anchored truncated (superseded)",
+         "s1c_rebase": "S1-causal re-based", "s1c_staged": "S1-causal staged"}
 
 
 def _jl(path: Path) -> list[dict]:
@@ -50,7 +55,9 @@ def _best_kind(sel, prefix, B):
 def load_stream() -> pd.DataFrame:
     rows = []
     names = ["rows_drift.jsonl", "rows_year.jsonl", "rows_sc_0629.jsonl", "rows_sc_0708.jsonl",
-             "rows_drift_fix.jsonl", "rows_year_fix.jsonl", "rows_sc_0629_fix.jsonl", "rows_sc_0708_fix.jsonl"]
+             "rows_drift_fix.jsonl", "rows_year_fix.jsonl", "rows_sc_0629_fix.jsonl", "rows_sc_0708_fix.jsonl",
+             "rows_drift_rebased.jsonl", "rows_year_rebased.jsonl",
+             "rows_sc_0629_rebased.jsonl", "rows_sc_0708_rebased.jsonl"]
     for name in names:
         rows += _jl(RAW / name)
     if not rows:
@@ -112,11 +119,6 @@ def load_stored() -> pd.DataFrame:
                              "B": int(r["B"]), "draw": int(r["draw"]), "seed": int(r["seed"]),
                              "method": r["method"], "r2": float(r["r2"])})
     return pd.DataFrame(rows)
-
-
-def _session_of(df):
-    """One row per (stratum, bid, target, B, draw, seed) would duplicate methods.  Pivot methods."""
-    return df
 
 
 def pivot(df: pd.DataFrame) -> pd.DataFrame:
@@ -246,34 +248,49 @@ def add_month_core(pv: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([pv, sub], ignore_index=True)
 
 
+def _source_jbar(tag: str, n_lags: int):
+    """Averaged source Jacobian, lags 0..n_lags-1.  Not the fitted exponential."""
+    import torch
+    if tag == "subm":
+        path = P3_FIX / "jacobian_month.pt"
+    else:
+        path = EXP / "jacobian" / f"{tag}.pt"
+    blob = torch.load(path, weights_only=False)
+    tot, n = 0, 0
+    for s in blob["sessions"].values():
+        tot = tot + s["sum"]
+        n += s["n"]
+    return (tot / n)[:n_lags].double()
+
+
 def fit_table() -> pd.DataFrame:
     rows = []
+    import torch
+    from ssm_decode.stream_f7 import kernel_tail_metrics, probe_data_term_cosine
     for tag in ("subm", "sc_0629", "sc_0708"):
         path = RAW / f"fit_{tag}.pt"
         if not path.exists():
             continue
-        blob = __import__("torch").load(path, weights_only=False)
-        import torch
-        from ssm_decode.stream_f7 import (exponential_jbar, kernel_tail_metrics,
-                                          probe_data_term_cosine)
+        blob = torch.load(path, weights_only=False)
         for L, modes in blob["modes"].items():
             for m, block in modes.items():
                 rho = torch.tensor(block["rho"], dtype=torch.float64)
                 c = block["C"].double()
                 n_lags = int(block["n_lags"])
-                jhat = exponential_jbar(rho, c, n_lags)
-                tail = kernel_tail_metrics(jhat, rho, c)
-                cos = probe_data_term_cosine(jhat, rho, c, seed=0)
+                jbar = _source_jbar(tag, n_lags)
+                tail = kernel_tail_metrics(jbar, rho, c)
+                cos = probe_data_term_cosine(jbar, rho, c, seed=0)
                 rows.append({"tag": tag, "L": int(L), "M": int(m), "rel_frobenius": block["rel_frobenius"],
                              "rho_abs_max": block["rho_abs_max"],
                              "rho": " ".join(f"{v:.4f}" for v in block["rho"]),
                              "head_frobenius": tail["head_frobenius"],
                              "tail_frobenius": tail["tail_frobenius"],
                              "dc_gain_head": tail["dc_gain_head"],
+                             "dc_gain_true": tail["dc_gain_true"],
                              "dc_gain_infinite": tail["dc_gain_infinite"],
                              "max_abs_C": tail["max_abs_C"],
-                             "cosine_truncated": cos["cosine_truncated_trace"],
-                             "cosine_infinite": cos["cosine_infinite_trace"]})
+                             "cosine_truncated_vs_source": cos["cosine_truncated_trace"],
+                             "cosine_infinite_vs_source": cos["cosine_infinite_trace"]})
     return pd.DataFrame(rows)
 
 

@@ -1,6 +1,67 @@
 # Streaming fixed-feedback refinement（F7-J 求和重排，2026-10-19）
 
-## 审查后修正
+## 第二轮修正：Δ 与 P0 分开，每个 trial 重建表
+
+上一节（以及方法名 `s1c` / `s1c_ridge` / `tr4c` / `tr8c`）的 “S1-causal” 是 **prior-anchored，已作废**。`commit_on_p0` 写成 `T = rescale(T_used) + η·step − ρ(rescale(T_used) − P0)`，表从 prior 往下传，prior 的权重是 `(1−ρ)^B`；ρ=0 时 P0 根本不会成为基座。sub-C 的 prior 很差，所以那一版 target 上低于 P0。
+
+现在的部署是 `rebased_feedback_loop`。校正量 Δ（K×N）和 latent bias（K）单独存。trial k>0 的前向是 `T = P0_{<k} + Δ`。每个 trial 之后 `Δ ← (1−ρ)·shift(Δ) + η·shift(step)`，mean 的变化进 bias：`gain @ (mean_new − mean_old)`，使 `(x−mean)/std` 上的仿射映射不变。最终表是 `P0_{≤B} + Δ`。`η=0, ρ=0` 时 Δ 和 bias 都是 0，表正好是 `P0_B`（有测试）。
+
+**Staged（trial-causal）** 让 trial k 的前向使用包含本 trial 的 P0，和 trial 0 归一化用的 one-trial staging 同一合法性。两者都不是 bin-causal：trial 0 的归一化要看完整一个 trial。不读未来 trial。
+
+Source 选择加了预注册门槛：配对增益 ≥ 0.005，或者大于 2 倍 seed/draw 的 SE，才部署非 P0；并列时 η 靠近该 B 的 R2 规则。没有另找 selection session：month 已经用有漂移的 20140307；sub-C 只有 pool 的最后一个 session，source 增益 ≤ 0.005，没有更早、又没进 trunk 的 session 可用。
+
+Fallback（规则数 = B × {rebase, staged}）：month 0/12，year 0/12，sc_0629 **4/10**，sc_0708 **10/10**。合计 14/44 = 0.32。sc_0708 的 source 增益最高约 0.0005，全部退回 P0。
+
+### Re-based / staged headline（query R²）
+
+| 层 | B | P0 | R2 | R3 | re-based | staged |
+|---|---:|---:|---:|---:|---:|---:|
+| subm_month | 1 | 0.466 | 0.488 | 0.492 | 0.488 | 0.494 |
+|  | 8 | 0.565 | 0.626 | 0.630 | 0.624 | 0.620 |
+|  | 33 | 0.566 | 0.670 | 0.679 | 0.657 | 0.655 |
+| subm_year | 1 | 0.198 | 0.219 | 0.219 | 0.181 | 0.195 |
+|  | 8 | 0.256 | 0.336 | 0.334 | 0.314 | 0.311 |
+|  | 33 | 0.315 | 0.361 | 0.435 | 0.405 | 0.404 |
+| subm_drift（12） | 1 | 0.153 | 0.170 | 0.165 | 0.162 | 0.153 |
+|  | 8 | 0.212 | 0.345 | 0.348 | 0.320 | 0.314 |
+|  | 33 | 0.211 | 0.406 | 0.412 | 0.373 | 0.370 |
+| subc_month（12） | 1 | 0.222 | 0.226 | 0.224 | 0.222 | 0.222 |
+|  | 8 | 0.301 | 0.362 | 0.361 | 0.306 | 0.307 |
+|  | 33 | 0.322 | 0.415 | 0.416 | 0.369 | 0.367 |
+
+Re-based 占 R2 增益的比例（全部 B；session CI 或单 target 的 draw bootstrap）：
+
+| 层 | 1 | 2 | 4 | 8 | 16 | 33 |
+|---|---:|---:|---:|---:|---:|---:|
+| subm_drift | 0.50 | 0.76 | 0.87 [0.79, 0.93] | 0.82 [0.77, 0.86] | 0.84 [0.80, 0.88] | 0.83 [0.81, 0.85] |
+| subm_month | 0.99 | 5.85（分母 0.003） | 0.86 | 0.97 | 0.92 | 0.87 |
+| subm_year | −0.81 | −3.68（分母 0.015） | 0.27 | 0.73 | 0.68 | 1.95（R2 增益只有 0.046，CI 很宽） |
+| subc_month | 0.00（fallback） | — | 0.00（fallback） | 0.10 [0.05, 0.13] | 0.21 [0.11, 0.28] | 0.50 [0.21, 0.74] |
+
+Staged 在 drift 上略低（B=8 为 0.76，B=33 为 0.82），在 sub-C 上和 re-based 几乎一样。Month 单 target 的 B=8 re-based 是 0.624，R2 是 0.626。作废的 prior-anchored 在 sub-C B=8 是 0.255（低于 P0 0.301）；重锚定之后是 0.306。sub-C 仍然只拿回 R2 增益的一小部分，因为 source 上几乎没有可部署的信号，sc_0708 整层 fallback。
+
+### 核：相对 source J̄，不是相对拟合自己
+
+`fit.csv` 的 tail、DC、余弦现在对的是 source 上的 J̄。sc_0629、L=8、M=8：head 0.098，tail 1.396，`dc_gain_true` 0.264（与 head DC 0.264 一致），无限 DC 9.30，max|C|=64.7。探针上截断 trace 相对 source J̄ 的余弦是 0.99998，无限 trace 是 0.336。其它核的 max|C|：sub-M M=8 为 20.4，sc_0708 M=8 为 8.9。截断在 float64 里做；float32 下大系数相消不稳定，定点累加有风险，更稳的是直接做 L-tap FIR，而不是 `s_t − ρ^L s_{t−L}`。
+
+截断 trace 要一条 L 深的 delay line（每个 mode 的 s_{t−L}），不是 M·N 就能代替 ring。M=4、L=33：delay 在 N=26 是 13.4 KB，当前 trace 只有 0.41 KB。
+
+### SRAM（KB，B=8，T=200，L=33；对称 Gram N(N+1)/2；含 prior 表和 P0 权重）
+
+P0 calibrator 的 fixed-weight MAC：N=26 时一次 2.01×10^5，S1-causal 每 trial 一次、B=8 共 1.61×10^6；R2 只调用一次。N=256 为 1.98×10^6 / 1.59×10^7。权重两边都算（共享的一份）。
+
+| | N=26 不含 / 含 trunk state | N=256 不含 / 含 trunk state |
+|---|---:|---:|
+| R2 | 63.4 / 95.4 | 396 / 428 |
+| S1-causal re-based，3-bit ring | 44.7 / 76.7 | 262 / 294 |
+| S1-causal，32-bit ring | 47.7 / 79.7 | 292 / 324 |
+| S1-causal trace（再加 L·M·N delay） | 57.6 / 89.6 | 395 / 427 |
+
+Trunk state 仍是 32,768 B。N=256 的 P0 统计量约 165 KB（对称 Gram），prior 表 10 KB。
+
+---
+
+## 审查后修正（第一轮；其中 S1-causal 数字是 prior-anchored，已作废）
 
 独立审查之后补跑。旧行保留，方法名不变，下面正文里把它们叫成 causal 的句子作废。新行在 `rows_*_fix.jsonl`，选择在 `select_*_fix.json`。
 
@@ -180,7 +241,7 @@ SRAM（fp32，含当前 trial 的 staging，不含与推理共享的 trunk state
 | | N=26 | N=256 |
 |---|---:|---:|
 | S1-FIR（ring L·N + U 的 K×N + 表 + T0 + 一个 trial staging） | 9.2 KB | 83.6 KB |
-| trace M=4（M·N 代替 ring） | 6.3 KB | 54.6 KB |
+| trace M=4（旧记账，只算了 M·N，漏了 L 深 delay line；见文首） | 6.3 KB | 54.6 KB |
 | S1+R1s（再加 full Gram 与 V） | 44.0 KB | 118 KB |
 | R2（S=10，含全部 B trial 的 replay buffer） | 57 KB，其中 replay 22 KB | 221 KB，其中 replay 156 KB |
 

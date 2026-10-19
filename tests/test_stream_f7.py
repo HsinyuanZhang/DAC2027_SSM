@@ -257,6 +257,95 @@ def test_causal_loop_does_not_read_later_trials():
     assert not any(base.grad_enabled_during_forward)
 
 
+def test_eta0_rho0_returns_p0_of_all_trials_exactly():
+    """A zero update must install P0_B, not a blend with the prior, even if mean/std change."""
+    base = LinTrunk(3)
+    g = torch.Generator().manual_seed(11)
+    prior = torch.randn(K, N, generator=g, dtype=torch.float64) * 5
+    p0 = [torch.randn(K, N, generator=g, dtype=torch.float64) for _ in range(2)]
+    means = [torch.zeros(N, dtype=torch.float64), torch.linspace(-0.4, 0.6, N)]
+    stds = [torch.ones(N, dtype=torch.float64), torch.linspace(0.5, 1.7, N)]
+    jbar = torch.randn(4, D, K, generator=g, dtype=torch.float64)
+
+    def prepare(k, closed):
+        if not closed and k == 0:
+            return means[0], stds[0], None
+        nprefix = k + 1 if closed else k
+        return means[nprefix - 1], stds[nprefix - 1], p0[nprefix - 1]
+
+    raw = []
+    for _ in range(2):
+        raw.append((torch.randn(8, N, generator=g, dtype=torch.float64),
+                    torch.randn(8, D, generator=g, dtype=torch.float64),
+                    torch.ones(8, dtype=torch.float64)))
+    for mode in ("rebase", "staged"):
+        out = sf.rebased_feedback_loop(base, raw, prior, 0.0, 0.0, prepare, mode=mode, kind="fir",
+                                       jbar=jbar)
+        torch.testing.assert_close(out["table"], p0[1], rtol=0, atol=0)
+        torch.testing.assert_close(out["bias"], torch.zeros(K, dtype=torch.float64), rtol=0, atol=0)
+        assert not torch.allclose(out["table"], prior)
+
+
+def test_shift_correction_preserves_the_affine_map():
+    g = torch.Generator().manual_seed(12)
+    delta = torch.randn(K, N, generator=g, dtype=torch.float64)
+    bias = torch.randn(K, generator=g, dtype=torch.float64)
+    mean_old = torch.randn(N, generator=g, dtype=torch.float64)
+    mean_new = torch.randn(N, generator=g, dtype=torch.float64)
+    std_old = torch.rand(N, generator=g, dtype=torch.float64) + 0.3
+    std_new = torch.rand(N, generator=g, dtype=torch.float64) + 0.3
+    x = torch.randn(N, generator=g, dtype=torch.float64)
+    old = delta @ ((x - mean_old) / std_old) + bias
+    delta_r, bias_r = sf.shift_correction(delta, bias, mean_old, std_old, mean_new, std_new)
+    new = delta_r @ ((x - mean_new) / std_new) + bias_r
+    torch.testing.assert_close(new, old, rtol=1e-10, atol=1e-10)
+
+
+def test_prepare_causal_tracks_changing_prefix_and_trial0_is_staged():
+    """Trial 0 normalisation is the whole trial (trial-causal), and later prefixes differ."""
+    from types import SimpleNamespace
+    from ssm_decode.population_calib import PopStats, TrialBank, norm_stats, segment_sums
+    from scripts.run_stream_f7 import _prepare_causal
+
+    g = torch.Generator().manual_seed(13)
+
+    def seg(shift):
+        x = torch.rand(6, N, generator=g, dtype=torch.float64) + shift
+        y = torch.randn(6, D, generator=g, dtype=torch.float64)
+        ang = torch.zeros(6, dtype=torch.long)
+        valid = torch.ones(6, dtype=torch.bool)
+        return segment_sums(x, y, ang, valid)
+
+    bank = TrialBank([seg(0.0), seg(2.0)])
+
+    class _SD:
+        pass
+
+    sd = _SD()
+    sd.bank = bank
+    prior = torch.zeros(K, N, dtype=torch.float64)
+
+    class _Cal:
+        def calibrate(self, stats, prior_t):
+            mean, std = norm_stats(stats)
+            table = prior_t + float(stats.n_trials)
+            return SimpleNamespace(mean=mean, std=std, table=table)
+
+    prepare = _prepare_causal(sd, prior, _Cal(), [0, 1])
+    mean0, std0, p0_before = prepare(0, False)
+    ref_m, ref_s = norm_stats(PopStats.from_trials(bank, [0]))
+    torch.testing.assert_close(mean0, ref_m)
+    torch.testing.assert_close(std0, ref_s)
+    assert p0_before is None
+    _, _, table1 = prepare(0, True)
+    _, _, table1b = prepare(1, False)
+    _, _, table2 = prepare(1, True)
+    torch.testing.assert_close(table1, table1b)
+    assert float(table1[0, 0]) == 1.0
+    assert float(table2[0, 0]) == 2.0
+    assert not torch.allclose(mean0, prepare(1, True)[0])
+
+
 def test_causality_statements_and_cost_identity():
     for key in ("r2_replay", "fir_reorder", "s1_fir", "s1_causal", "trace", "s1_r1s"):
         text = sf.CAUSALITY[key]
