@@ -1,0 +1,5 @@
+N,K,p,accumulator_bytes_fp32,accumulator_bytes_fp32_double_buffer,mac_per_bin_H,mac_per_bin_G_full,mac_per_bin_G_sym,mac_per_bin_r2,mac_per_bin_total,commit_macs,solve_flops,solve_matrix
+26,10,8,1332,2664,208,64,36,26,298,6672,1834,8x8
+26,10,16,2964,5928,416,256,136,26,698,17952,8021,16x16
+256,10,8,10532,21064,2048,64,36,256,2368,60032,16554,8x8
+256,10,16,19524,39048,4096,256,136,256,4608,154112,66901,16x16
