@@ -52,3 +52,11 @@
 1. 数据定位：**植入式（000688 + M2）为主，sEMG（Hyser / DB6）作为“通道身份未知”的场景与边界。**
 2. RTL 范围：**第 0–2 级必做**（prior + B-trial 归一化、P0 固定权重 encoder、R1-stream readout ridge）；**F7-J 只做架构级建模**，作为可选精修级的 Pareto 点。
 3. **（同日更正）RTL 不是重点。** 贡献 2 改为架构级分析：系统中有哪些算子；流式输入时各处的数据带宽；存内计算（MVM）的使用方式与占比；特殊算子（非线性、norm、softmax、describe 中的 log/sqrt/除法、SSM 递推中的 exp/softplus/旋转等）的优化。对应文档：`docs/arch_analysis_operators_dataflow_20261016.md`（进行中）。
+
+## 6. 冻结算法（MZ 决定，2026-10-19）
+
+- **主方法**：P0（electrode-aligned prior + 固定权重的 per-unit encoder，统计量流式按前缀累加）+ W_α（向 ridge-CCA 表收缩，α 按扩展窗口协议选）+ S1-causal re-based 固定反馈精修（即“组合方法”）；备选为 CCA + S1。
+- **主协议**：causal-first-B（前 B 个 trial 校准、之后的 trial 作为 query、统计量按前缀累加、anytime 提交、整段连续解码）。
+- **可部署的对照方法**：P-prior、P0、ridge-CCA、W_α、S1-causal；参照：R2/R3（重放）、P0 + ui_reg（不可部署）。
+- 证据：`results/analysis/causal_main_20261019/README.md`（两轮审查）。
+- 后续三条线并行：第 2 轮 Colab（增加 backbone 和选参 session）、硬件架构分析（`docs/arch_analysis_20261019.md`）、论文初稿与 exp-log。
