@@ -50,11 +50,17 @@ except ImportError:  # pragma: no cover - the experiment env always has torch
 DIR_BINS = 8
 P_GRID = (8, 16)
 ALPHAS = (0.0, 0.25, 0.5, 0.75, 1.0)
-# Source-only grids. Large lambda is the explicit "keep W0" corner.
-LAM_GRID = (1e-3, 1e-2, 1e-1, 1.0, 10.0, 100.0, 1e4)
+# Source-only grids. The first pass stopped at 1e2 / 1e4 and never tried 1e3, so the
+# selected lambda sat on a grid edge. The follow-up grid fills that hole and goes past 1e4.
+LAM_GRID = (1e-3, 1e-2, 1e-1, 1.0, 10.0, 100.0, 1e3, 1e4, 1e5, 1e6)
+# Absolute eps (legacy). G is a raw sum, so these are negligible next to trace(G)/p.
 EPS_GRID = (1e-8, 1e-4, 1e-2, 1.0)
+# Relative eps: epsilon = eps_rel * trace(G) / p. Order-1 values are on the scale of G.
+EPS_REL_GRID = (1e-4, 1e-2, 1e-1, 1.0, 10.0)
 F_RIDGE_GRID = (1e-4, 1e-2, 1.0)
 STD_FLOOR = 1e-6
+# Elapsed-days bins for adaptive shrinkage. Edges are inclusive.
+GAP_BINS = ("le14", "mid", "gt180")
 
 
 @dataclass
@@ -316,6 +322,135 @@ def apply_readin(r, w, mean, std, bias=None) -> np.ndarray:
     if bias is not None:
         u = u + np.asarray(bias, dtype=np.float64).reshape(-1)
     return u
+
+
+def eps_from_relative(g: np.ndarray, eps_rel: float) -> float:
+    """``eps = eps_rel * trace(G) / p``. ``eps_rel`` of order 1 matches the scale of ``G``."""
+    g = np.asarray(g, dtype=np.float64)
+    p = int(g.shape[0])
+    scale = float(np.trace(g)) / max(p, 1)
+    return float(eps_rel) * max(scale, 0.0)
+
+
+def gap_bin_name(elapsed_days: int) -> str:
+    """Bin |elapsed days| into ``le14`` / ``mid`` (15–180) / ``gt180``.
+
+    Negative elapsed (a source session dated before the latest trunk session) is
+    binned by absolute gap: that distance is what the source episodes actually span.
+    """
+    gap = abs(int(elapsed_days))
+    if gap <= 14:
+        return "le14"
+    if gap <= 180:
+        return "mid"
+    return "gt180"
+
+
+def resolve_gap_bin(want: str, populated: set) -> tuple[str, str | None]:
+    """Return ``(bin_used, requested_or_None)``. The second value is the empty bin we fell back from."""
+    if want not in GAP_BINS:
+        raise ValueError(f"unknown gap bin {want}")
+    populated = {b for b in populated if b in GAP_BINS}
+    if want in populated:
+        return want, None
+    if not populated:
+        raise ValueError("no populated gap bin to fall back to")
+    i = GAP_BINS.index(want)
+    ranked = sorted((abs(GAP_BINS.index(b) - i), GAP_BINS.index(b), b) for b in populated)
+    return ranked[0][2], want
+
+
+def logistic_alpha(reliability: float, intercept: float, slope: float) -> float:
+    """Monotone map from a calibration-only reliability ``c`` to ``alpha`` in (0, 1).
+
+    ``slope >= 0`` so a larger ``c`` never decreases alpha. No query label enters.
+    """
+    if float(slope) < 0.0:
+        raise ValueError("slope must be >= 0 (monotone nondecreasing)")
+    z = float(intercept) + float(slope) * float(reliability)
+    if z >= 0.0:
+        return float(1.0 / (1.0 + np.exp(-z)))
+    ez = float(np.exp(z))
+    return float(ez / (1.0 + ez))
+
+
+def combine_gap_reliability(alpha_bin: float, reliability: float, intercept: float, slope: float) -> float:
+    """``alpha = clip(alpha_bin * logistic(c), 0, 1)``. The bin sets the ceiling; low ``c`` shrinks it."""
+    return float(np.clip(float(alpha_bin) * logistic_alpha(reliability, intercept, slope), 0.0, 1.0))
+
+
+def nearest_grid_alpha(alpha: float, grid=ALPHAS) -> float:
+    grid = np.asarray(grid, dtype=np.float64)
+    return float(grid[int(np.argmin(np.abs(grid - float(alpha))))])
+
+
+def fit_monotone_logistic(rows: list, *, c_key: str = "c") -> dict:
+    """Fit ``(intercept, slope>=0)`` on source rows ``{c, r2_by_alpha}``.
+
+    The score of a continuous alpha is the stored R^2 of the nearest grid alpha.
+    Rows carry only source-simulation quantities.
+    """
+    if not rows:
+        raise ValueError("no source rows to fit the logistic")
+    best = None
+    for intercept in np.linspace(-6.0, 6.0, 25):
+        for slope in np.linspace(0.0, 12.0, 25):
+            scores = []
+            for row in rows:
+                alpha = logistic_alpha(row[c_key], float(intercept), float(slope))
+                scores.append(row["r2_by_alpha"][nearest_grid_alpha(alpha, tuple(row["r2_by_alpha"]))])
+            mean = float(np.mean(scores))
+            # Tie → smaller slope (closer to a constant), then smaller |intercept|.
+            key = (mean, -float(slope), -abs(float(intercept)))
+            if best is None or key > best[0]:
+                best = (key, float(intercept), float(slope), mean)
+    return {"intercept": best[1], "slope": best[2], "source_r2": best[3], "n_episodes": len(rows)}
+
+
+def fit_combined_logistic(rows: list, *, c_key: str = "c", bin_key: str = "alpha_bin") -> dict:
+    """Same grid search for ``alpha = alpha_bin * logistic(c)``."""
+    if not rows:
+        raise ValueError("no source rows to fit the combined map")
+    best = None
+    for intercept in np.linspace(-6.0, 6.0, 25):
+        for slope in np.linspace(0.0, 12.0, 25):
+            scores = []
+            for row in rows:
+                alpha = combine_gap_reliability(row[bin_key], row[c_key], float(intercept), float(slope))
+                scores.append(row["r2_by_alpha"][nearest_grid_alpha(alpha, tuple(row["r2_by_alpha"]))])
+            mean = float(np.mean(scores))
+            key = (mean, -float(slope), -abs(float(intercept)))
+            if best is None or key > best[0]:
+                best = (key, float(intercept), float(slope), mean)
+    return {"intercept": best[1], "slope": best[2], "source_r2": best[3], "n_episodes": len(rows)}
+
+
+def subspace_energy(delta_w: np.ndarray, basis: np.ndarray) -> tuple[float, np.ndarray]:
+    """Energy fraction ``||P Δ||^2 / ||Δ||^2`` for an orthonormal basis ``[N, r]``.
+
+    The norm ratio ``||P Δ|| / ||Δ||`` is not used: a random rank-r subspace has
+    expected norm ratio about ``sqrt(r/N)``, which looks large when ``r`` is close to ``N``.
+    """
+    delta = np.asarray(delta_w, dtype=np.float64)
+    basis = np.asarray(basis, dtype=np.float64)
+    if basis.size == 0 or basis.shape[1] == 0:
+        return 0.0, np.zeros_like(delta)
+    proj = (delta @ basis) @ basis.T
+    den = float(np.sum(delta ** 2))
+    if den <= 0.0:
+        return 0.0, proj
+    return float(np.sum(proj ** 2) / den), proj
+
+
+def projector_rank(h: np.ndarray, d=None, rank_tol: float = 1e-8) -> int:
+    """Rank of the row space of ``H^T D`` (same tolerance as ``project_update``)."""
+    h = np.asarray(h, dtype=np.float64)
+    dv = _as_d(d, h.shape[0])
+    m = (h * dv[:, None]).T
+    _, s, _vt = np.linalg.svd(m, full_matrices=False)
+    if len(s) == 0 or s[0] <= 0:
+        return 0
+    return int(np.sum(s > rank_tol * s[0]))
 
 
 def project_update(delta_w: np.ndarray, h: np.ndarray, d=None, rank_tol: float = 1e-8) -> np.ndarray:

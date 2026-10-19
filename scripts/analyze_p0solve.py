@@ -33,10 +33,12 @@ HEADLINE_B = (1, 8, 33)
 KINDS = ("full", "diag", "lr8", "lr16", "lr32")
 OUR = ("p_prior", "p0", "w_alpha", "p0solve_p8", "p0solve_p16",
        "prior_solve_p8", "prior_solve_p16", "ridge_cca")
+ADAPT = ("w_alpha_gap", "w_alpha_rel", "w_alpha_both")
 REFS = ("r3", "p0_ui_reg")
 SEED_FREE = {"p_prior", "prior_solve_p8", "prior_solve_p16", "ridge_cca"}
 # Order used by the headline table. p0solve_p8/p16 are both reported; neither is picked on target.
-HEADLINE = ("p0", "w_alpha", "p0solve_p8", "p0solve_p16", "ridge_cca", "r3", "p0_ui_reg")
+HEADLINE = ("p0", "w_alpha", "w_alpha_gap", "w_alpha_rel", "w_alpha_both",
+            "p0solve_p8", "p0solve_p16", "ridge_cca", "r3", "p0_ui_reg")
 DIFF_BASES = ("p0", "w_alpha")
 RNG = np.random.default_rng(0)
 
@@ -96,12 +98,31 @@ def load_drift_refs() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def load_ours() -> pd.DataFrame:
+def _load_stratum_rows(stratum: str) -> pd.DataFrame:
+    """Base rows, with any re-selected / adaptive method from the adapt file taking precedence."""
+    base = _rows(RAW / "eval" / f"rows_{stratum}.jsonl")
+    adapt = _rows(RAW / "eval" / f"rows_{stratum}_adapt.jsonl")
     frames = []
-    for stratum in ("days", "year", "drift"):
-        rows = _rows(RAW / "eval" / f"rows_{stratum}.jsonl")
-        if rows:
-            frames.append(pd.DataFrame(rows))
+    if base:
+        b = pd.DataFrame(base)
+        if adapt:
+            ad = pd.DataFrame(adapt)
+            # Replace only the (method, target, B, draw, seed) cells that were re-scored.
+            # A method can change for some B and keep the original rows for the rest.
+            ad_keys = set(zip(ad.method, ad.target, ad.B.astype(int), ad.draw.astype(int), ad.seed.astype(int)))
+            keep = [(m, t, int(B), int(d), int(s)) not in ad_keys
+                    for m, t, B, d, s in zip(b.method, b.target, b.B, b.draw, b.seed)]
+            b = b[keep]
+        frames.append(b)
+    if adapt:
+        frames.append(pd.DataFrame(adapt))
+    if not frames:
+        return pd.DataFrame()
+    return pd.concat(frames, ignore_index=True)
+
+
+def load_ours() -> pd.DataFrame:
+    frames = [df for s in ("days", "year", "drift") if not (df := _load_stratum_rows(s)).empty]
     if not frames:
         raise SystemExit(f"no eval rows under {RAW}/eval")
     df = pd.concat(frames, ignore_index=True)
@@ -134,8 +155,8 @@ def attach_refs(ours: pd.DataFrame) -> pd.DataFrame:
             block["like_for_like"] = True
             refs.append(block[["stratum", "target", "B", "draw", "seed", "method", "r2", "reused", "like_for_like"]])
     ref = pd.concat(refs, ignore_index=True)
-    keep = ours[ours.method.isin(OUR)][["stratum", "target", "date", "B", "draw", "seed", "method", "r2",
-                                        "n_units", "diagnostic_only"]].copy()
+    keep = ours[ours.method.isin(OUR + ADAPT)][["stratum", "target", "date", "B", "draw", "seed", "method", "r2",
+                                               "n_units", "diagnostic_only"]].copy()
     keep["reused"] = False
     ref["date"] = ref.target.str[-8:]
     ref["diagnostic_only"] = False
@@ -215,7 +236,7 @@ def draw_cluster_ci(sub: pd.DataFrame, col: str, n_boot: int = 2000):
 
 def cells(df: pd.DataFrame) -> pd.DataFrame:
     out = []
-    methods = list(OUR) + list(REFS)
+    methods = list(OUR) + list(ADAPT) + list(REFS)
     for (stratum, B), sub in df.groupby(["stratum", "B"]):
         n_targets = sub.target.nunique()
         for method in methods:
@@ -250,7 +271,7 @@ def paired(df: pd.DataFrame) -> pd.DataFrame:
                 continue
             # W_alpha vs P0 is required; W_alpha vs itself is not.
             methods = []
-            for method in ("w_alpha",) + tuple(OUR) + REFS:
+            for method in ("w_alpha",) + ADAPT + tuple(OUR) + REFS:
                 if method != base and method != "p_prior" and method not in methods:
                     methods.append(method)
             for method in methods:
@@ -292,18 +313,91 @@ def projection(diag: pd.DataFrame) -> pd.DataFrame:
             ratios = tm_num / tm_den
         ratios = ratios[np.isfinite(ratios) & (np.abs(tm_den) > 0.01)]
         lo, hi = cluster_ci(sub.groupby("target").gain_diag.mean().to_numpy())
+        # The stored "frobenius_retained" is ||PΔ||/||Δ||. Energy is its square.
+        # A random rank-r subspace has expected norm ratio ~sqrt(r/N), which is not evidence.
+        if "energy_retained" in sub.columns and sub["energy_retained"].notna().any():
+            energy = float(sub["energy_retained"].mean())
+        else:
+            energy = float((sub.frobenius_retained ** 2).mean())
         out.append({"stratum": stratum, "B": int(B), "p": int(p),
                     "n_rows": int(len(sub)), "n_targets": int(sub.target.nunique()),
                     "gain_ui": denom, "gain_diag": numer,
                     "retained_fraction": float(numer / denom) if abs(denom) > 1e-4 else np.nan,
                     "target_median_retained": float(np.median(ratios)) if len(ratios) else np.nan,
-                    "frobenius_retained": float(sub.frobenius_retained.mean()),
+                    "energy_retained": energy,
+                    "norm_ratio": float(sub.frobenius_retained.mean()),
                     "like_for_like": bool(sub.like_for_like.iloc[0]),
                     "gain_diag_ci_lo": lo, "gain_diag_ci_hi": hi,
                     "seed_spread_diag": float(abs(sub[sub.seed == 0].gain_diag.mean()
                                                  - sub[sub.seed == 1].gain_diag.mean()))
                     if set(sub.seed) >= {0, 1} else np.nan})
     return pd.DataFrame(out)
+
+
+def projection_controls(path: Path | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Random / PCA / shuffled-label controls from the 2026-10-19 review.
+
+    Source: ``/tmp/p0s_review/control_drift.jsonl``, produced by ``proj_control.py``
+    (same draws, same ui_reg rule, H matched the stored W_diag). Imported, not re-decoded.
+    """
+    path = path or Path("/tmp/p0s_review/control_drift.jsonl")
+    if not path.exists():
+        return pd.DataFrame(), pd.DataFrame()
+    rows = []
+    seen = set()
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        r = json.loads(line)
+        key = (r["target"], r["B"], r["draw"], r["seed"])
+        if key in seen:
+            continue
+        seen.add(key)
+        for name, p, energy, r2 in r["res"]:
+            sub = "rand" if str(name).startswith("rand") else name
+            rows.append({"target": r["target"], "N": int(r["N"]), "B": int(r["B"]),
+                         "draw": int(r["draw"]), "seed": int(r["seed"]), "p": int(p),
+                         "sub": sub, "energy": float(energy),
+                         "gain": float(r2) - float(r["r2_p0"]),
+                         "gain_ui": float(r["r2_ui"]) - float(r["r2_p0"]),
+                         "rank": int(r["meta"][str(p)]["rank"])})
+    df = pd.DataFrame(rows)
+    per = []
+    for (target, B, p), sub in df.groupby(["target", "B", "p"]):
+        rec = {"stratum": "drift", "target": target, "N": int(sub.N.iloc[0]), "B": int(B), "p": int(p),
+               "rank_H": float(sub["rank"].mean()), "rank_over_N": float(sub["rank"].mean() / sub.N.iloc[0]),
+               "n_episodes": int(sub.groupby(["draw", "seed"]).ngroups),
+               "gain_ui": float(sub.drop_duplicates(["draw", "seed"]).gain_ui.mean()),
+               "source": "opus review proj_control.py 2026-10-19"}
+        for name, block in sub.groupby("sub"):
+            rec[f"gain_{name}"] = float(block.gain.mean())
+            rec[f"energy_{name}"] = float(block.energy.mean())
+        per.append(rec)
+    per = pd.DataFrame(per)
+    summary = []
+    for (B, p), sub in df.groupby(["B", "p"]):
+        gui = float(sub.drop_duplicates(["target", "draw", "seed"]).gain_ui.mean())
+        rec = {"stratum": "drift", "B": int(B), "p": int(p), "gain_ui": gui,
+               "mean_N": float(sub.drop_duplicates("target").N.mean()),
+               "mean_rank": float(sub.drop_duplicates(["target", "draw", "seed"])["rank"].mean()),
+               "source": "opus review proj_control.py 2026-10-19"}
+        for name, block in sub.groupby("sub"):
+            rec[f"gain_{name}"] = float(block.gain.mean())
+            rec[f"retained_{name}"] = float(block.gain.mean() / gui) if abs(gui) > 1e-4 else np.nan
+            rec[f"energy_{name}"] = float(block.energy.mean())
+        # H minus each control, target-cluster CI on the per-target mean gain difference
+        wide = sub.groupby(["target", "draw", "seed", "sub"]).gain.mean().unstack()
+        for other in ("rand", "pca", "shuf"):
+            if other not in wide.columns or "H" not in wide.columns:
+                continue
+            diff = (wide["H"] - wide[other]).rename("diff").reset_index()
+            tm = diff.groupby("target")["diff"].mean().to_numpy()
+            lo, hi = cluster_ci(tm)
+            rec[f"H_minus_{other}"] = float(np.mean(tm))
+            rec[f"H_minus_{other}_lo"] = lo
+            rec[f"H_minus_{other}_hi"] = hi
+        summary.append(rec)
+    return per, pd.DataFrame(summary)
 
 
 def selection_table() -> pd.DataFrame:
@@ -361,6 +455,10 @@ def main():
     proj = projection(pd.DataFrame(diag_rows) if diag_rows else pd.DataFrame())
     if not proj.empty:
         proj.to_csv(OUT / "projection.csv", index=False)
+    per, summary = projection_controls()
+    if not per.empty:
+        per.to_csv(OUT / "projection_controls.csv", index=False)
+        summary.to_csv(OUT / "projection_controls_summary.csv", index=False)
     sel = selection_table()
     if not sel.empty:
         sel.to_csv(OUT / "selection.csv", index=False)
@@ -391,7 +489,7 @@ def main():
                 continue
             lines.append(f"{r.stratum} B={int(r.B)} p={int(r.p)}: {r.retained_fraction:.3f} "
                          f"(ui gain {r.gain_ui:+.3f}, diag gain {r.gain_diag:+.3f}, "
-                         f"fro {r.frobenius_retained:.3f}, like_for_like={r.like_for_like})")
+                         f"energy {r.energy_retained:.3f}, like_for_like={r.like_for_like})")
     text = "\n".join(lines) + "\n"
     (OUT / "headline.md").write_text(text)
     print(text)

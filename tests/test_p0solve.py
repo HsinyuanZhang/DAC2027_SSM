@@ -4,9 +4,11 @@ import pytest
 import torch
 
 from ssm_decode.p0solve import (
-    accumulate_raw, add_moments, apply_readin, batch_hg, cost_model, direct_ls_solve,
-    fit_anchor, map_cca_into_w0_coordinates, mean_std_from_raw, moments_to_normalized,
-    phi_features, project_update, proxy_objective, shrink_tables, solve_p0,
+    accumulate_raw, add_moments, apply_readin, batch_hg, combine_gap_reliability,
+    cost_model, direct_ls_solve, eps_from_relative, fit_anchor, fit_combined_logistic,
+    fit_monotone_logistic, gap_bin_name, logistic_alpha, map_cca_into_w0_coordinates,
+    mean_std_from_raw, moments_to_normalized, phi_features, project_update,
+    proxy_objective, resolve_gap_bin, shrink_tables, solve_p0, subspace_energy,
     target_side_solve,
 )
 
@@ -193,3 +195,70 @@ def test_cost_model_matches_the_accumulator_layout():
 def test_shrink_rejects_out_of_range_alpha():
     with pytest.raises(ValueError):
         shrink_tables(np.zeros((2, 3)), np.zeros((2, 3)), np.zeros(2), 1.5)
+
+
+def test_relative_eps_scales_with_trace():
+    g = np.eye(4) * 20.0
+    # trace/p = 20, so eps_rel=0.1 -> 2
+    assert eps_from_relative(g, 0.1) == pytest.approx(2.0)
+    assert eps_from_relative(g, 0.0) == 0.0
+
+
+def test_gap_bins_and_fallback():
+    assert gap_bin_name(0) == "le14"
+    assert gap_bin_name(14) == "le14"
+    assert gap_bin_name(-3) == "le14"          # absolute gap to the latest trunk session
+    assert gap_bin_name(15) == "mid"
+    assert gap_bin_name(180) == "mid"
+    assert gap_bin_name(181) == "gt180"
+    assert gap_bin_name(-400) == "gt180"
+    used, fell = resolve_gap_bin("le14", {"le14", "mid"})
+    assert used == "le14" and fell is None
+    used, fell = resolve_gap_bin("gt180", {"le14", "mid"})
+    assert used == "mid" and fell == "gt180"
+    used, fell = resolve_gap_bin("le14", {"gt180"})
+    assert used == "gt180" and fell == "le14"
+    with pytest.raises(ValueError):
+        resolve_gap_bin("mid", set())
+
+
+def test_logistic_is_monotone_and_source_only():
+    low = logistic_alpha(0.1, intercept=-1.0, slope=4.0)
+    high = logistic_alpha(0.9, intercept=-1.0, slope=4.0)
+    assert high > low
+    assert logistic_alpha(0.2, 0.0, 0.0) == pytest.approx(0.5)   # slope 0 is constant
+    with pytest.raises(ValueError):
+        logistic_alpha(0.2, 0.0, slope=-0.1)
+    # The fit sees only c and the source R^2 of each grid alpha. No query field is read.
+    rows = []
+    for c, prefer in ((0.05, 0.0), (0.15, 0.0), (0.85, 1.0), (0.95, 1.0)):
+        r2 = {0.0: 0.2, 0.25: 0.2, 0.5: 0.2, 0.75: 0.2, 1.0: 0.2}
+        r2[prefer] = 0.9
+        rows.append({"c": c, "r2_by_alpha": r2})
+    fit = fit_monotone_logistic(rows)
+    assert fit["slope"] > 0.0
+    assert logistic_alpha(0.95, fit["intercept"], fit["slope"]) > logistic_alpha(
+        0.05, fit["intercept"], fit["slope"])
+    # Combined map cannot exceed the bin ceiling.
+    assert combine_gap_reliability(0.25, 0.99, fit["intercept"], fit["slope"]) <= 0.25 + 1e-9
+    both = fit_combined_logistic([{"c": r["c"], "alpha_bin": 0.5, "r2_by_alpha": r["r2_by_alpha"]} for r in rows])
+    assert both["slope"] >= 0.0
+
+
+def test_energy_fraction_not_the_norm_ratio():
+    rng = np.random.default_rng(7)
+    delta = _rand(rng, 3, 6)
+    # full space keeps all the energy
+    q, _ = np.linalg.qr(np.eye(6))
+    energy, proj = subspace_energy(delta, q)
+    assert energy == pytest.approx(1.0)
+    np.testing.assert_allclose(proj, delta, atol=1e-8)
+    # rank-1 coordinate axis: energy is the fraction of squared mass, not the norm ratio
+    basis = np.zeros((6, 1))
+    basis[0, 0] = 1.0
+    energy, proj = subspace_energy(delta, basis)
+    expected = float(np.sum(delta[:, :1] ** 2) / np.sum(delta ** 2))
+    assert energy == pytest.approx(expected)
+    norm_ratio = float(np.linalg.norm(proj) / np.linalg.norm(delta))
+    assert energy == pytest.approx(norm_ratio ** 2)
+    assert energy < norm_ratio

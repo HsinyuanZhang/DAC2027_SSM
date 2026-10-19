@@ -345,6 +345,8 @@ def cca_readin(ref: RefDay, x_fit: np.ndarray, tgt_trials: list, tgt_conds: list
     lr = np.concatenate([ref.cond_avg[c] for c in common])
     mr_mat, mt_mat, m_r, m_t, corr = cca(lr, lt, ridge)
     info["mean_canon_corr"] = float(corr.mean())
+    top = np.sort(corr)[-min(3, corr.size):]
+    info["top3_canon_corr"] = float(top.mean()) if top.size else float("nan")
     # target latent -> baseline latent: (l - m_t) Mt Mr^-1 + m_r
     trans = mt_mat @ np.linalg.inv(mr_mat)                # [K, K], row-vector convention
     # z = a_pca @ [ ((xz) p_t - m_t) trans + m_r ] + c_pca

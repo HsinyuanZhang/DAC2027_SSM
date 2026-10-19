@@ -38,9 +38,10 @@ from scripts.run_labeled_calibration import D1_POOLS                       # noq
 from ssm_decode import published_baselines as pb                           # noqa: E402
 from ssm_decode.p0solve import (ALPHAS, EPS_GRID, F_RIDGE_GRID, LAM_GRID, P_GRID,
                                 RawMoments, accumulate_raw, add_moments, apply_readin,
-                                cost_model, empty_moments, fit_anchor, map_cca_into_w0_coordinates,
-                                mean_std_from_raw, moments_to_normalized, phi_features,
-                                project_update, shrink_tables, target_side_solve)
+                                cost_model, empty_moments, eps_from_relative, fit_anchor,
+                                map_cca_into_w0_coordinates, mean_std_from_raw, moments_to_normalized,
+                                phi_features, project_update, projector_rank, shrink_tables,
+                                target_side_solve)
 from ssm_decode.population_calib import PopStats, norm_stats               # noqa: E402
 
 OUT = Path(os.environ.get("P0SOLVE_OUT", str(ROOT / "results/p0solve_20261019")))
@@ -405,6 +406,18 @@ def solve_one(base_w, anchor_f, raw, mean, std, lam, eps):
     return table
 
 
+def eps_of_cfg(cfg: dict, g: np.ndarray) -> float:
+    """Absolute eps, or ``eps_rel * trace(G) / p`` when the config says so."""
+    if "eps_rel" in cfg:
+        return eps_from_relative(g, cfg["eps_rel"])
+    return float(cfg["eps"])
+
+
+def solve_from_cfg(base_w, anchor_f, raw, mean, std, cfg: dict):
+    _h, g = moments_to_normalized(raw, mean, std)
+    return solve_one(base_w, anchor_f, raw, mean, std, float(cfg["lam"]), eps_of_cfg(cfg, g))
+
+
 def cmd_select(args):
     device = require_gpu()
     sim_set = SIM_SET[args.stratum]
@@ -563,12 +576,12 @@ def episode_maps(world, sd, prior_t, calib, idx, anchor, sel, B, stratum_cca: st
             out["w_alpha"] = (w, bias, {"alpha": alpha})
         for p in P_GRID:
             cfg = sel[f"p0solve_p{p}"][str(B)]["cfg"]
-            table = solve_one(w0, anchor[p], moments[p], mean, std, cfg["lam"], cfg["eps"])
+            table = solve_from_cfg(w0, anchor[p], moments[p], mean, std, cfg)
             out[f"p0solve_p{p}"] = (table, zeros, cfg)
     cfg_names = {f"prior_solve_p{p}": p for p in P_GRID}
     for method, p in cfg_names.items():
         cfg = sel[method][str(B)]["cfg"]
-        table = solve_one(prior, anchor[p], moments[p], mean, std, cfg["lam"], cfg["eps"])
+        table = solve_from_cfg(prior, anchor[p], moments[p], mean, std, cfg)
         out[method] = (table, zeros, cfg)
     out["p_prior"] = (prior, zeros, {})
     if cca is None:
@@ -747,7 +760,9 @@ def cmd_diag(args):
                                      "p": int(p), "method": "w_diag", "r2": r_diag, "r2_p0": r_p0,
                                      "r2_ui": r_ui, "r2_ui_stored": stored_ui,
                                      "gain_ui": r_ui - r_p0, "gain_diag": r_diag - r_p0,
-                                     "frobenius_retained": fro, "diagnostic_only": True,
+                                     "frobenius_retained": fro, "energy_retained": fro ** 2,
+                                     "rank_h": projector_rank(h),
+                                     "diagnostic_only": True,
                                      "like_for_like": bool(rule["like_for_like"]),
                                      "cfg": {"lam": u["lam"], "lr": u["lr"], "steps": u["steps"], "p": int(p)},
                                      "note": rule["note"], "backprop": True, "n_units": int(sd.n_units)})
