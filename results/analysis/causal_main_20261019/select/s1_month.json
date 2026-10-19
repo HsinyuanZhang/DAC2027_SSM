@@ -1,0 +1,199 @@
+{
+ "b": {
+  "1": {
+   "or": {
+    "margin": 0.005,
+    "mode": "or",
+    "n_episodes": 2,
+    "p0_source_r2": 0.6108379022932615,
+    "eta": 0.0,
+    "rho": 0.0,
+    "fallback_base": true,
+    "n_viable": 0,
+    "source_gain": 0.0,
+    "source_se": null,
+    "best_rejected_gain": -0.0015163074080492
+   },
+   "and": {
+    "margin": 0.005,
+    "mode": "and",
+    "n_episodes": 2,
+    "p0_source_r2": 0.6108379022932615,
+    "eta": 0.0,
+    "rho": 0.0,
+    "fallback_base": true,
+    "n_viable": 0,
+    "source_gain": 0.0,
+    "source_se": null,
+    "best_rejected_gain": -0.0015163074080492
+   },
+   "n_episodes": 2,
+   "sessions": [
+    "20140307"
+   ]
+  },
+  "2": {
+   "or": {
+    "margin": 0.005,
+    "mode": "or",
+    "n_episodes": 2,
+    "p0_source_r2": 0.6340672765610035,
+    "eta": 0.0,
+    "rho": 0.0,
+    "fallback_base": true,
+    "n_viable": 0,
+    "source_gain": 0.0,
+    "source_se": null,
+    "best_rejected_gain": 0.002908519766278983
+   },
+   "and": {
+    "margin": 0.005,
+    "mode": "and",
+    "n_episodes": 2,
+    "p0_source_r2": 0.6340672765610035,
+    "eta": 0.0,
+    "rho": 0.0,
+    "fallback_base": true,
+    "n_viable": 0,
+    "source_gain": 0.0,
+    "source_se": null,
+    "best_rejected_gain": 0.002908519766278983
+   },
+   "n_episodes": 2,
+   "sessions": [
+    "20140307"
+   ]
+  },
+  "4": {
+   "or": {
+    "margin": 0.005,
+    "mode": "or",
+    "n_episodes": 2,
+    "p0_source_r2": 0.696940667811705,
+    "eta": 1.0,
+    "rho": 0.0,
+    "fallback_base": false,
+    "n_viable": 19,
+    "source_gain": 0.05580346763337968,
+    "source_se": 0.001648871003009089,
+    "source_r2": 0.7527441354450848
+   },
+   "and": {
+    "margin": 0.005,
+    "mode": "and",
+    "n_episodes": 2,
+    "p0_source_r2": 0.696940667811705,
+    "eta": 1.0,
+    "rho": 0.0,
+    "fallback_base": false,
+    "n_viable": 19,
+    "source_gain": 0.05580346763337968,
+    "source_se": 0.001648871003009089,
+    "source_r2": 0.7527441354450848
+   },
+   "n_episodes": 2,
+   "sessions": [
+    "20140307"
+   ]
+  },
+  "8": {
+   "or": {
+    "margin": 0.005,
+    "mode": "or",
+    "n_episodes": 2,
+    "p0_source_r2": 0.7367684436676496,
+    "eta": 0.3,
+    "rho": 0.0,
+    "fallback_base": false,
+    "n_viable": 13,
+    "source_gain": 0.02694819988352476,
+    "source_se": 0.0031240953914333787,
+    "source_r2": 0.7637166435511744
+   },
+   "and": {
+    "margin": 0.005,
+    "mode": "and",
+    "n_episodes": 2,
+    "p0_source_r2": 0.7367684436676496,
+    "eta": 0.3,
+    "rho": 0.0,
+    "fallback_base": false,
+    "n_viable": 10,
+    "source_gain": 0.02694819988352476,
+    "source_se": 0.0031240953914333787,
+    "source_r2": 0.7637166435511744
+   },
+   "n_episodes": 2,
+   "sessions": [
+    "20140307"
+   ]
+  },
+  "16": {
+   "or": {
+    "margin": 0.005,
+    "mode": "or",
+    "n_episodes": 2,
+    "p0_source_r2": 0.7400334978999357,
+    "eta": 3.0,
+    "rho": 0.3,
+    "fallback_base": false,
+    "n_viable": 19,
+    "source_gain": 0.03677676387718248,
+    "source_se": 0.009781572735711395,
+    "source_r2": 0.7768102617771182
+   },
+   "and": {
+    "margin": 0.005,
+    "mode": "and",
+    "n_episodes": 2,
+    "p0_source_r2": 0.7400334978999357,
+    "eta": 3.0,
+    "rho": 0.3,
+    "fallback_base": false,
+    "n_viable": 17,
+    "source_gain": 0.03677676387718248,
+    "source_se": 0.009781572735711395,
+    "source_r2": 0.7768102617771182
+   },
+   "n_episodes": 2,
+   "sessions": [
+    "20140307"
+   ]
+  },
+  "33": {
+   "or": {
+    "margin": 0.005,
+    "mode": "or",
+    "n_episodes": 2,
+    "p0_source_r2": 0.7422580369009817,
+    "eta": 0.3,
+    "rho": 0.03,
+    "fallback_base": false,
+    "n_viable": 13,
+    "source_gain": 0.026707977983170206,
+    "source_se": 0.007976888286744643,
+    "source_r2": 0.768966014884152
+   },
+   "and": {
+    "margin": 0.005,
+    "mode": "and",
+    "n_episodes": 2,
+    "p0_source_r2": 0.7422580369009817,
+    "eta": 0.3,
+    "rho": 0.03,
+    "fallback_base": false,
+    "n_viable": 11,
+    "source_gain": 0.026707977983170206,
+    "source_se": 0.007976888286744643,
+    "source_r2": 0.768966014884152
+   },
+   "n_episodes": 2,
+   "sessions": [
+    "20140307"
+   ]
+  }
+ },
+ "protocol": "causal_first_B",
+ "tag": "month",
+ "what": "s1"
+}

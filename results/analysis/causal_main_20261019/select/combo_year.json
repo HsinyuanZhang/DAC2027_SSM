@@ -1,0 +1,217 @@
+{
+ "b": {
+  "1": {
+   "or": {
+    "margin": 0.005,
+    "mode": "or",
+    "n_episodes": 8,
+    "p0_source_r2": 0.29349033142865605,
+    "eta": 3.0,
+    "rho": 0.0,
+    "fallback_base": false,
+    "n_viable": 10,
+    "source_gain": 0.01666089384221764,
+    "source_se": 0.01905139713792258,
+    "source_r2": 0.3101512252708737
+   },
+   "and": {
+    "margin": 0.005,
+    "mode": "and",
+    "n_episodes": 8,
+    "p0_source_r2": 0.29349033142865605,
+    "eta": 0.0,
+    "rho": 0.0,
+    "fallback_base": true,
+    "n_viable": 0,
+    "source_gain": 0.0,
+    "source_se": null,
+    "best_rejected_gain": 0.01666089384221764
+   },
+   "n_episodes": 8,
+   "sessions": [
+    "20140307",
+    "20140627",
+    "20140929",
+    "20141203"
+   ]
+  },
+  "2": {
+   "or": {
+    "margin": 0.005,
+    "mode": "or",
+    "n_episodes": 8,
+    "p0_source_r2": 0.3123940595202136,
+    "eta": 3.0,
+    "rho": 0.1,
+    "fallback_base": false,
+    "n_viable": 15,
+    "source_gain": 0.026338859918622684,
+    "source_se": 0.025554360408957328,
+    "source_r2": 0.33873291943883627
+   },
+   "and": {
+    "margin": 0.005,
+    "mode": "and",
+    "n_episodes": 8,
+    "p0_source_r2": 0.3123940595202136,
+    "eta": 0.0,
+    "rho": 0.0,
+    "fallback_base": true,
+    "n_viable": 0,
+    "source_gain": 0.0,
+    "source_se": null,
+    "best_rejected_gain": 0.026338859918622684
+   },
+   "n_episodes": 8,
+   "sessions": [
+    "20140307",
+    "20140627",
+    "20140929",
+    "20141203"
+   ]
+  },
+  "4": {
+   "or": {
+    "margin": 0.005,
+    "mode": "or",
+    "n_episodes": 8,
+    "p0_source_r2": 0.3505385121935712,
+    "eta": 1.0,
+    "rho": 0.0,
+    "fallback_base": false,
+    "n_viable": 20,
+    "source_gain": 0.07588958245654656,
+    "source_se": 0.03956651377243246,
+    "source_r2": 0.4264280946501178
+   },
+   "and": {
+    "margin": 0.005,
+    "mode": "and",
+    "n_episodes": 8,
+    "p0_source_r2": 0.3505385121935712,
+    "eta": 0.0,
+    "rho": 0.0,
+    "fallback_base": true,
+    "n_viable": 0,
+    "source_gain": 0.0,
+    "source_se": null,
+    "best_rejected_gain": 0.07588958245654656
+   },
+   "n_episodes": 8,
+   "sessions": [
+    "20140307",
+    "20140627",
+    "20140929",
+    "20141203"
+   ]
+  },
+  "8": {
+   "or": {
+    "margin": 0.005,
+    "mode": "or",
+    "n_episodes": 8,
+    "p0_source_r2": 0.37530666290342596,
+    "eta": 1.0,
+    "rho": 0.1,
+    "fallback_base": false,
+    "n_viable": 22,
+    "source_gain": 0.20014532145466946,
+    "source_se": 0.04584600488430935,
+    "source_r2": 0.5754519843580954
+   },
+   "and": {
+    "margin": 0.005,
+    "mode": "and",
+    "n_episodes": 8,
+    "p0_source_r2": 0.37530666290342596,
+    "eta": 1.0,
+    "rho": 0.1,
+    "fallback_base": false,
+    "n_viable": 20,
+    "source_gain": 0.20014532145466946,
+    "source_se": 0.04584600488430935,
+    "source_r2": 0.5754519843580954
+   },
+   "n_episodes": 8,
+   "sessions": [
+    "20140307",
+    "20140627",
+    "20140929",
+    "20141203"
+   ]
+  },
+  "16": {
+   "or": {
+    "margin": 0.005,
+    "mode": "or",
+    "n_episodes": 8,
+    "p0_source_r2": 0.3780564752514798,
+    "eta": 1.0,
+    "rho": 0.1,
+    "fallback_base": false,
+    "n_viable": 21,
+    "source_gain": 0.2339607647658352,
+    "source_se": 0.0463397421429903,
+    "source_r2": 0.612017240017315
+   },
+   "and": {
+    "margin": 0.005,
+    "mode": "and",
+    "n_episodes": 8,
+    "p0_source_r2": 0.3780564752514798,
+    "eta": 1.0,
+    "rho": 0.1,
+    "fallback_base": false,
+    "n_viable": 21,
+    "source_gain": 0.2339607647658352,
+    "source_se": 0.0463397421429903,
+    "source_r2": 0.612017240017315
+   },
+   "n_episodes": 8,
+   "sessions": [
+    "20140307",
+    "20140627",
+    "20140929",
+    "20141203"
+   ]
+  },
+  "33": {
+   "or": {
+    "margin": 0.005,
+    "mode": "or",
+    "n_episodes": 8,
+    "p0_source_r2": 0.3802281240606523,
+    "eta": 1.0,
+    "rho": 0.1,
+    "fallback_base": false,
+    "n_viable": 21,
+    "source_gain": 0.23881247245996912,
+    "source_se": 0.049867284036436275,
+    "source_r2": 0.6190405965206214
+   },
+   "and": {
+    "margin": 0.005,
+    "mode": "and",
+    "n_episodes": 8,
+    "p0_source_r2": 0.3802281240606523,
+    "eta": 1.0,
+    "rho": 0.1,
+    "fallback_base": false,
+    "n_viable": 18,
+    "source_gain": 0.23881247245996912,
+    "source_se": 0.049867284036436275,
+    "source_r2": 0.6190405965206214
+   },
+   "n_episodes": 8,
+   "sessions": [
+    "20140307",
+    "20140627",
+    "20140929",
+    "20141203"
+   ]
+  }
+ },
+ "protocol": "causal_first_B",
+ "tag": "year",
+ "what": "combo"
+}

@@ -489,7 +489,8 @@ def _forward_biased(base, xz, table, bias, want_h=False):
 
 
 def rebased_feedback_loop(base, raw_trials, prior, eta, rho, prepare, *, mode="rebase", kind="fir",
-                          jbar=None, poles=None, coeff=None, n_lags=None, eps=EPS_Q):
+                          jbar=None, poles=None, coeff=None, n_lags=None, eps=EPS_Q, history=None,
+                          base_bias=None):
     """S1 with the correction stored separately from P0.
 
     ``mode='rebase'`` (strict prefix): trial k>0 is forwarded as P0 of trials < k plus
@@ -529,7 +530,14 @@ def rebased_feedback_loop(base, raw_trials, prior, eta, rho, prepare, *, mode="r
                 d_use, b_use = shift_correction(delta, bias, coord[0], coord[1], mean, std)
             table = base_table + d_use
             xz = (x_raw - mean.to(dtype=x_raw.dtype)) / std.to(dtype=x_raw.dtype).clamp_min(1e-8)
-            yhat, h = _forward_biased(base, xz.unsqueeze(0), table, b_use, want_h=True)
+            # base_bias is part of the base map (W_alpha's CCA bias), not part of Delta.
+            # It is recomputed with the base; it is not shrunk and not stored in ``bias``.
+            b_forward = b_use
+            if base_bias is not None:
+                extra = base_bias(k, mode == "staged")
+                if extra is not None:
+                    b_forward = b_use + extra.to(dtype=b_use.dtype, device=b_use.device)
+            yhat, h = _forward_biased(base, xz.unsqueeze(0), table, b_forward, want_h=True)
             yhat, h = yhat[0], h[0]
             r = _residual(yhat, y.to(dtype=yhat.dtype), mask)
             if kind == "fir":
@@ -545,6 +553,18 @@ def rebased_feedback_loop(base, raw_trials, prior, eta, rho, prepare, *, mode="r
             bias = (1.0 - float(rho)) * b_c + float(eta) * b_s
             coord = (mean_a, std_a)
             p0_final = p0_a
+            if history is not None:
+                # Snapshot the table that is legal to install after trial k (prefix <= k).
+                # Cloning keeps a later in-loop rewrite from mutating the record.
+                history.append({
+                    "k": int(k),
+                    "table": (p0_a + delta).detach().clone(),
+                    "bias": bias.detach().clone(),
+                    "mean": mean_a.detach().clone(),
+                    "std": std_a.detach().clone(),
+                    "delta": delta.detach().clone(),
+                    "base": p0_a.detach().clone(),
+                })
     table = p0_final + delta
     return {"table": table, "bias": bias, "mean": coord[0], "std": coord[1], "delta": delta,
             "readout": readout}
