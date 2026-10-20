@@ -1,0 +1,41 @@
+% Datasets and protocol -- draft 2026-10-20. Fact sources: docs/paper/datasets_notes.md.
+\subsection{Datasets and Protocol}
+\label{sec:datasets}
+
+We use five public sources (Table~\ref{tab:datasets}).
+The main testbed is DANDI~000688~\cite{dandi000688,gallego2020stability}: sorted
+single units (a different set each session) from a 96-electrode M1 Utah array
+in two macaques performing center-out reaching, binned into 20\,ms spike
+counts and decoded to 2-D cursor velocity.
+For monkey~M (19 sessions, 2014--2015), a backbone trained on six sessions up
+to 2014-03-06 is tested time-forward on 12 later sessions 112--468 days out,
+and a second backbone serves two targets 1--2 days later. Its last three
+sessions were reserved as a held-out set and never used.
+Monkey~C repeats the setting with rolling six-session
+backbones at days (1--7\,d) and month (102--128\,d) gaps, 25 sessions in all;
+six sessions reserved as a held-out set were never used, nor were any 2016
+sessions.
+FALCON~M2~\cite{karpowicz2024falcon} (96 fixed channels, 2-D finger-group
+velocity) adds five targets 1--7 days after their sources; our $B$-trial
+protocol on this public data is not the official FALCON metric.
+Two surface-EMG sets are boundary cases with no stable channel identity,
+since electrodes are re-applied every session. % VERIFY: re-application is from the dataset protocols, not checked in the data
+Hyser~\cite{jiang2021hyser} has 256-channel HD-sEMG from 20 subjects in two
+sessions on different days, with 5-channel finger force during 1-DoF
+contractions. NinaPro DB6~\cite{palermo2017repeatability} has 14 channels from
+10 subjects over 5 days (two sessions per day) and 7 grasps plus rest,
+classified per bin and scored by balanced accuracy; days 1--2 are sources and
+days 3--5 targets. EMG is rectified, smoothed by a causal one-pole leaky
+integrator ($\tau = 80$\,ms for Hyser, applied to its released band-passed
+signals; 160\,ms for DB6) and sampled at 50\,Hz.
+
+Each target session offers $B$ labeled trials, $B \in \{1,2,4,8,16,33\}$
+($\{1,2,5,10\}$ for Hyser's 15-trial sessions, $B \le 16$ for DB6).
+The 000688 main results use \emph{causal-first-B}: calibration uses the first
+$B$ usable trials in recorded order, with prefix statistics and a table commit
+at the start of each following trial; the remaining trials are decoded
+contiguously and causally, without state resets, and $R^2$ is computed on them
+in physical units. M2, Hyser, DB6, and the monkey-C days targets currently use
+random balanced draws of $B$ trials (8 draws; 5 for DB6), scored on all
+non-calibration trials; Hyser trials are separate 25\,s recordings, each
+decoded from a zero state.

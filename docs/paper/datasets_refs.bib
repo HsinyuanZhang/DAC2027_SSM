@@ -1,0 +1,67 @@
+% Dataset references for the Datasets section -- draft 2026-10-20.
+% Verification status per entry is in docs/paper/datasets_notes.md.
+% (BibTeX ignores text outside entries; never put an at-sign in these comment lines.)
+
+% DANDI 000688: dandiset id and version from the local download manifest
+% (SPINT/sua_exploration/data/dandi_000688/manifest.json: version 0.250122.1735).
+% VERIFY: DOI string follows the standard DANDI pattern (10.48324/dandi.<id>/<version>);
+% VERIFY: dandiset title and contributor list were not available offline.
+@misc{dandi000688,
+  author       = {{DANDI Archive}},
+  title        = {Dandiset 000688 (version 0.250122.1735)},
+  howpublished = {DANDI Archive},
+  year         = {2025},
+  doi          = {10.48324/dandi.000688/0.250122.1735}
+}
+
+% DOI 10.1038/s41593-019-0555-4 is listed in general/related_publications of the
+% 000688 NWB files (sub-M and sub-C). VERIFY: author list, volume, pages (from memory).
+@article{gallego2020stability,
+  author  = {Gallego, Juan A. and Perich, Matthew G. and Chowdhury, Raeed H. and
+             Solla, Sara A. and Miller, Lee E.},
+  title   = {Long-term stability of cortical population dynamics underlying
+             consistent behavior},
+  journal = {Nature Neuroscience},
+  volume  = {23},
+  number  = {2},
+  pages   = {260--270},
+  year    = {2020},
+  doi     = {10.1038/s41593-019-0555-4}
+}
+
+% Title, venue and lead authors given in the task brief. VERIFY: full author list.
+@inproceedings{karpowicz2024falcon,
+  author    = {Karpowicz, Brianna M. and Ye, Joel and Fan, Chaofei and
+               Tostado-Marcos, Pablo and Rizzoglio, Fabio and others},
+  title     = {Few-shot Algorithms for Consistent Neural Decoding ({FALCON})
+               Benchmark},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS),
+               Datasets and Benchmarks Track},
+  year      = {2024}
+}
+
+% Journal, year and DOI given in the task brief. VERIFY: exact title, co-authors, pages.
+@article{jiang2021hyser,
+  author  = {Jiang, Xinyu and Liu, Xiangyu and Fan, Jiahao and Ye, Xinming and
+             Dai, Chenyun and Clancy, Edward A. and Akay, Metin and Chen, Wei},
+  title   = {Open Access Dataset, Toolbox and Benchmark Processing Results of
+             High-Density Surface Electromyogram Recordings},
+  journal = {IEEE Transactions on Neural Systems and Rehabilitation Engineering},
+  volume  = {29},
+  pages   = {1035--1046},
+  year    = {2021},
+  doi     = {10.1109/TNSRE.2021.3082551}
+}
+
+% No local metadata (the DB6 .mat files and download script carry no citation).
+% VERIFY: entire entry (authors, pages, DOI) is from memory.
+@inproceedings{palermo2017repeatability,
+  author    = {Palermo, Francesca and Cognolato, Matteo and Gijsberts, Arjan and
+               M{\"u}ller, Henning and Caputo, Barbara and Atzori, Manfredo},
+  title     = {Repeatability of grasp recognition for robotic hand prosthesis
+               control based on {sEMG} data},
+  booktitle = {Proc. International Conference on Rehabilitation Robotics (ICORR)},
+  pages     = {1154--1159},
+  year      = {2017},
+  doi       = {10.1109/ICORR.2017.8009405}
+}

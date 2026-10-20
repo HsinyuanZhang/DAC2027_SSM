@@ -1,0 +1,27 @@
+% Datasets table -- draft 2026-10-20. Fact sources: docs/paper/datasets_notes.md.
+% Requires booktabs. Single-column float.
+\begin{table}[t]
+\caption{Data sources. Gap: days from the latest source session to a target.
+DB6: NinaPro DB6. Protocol: CF-B = causal-first-B, RD = random balanced draws.}
+\label{tab:datasets}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{@{}llclll@{}}
+\toprule
+Source & Input & Subj./sess. & Output & Gap & Prot., $B$ \\
+\midrule
+000688 M  & 10--52 M1 units & 1/19  & cursor vel.  & 1--468\,d & CF-B, 1--33 \\
+000688 C  & 38--91 M1 units & 1/25  & cursor vel.  & 1--128\,d & CF-B$^{a}$, 1--33 \\
+FALCON M2 & 96 fixed ch.    & 1/7   & finger vel.  & 1--7\,d   & RD, 1--33 \\
+Hyser     & 256 HD-sEMG     & 20/40 & finger force & 2nd day   & RD, 1--10 \\
+DB6       & 14 sEMG         & 10/99 & grasp class  & day 3--5$^{b}$ & RD, 1--16 \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+\parbox{\columnwidth}{\scriptsize
+$^{a}$Month targets (two backbones, six targets each, $B \ne 2$); days targets use RD.
+$^{b}$Sources are days 1--2. Velocities are 2-D; Hyser force has 5 channels;
+DB6 has 8 classes (7 grasps + rest), scored by balanced accuracy.}
+\end{table}
