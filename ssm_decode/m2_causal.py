@@ -85,6 +85,20 @@ POOL_TRUNK = {
 }
 # Held-in D2 targets.  Dates, matching the 000688 strict filter (a date, not a run id).
 REPORTED_DATES = frozenset({"20201020", "20201027", "20201028"})
+# Latest source of each trunk.  It is the CCA reference day.  Its own validation tail
+# is inside the anchor fit, so it does not also vote on α / CCA config / CCA+S1.
+ANCHOR_SESSION = {
+    "pool1": "2020-10-19-Run2",
+    "pool2": "2020-10-20-Run2",
+    "pool3": "2020-10-27-Run2",
+}
+# Sessions a trunk has not trained on, scored as causal-first-B episodes so a later
+# target can use them.  pool1's 10-20 runs vote for 10-27 and 10-28; pool2's 10-27
+# runs vote for 10-28.
+UNSEEN_SESSIONS = {
+    "pool1": ("2020-10-20-Run1", "2020-10-20-Run2"),
+    "pool2": ("2020-10-27-Run1", "2020-10-27-Run2"),
+}
 POOL_OF_TARGET = {
     "2020-10-20-Run1": "pool1", "2020-10-20-Run2": "pool1",
     "2020-10-27-Run1": "pool2", "2020-10-27-Run2": "pool2",
@@ -113,7 +127,7 @@ def target_gaps(pool: str, target: str) -> dict:
     """Days from the latest trunk-training date, and from the latest source date."""
     src = POOL_TRUNK[pool]["sources"]
     latest_src = max(src, key=ymd_date)
-    g_trunk = days_between(target, "x" * 0 + _date_session(POOL_TRUNK[pool]["last"]))
+    g_trunk = days_between(target, _date_session(POOL_TRUNK[pool]["last"]))
     g_src = days_between(target, latest_src)
     return {"gap_days_trunk": int(g_trunk), "gap_days_source": int(g_src),
             "trunk_last": POOL_TRUNK[pool]["last"], "latest_source": latest_src,
@@ -474,10 +488,15 @@ def _loop_base_bias(cache, cseed, kind, alpha, prior_b, device):
     return base_bias
 
 
-def rebased_maps(base, sd, prior_table, cache, cseed, B, *, eta, rho, jbar, alpha, kind, prior_b):
-    """Anytime commits of S1 / COMBO / CCA+S1.  eta = rho = 0 returns the base maps."""
+def rebased_maps(base, sd, prior_table, cache, cseed, B, *, eta, rho, jbar, alpha, kind, prior_b,
+                 force_loop: bool = False):
+    """Anytime commits of S1 / COMBO / CCA+S1.  eta = rho = 0 returns the base maps.
+
+    ``force_loop`` still runs the rebased loop at eta = rho = 0.  The short-circuit is the
+    deployed path; the loop must return the same table (the identity test).
+    """
     device = prior_table.device
-    if float(eta) == 0.0 and float(rho) == 0.0:
+    if float(eta) == 0.0 and float(rho) == 0.0 and not force_loop:
         maps = {}
         for k in range(1, B + 1):
             if kind == "p0":
@@ -759,33 +778,48 @@ def decode_jobs(caller_nobias: LatentTrunk, sd, label_stats, jobs, *, chunk: int
     return scores
 
 
-def episode_allowed(row: dict, target_date: str, pool: str, variant: str) -> bool:
-    """Same rule as ``causal_protocol.alpha_episode_allowed``, with M2 session ids.
+def episode_allowed(row: dict, target_date: str, pool: str, variant: str, *,
+                    drop_anchor: bool = False) -> bool:
+    """000688 ``alpha_episode_allowed``, with M2 session ids.
 
-    M2 ids are ``YYYY-MM-DD-RunN``, so the 000688 ``session[-8:]`` slice does not apply.
+    ``pooled`` (primary, also accepted as ``expanding``): any episode whose session and
+    whose trunk both predate the target.  A pool1-trunk episode on 10-20 may vote for a
+    10-27 target.  ``in_pool`` is the narrower sensitivity (only that target's trunk).
+    ``strict`` is pooled plus the reported-target filter.
+
+    ``drop_anchor`` removes the CCA reference session of the trunk that scored the episode.
+    That session's validation tail is inside ``fit_anchor``, so it cannot also vote.
+    Trunk-unseen episodes are not that reference day.
     """
-    if variant not in ("expanding", "strict"):
+    if variant not in ("pooled", "expanding", "in_pool", "strict"):
         raise ValueError(variant)
-    if str(row["pool"]) != pool:
+    trunk = str(row["pool"])
+    if variant == "in_pool" and trunk != pool:
         return False
+    if drop_anchor and str(row.get("kind", "source")) != "unseen":
+        if str(row["session"]) == ANCHOR_SESSION[trunk]:
+            return False
     date = str(row["date"])
-    last = POOL_TRUNK[pool]["last"]
+    last = POOL_TRUNK[trunk]["last"]
     if date >= target_date or last >= target_date:
         return False
     if variant == "strict":
         if date in REPORTED_DATES:
             return False
-        if set(POOL_TRUNK[pool]["train"]) & set(REPORTED_DATES):
+        if set(POOL_TRUNK[trunk]["train"]) & set(REPORTED_DATES):
             return False
     return True
 
 
-def select_alpha_m2(episodes, pool: str, target: str, B: int, variant: str) -> dict:
-    """α for one M2 target from the episodes protocol ``variant`` allows in this pool."""
+def select_alpha_m2(episodes, pool: str, target: str, B: int, variant: str, *,
+                    drop_anchor: bool = False) -> dict:
+    """α for one M2 target.  Episodes are binned by the gap they were scored under."""
     want_gap = days_between(target, _date_session(POOL_TRUNK[pool]["last"]))
     want = gap_bin_name(int(want_gap))
     target_date = ymd(target)
-    pool_eps = [r for r in episodes if episode_allowed(r, target_date, pool, variant) and int(r["B"]) == int(B)]
+    pool_eps = [r for r in episodes
+                if episode_allowed(r, target_date, pool, variant, drop_anchor=drop_anchor)
+                and int(r["B"]) == int(B)]
     bins = {}
     for r in pool_eps:
         bins.setdefault(gap_bin_name(int(r["gap_days"])), []).append(r)
@@ -807,6 +841,8 @@ def select_alpha_m2(episodes, pool: str, target: str, B: int, variant: str) -> d
     return {"alpha": float(winner), "source_r2": means[winner], "bin": want, "bin_used": used,
             "fallback_from": fell, "n_episodes": len(group), "sessions": sessions,
             "seeds": sorted({int(r["seed"]) for r in group if "seed" in r}),
+            "trunks": sorted({str(r["pool"]) for r in group}),
+            "drop_anchor": bool(drop_anchor),
             "variant": variant, "pool": pool, "gap_days_trunk": int(want_gap)}
 
 
@@ -949,6 +985,23 @@ def jbar_from(blob: dict, lmax: int, *, exclude: str | None = None, device=None)
     return j
 
 
+def session_gate_for(episodes, eta: float, rho: float, base_key: str) -> dict:
+    """Conservative ≥2-session gate.
+
+    η = ρ = 0 is the base map.  Its scored R² differs from the base by float noise, which
+    must not be counted as a positive session (and must not set ``deploy``).
+    """
+    info = sessions_with_positive_gain(episodes, "rebase", float(eta), float(rho), base_key=base_key)
+    if abs(float(eta)) < 1e-12 and abs(float(rho)) < 1e-12:
+        return {**info, "n_positive_sessions": 0, "positive_sessions": [], "deploy": False,
+                "session_gain": {s: 0.0 for s in info.get("session_gain", {})},
+                "note": "eta=rho=0 is the base; float noise is not a positive gain"}
+    means = info.get("session_gain") or {}
+    positive = sorted(s for s, m in means.items() if float(m) > 1e-4)
+    return {**info, "positive_sessions": positive, "n_positive_sessions": len(positive),
+            "deploy": len(positive) >= 2}
+
+
 def margin_rules(episodes: list[dict], base_key: str) -> dict:
     """AND (primary) and OR, plus the conservative two-session gate on the AND pick."""
     from ssm_decode.causal_protocol import margin_pick
@@ -963,8 +1016,7 @@ def margin_rules(episodes: list[dict], base_key: str) -> dict:
             "and": margin_pick(group, "rebase", eta_r2, mode="and", base_key=base_key),
         }
         for gate, spec in chosen.items():
-            spec["session_gate"] = sessions_with_positive_gain(
-                group, "rebase", spec["eta"], spec["rho"], base_key=base_key)
+            spec["session_gate"] = session_gate_for(group, spec["eta"], spec["rho"], base_key)
         out["b"][str(B)] = {**chosen, "n_episodes": len(group),
                             "sessions": sorted({g["session"] for g in group})}
     return out

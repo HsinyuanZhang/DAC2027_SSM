@@ -91,6 +91,37 @@ def main():
     pd.DataFrame(per_target).to_csv(OUT / "per_target.csv", index=False)
     pd.DataFrame(per_pool).to_csv(OUT / "per_pool.csv", index=False)
 
+    # Paired differences at the pool (n = 3).  Within a pool, average targets, calibrators
+    # and backbone seeds first; the interval is across the three trunks.  No multiplicity
+    # correction across budgets × methods.
+    paired = []
+    base_methods = ("p0", "p_prior")
+    raw = lat0[~lat0.unavailable.fillna(False)].copy()
+    # one number per (method, B, pool, seed): mean over targets and calibrator seeds
+    cell = (raw.groupby(["method", "B", "pool", "seed"], as_index=False).r2.mean())
+    for method in sorted(cell.method.unique()):
+        if method in base_methods:
+            continue
+        for B in sorted(cell.B.unique()):
+            for base in base_methods:
+                a = cell[(cell.method == method) & (cell.B == B)].set_index(["pool", "seed"]).r2
+                b = cell[(cell.method == base) & (cell.B == B)].set_index(["pool", "seed"]).r2
+                common = a.index.intersection(b.index)
+                if len(common) == 0:
+                    continue
+                d = (a.loc[common] - b.loc[common]).astype(float)
+                # mean over seeds inside each pool, then across pools
+                by_pool = d.groupby(level=0).mean()
+                stat = _ci(by_pool.values)
+                row = {"method": method, "baseline": base, "B": int(B),
+                       "pool_mean": stat["mean"], "pool_ci95": stat["ci"], "n_pools": stat["n"],
+                       "n_pos_pools": int((by_pool > 1e-6).sum()),
+                       "note": "no multiplicity control across 6 budgets x methods"}
+                for pool, val in by_pool.items():
+                    row[f"d_{pool}"] = float(val)
+                paired.append(row)
+    pd.DataFrame(paired).to_csv(OUT / "paired_pool.csv", index=False)
+
     # Gate sensitivity on the target means.
     gate_rows = []
     pt = pd.DataFrame(per_target)
@@ -113,22 +144,33 @@ def main():
     # Map stored variant -> causal method.  ui_reg (prior init) compares to ui_reg_legacy.
     mapping = {"p_prior": "p_prior", "p0": "p0", "p0_r1s_lr16": "r1_lr16", "ui_reg": "ui_reg_legacy"}
     deltas = []
+    # Causal rows at seed resolution (mean over calibrators already inside per_target, which
+    # averaged seeds).  Rebuild from raw so the seed set matches the random-draw side.
+    causal_cell = (raw.groupby(["method", "B", "seed", "target"], as_index=False).r2.mean())
     for variant, method in mapping.items():
         sub = rnd[rnd.variant == variant]
         for B, g in sub.groupby("B"):
-            # draw/cseed mean inside (seed, target), then target mean of seed means
-            cell = g.groupby(["seed", "target"]).r2.mean().reset_index()
-            by_t = cell.groupby("target").r2.mean()
-            causal = pt[(pt.method == method) & (pt.B == int(B))].set_index("target").r2
-            common = by_t.index.intersection(causal.index)
+            rnd_cell = g.groupby(["seed", "target"]).r2.mean().reset_index()
+            seeds = sorted(set(rnd_cell.seed.astype(int)))
+            cau = causal_cell[(causal_cell.method == method) & (causal_cell.B == int(B))
+                              & (causal_cell.seed.isin(seeds))]
+            if cau.empty:
+                continue
+            # same seeds on both sides, then mean over seeds inside each target
+            rnd_m = rnd_cell[rnd_cell.seed.isin(seeds)].groupby("target").r2.mean()
+            cau_m = cau.groupby("target").r2.mean()
+            common = rnd_m.index.intersection(cau_m.index)
             if len(common) == 0:
                 continue
-            d = causal.loc[common] - by_t.loc[common]
+            d = cau_m.loc[common] - rnd_m.loc[common]
             deltas.append({"variant": variant, "method": method, "B": int(B),
-                           "random_mean": float(by_t.loc[common].mean()),
-                           "causal_mean": float(causal.loc[common].mean()),
+                           "random_mean": float(rnd_m.loc[common].mean()),
+                           "causal_mean": float(cau_m.loc[common].mean()),
                            "delta": float(d.mean()), "n_targets": int(len(common)),
-                           "n_seeds_random": int(cell.seed.nunique())})
+                           "seeds": ",".join(str(s) for s in seeds),
+                           "n_seeds": len(seeds),
+                           "query_note": "random-draw query includes early trials; "
+                                         "causal query is only trials after the first B"})
     pd.DataFrame(deltas).to_csv(OUT / "protocol_deltas.csv", index=False)
 
     # Latency 1 minus latency 0, target means.

@@ -52,6 +52,25 @@ def test_shrink_keeps_the_frozen_bias_outside_alpha():
     assert np.allclose(w, w0) and np.allclose(prior + b_shrink, prior)
 
 
+def test_session_gate_ignores_float_noise_at_the_zero_step():
+    episodes = [{"session": "a", "rebase": [{"eta": 0.0, "rho": 0.0, "r2": 0.5000001}], "p0": 0.5},
+                {"session": "b", "rebase": [{"eta": 0.0, "rho": 0.0, "r2": 0.5000002}], "p0": 0.5}]
+    gate = mc.session_gate_for(episodes, 0.0, 0.0, "p0")
+    assert gate["deploy"] is False
+    assert gate["n_positive_sessions"] == 0
+
+
+def test_pooled_rule_lets_an_earlier_trunk_vote():
+    def ep(pool, session, r_at_025):
+        return {"pool": pool, "session": session, "date": mc.ymd(session), "B": 16, "gap_days": 1,
+                "kind": "unseen", "alphas": [{"alpha": a, "r2": (0.2 if a == 0 else r_at_025)} for a in mc.ALPHAS]}
+    rows = [ep("pool1", "2020-10-20-Run1", 0.4), ep("pool1", "2020-10-20-Run2", 0.4)]
+    pooled = mc.select_alpha_m2(rows, "pool2", "2020-10-27-Run1", 16, "pooled")
+    inside = mc.select_alpha_m2(rows, "pool2", "2020-10-27-Run1", 16, "in_pool")
+    assert pooled["alpha"] == 0.25
+    assert inside["alpha"] is None
+
+
 def test_strict_protocol_drops_a_trunk_trained_on_a_reported_target():
     def ep(session, gap, r2s):
         return {"pool": "pool2", "session": session, "date": mc.ymd(session), "B": 8,
@@ -151,25 +170,38 @@ def test_first_b_maps_keep_the_bias_and_ignore_the_future():
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="cuda")
 def test_static_decode_matches_stored_random_draw_p0():
-    """Same trials as a stored random-draw row.  The adapter's static decode, bias included."""
-    dev = torch.device("cuda:0")
-    world = m2.M2World(0, "pool1", dev, load_sources=False)
-    calibs = mc.load_calibrators(world, 0, "pool1")
-    sd, prior = world.target("2020-10-20-Run1")
-    assert sd.bank.n_trials == 230
-    B, draw = 8, 0
-    idx = m2.draw_trials("2020-10-20-Run1", B, draw, sd.bank.n_trials)
+    """Same trials as stored random-draw P0 rows, across seeds and pools."""
+    import pandas as pd
     from ssm_decode.population_calib import PopStats
-    res = calibs[0].calibrate(PopStats.from_trials(sd.bank, idx), prior[0])
-    q = sd.query_mask(idx)
-    caller = mc.LatentTrunk(world.trunk.model, None)
-    got = mc.score_static(caller, sd, world.label_stats, mc._as_np(res.table), mc._as_np(prior[1]),
-                          mc._as_np(res.mean), mc._as_np(res.std), q)
-    y = m2.decode_full(world.trunk, sd, res.table, prior[1], res.mean, res.std)
-    ref = m2.r2_physical(world.label_stats, sd, y, q)[0]
-    assert abs(got - ref) < 1e-5
-    stored = 0.189595466175422
-    assert abs(got - stored) < 1e-3, got
+    stored = pd.read_csv("results/analysis/m2_calib_20261016/all_rows.csv.gz")
+    stored = stored[stored.variant == "p0"]
+    # The known row, plus two draws from every (seed, pool): 1 + 18.
+    pinned = stored[(stored.seed == 0) & (stored.pool == "pool1") & (stored.cseed == 0)
+                    & (stored.target == "2020-10-20-Run1") & (stored.B == 8) & (stored.draw == 0)]
+    extra = stored.groupby(["seed", "pool"]).apply(
+        lambda g: g.sample(2, random_state=0), include_groups=False).reset_index()
+    # groupby.apply may or may not keep grouping columns depending on pandas.
+    if "seed" not in extra.columns:
+        extra = stored.groupby(["seed", "pool"], group_keys=False).apply(
+            lambda g: g.sample(2, random_state=0)).reset_index(drop=True)
+    rows = pd.concat([pinned, extra], ignore_index=True).drop_duplicates(
+        ["seed", "pool", "cseed", "target", "B", "draw"])
+    dev = torch.device("cuda:0")
+    worst = 0.0
+    for (seed, pool), g in rows.groupby(["seed", "pool"]):
+        world = m2.M2World(int(seed), pool, dev, load_sources=False)
+        calibs = mc.load_calibrators(world, int(seed), pool)
+        caller = mc.LatentTrunk(world.trunk.model, None)
+        for _, row in g.iterrows():
+            sd, prior = world.target(row.target)
+            idx = m2.draw_trials(row.target, int(row.B), int(row.draw), sd.bank.n_trials)
+            res = calibs[int(row.cseed)].calibrate(PopStats.from_trials(sd.bank, idx), prior[0])
+            got = mc.score_static(caller, sd, world.label_stats, mc._as_np(res.table), mc._as_np(prior[1]),
+                                  mc._as_np(res.mean), mc._as_np(res.std), sd.query_mask(idx))
+            worst = max(worst, abs(got - float(row.r2)))
+        del world
+        torch.cuda.empty_cache()
+    assert worst < 1e-3, worst
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="cuda")
@@ -196,28 +228,40 @@ def test_s1_loop_prefix_causality_at_b8():
     def maps_of(session):
         cache = mc.prefix_cache(session, prior_t, prior_b, calibs, B, conds, ref, ridge=10.0, phases=10)
         cold, initial = mc.cold_initial(mc._as_np(prior_t), prior_b, cache)
+        out = {}
         body, info = mc.rebased_maps(caller, session, prior_t, cache, 0, B, eta=1.0, rho=0.0, jbar=jbar,
                                      alpha=0.0, kind="p0", prior_b=prior_b)
         assert info["fallback_base"] is False
         body[COLD], body[INITIAL] = cold, initial
-        # eta = 0 reproduces P0, bias included.
-        base, info0 = mc.rebased_maps(caller, session, prior_t, cache, 0, B, eta=0.0, rho=0.0, jbar=jbar,
-                                      alpha=0.0, kind="p0", prior_b=prior_b)
+        out["s1"] = body
+        # eta = 0 through the loop, not the short-circuit, reproduces P0 including bias.
+        loop0, info0 = mc.rebased_maps(caller, session, prior_t, cache, 0, B, eta=0.0, rho=0.0, jbar=jbar,
+                                       alpha=0.0, kind="p0", prior_b=prior_b, force_loop=True)
+        assert info0["fallback_base"] is False
         p0 = mc.p0_maps(cache, 0, B, prior_b, cold, initial)
-        assert np.allclose(base[B].weight, p0[B].weight, atol=1e-5)
-        assert np.allclose(base[B].bias, p0[B].bias, atol=1e-5)
-        return body
+        assert np.allclose(loop0[B].weight, p0[B].weight, atol=1e-5)
+        assert np.allclose(loop0[B].bias, p0[B].bias, atol=1e-5)
+        combo, _ = mc.rebased_maps(caller, session, prior_t, cache, 0, B, eta=1.0, rho=0.0, jbar=jbar,
+                                   alpha=0.5, kind="w_alpha", prior_b=prior_b)
+        combo[COLD], combo[INITIAL] = cold, initial
+        out["combo"] = combo
+        cca_s, _ = mc.rebased_maps(caller, session, prior_t, cache, 0, B, eta=1.0, rho=0.0, jbar=jbar,
+                                   alpha=1.0, kind="cca", prior_b=prior_b)
+        cca_s[COLD], cca_s[INITIAL] = cold, initial
+        out["cca_s1"] = cca_s
+        return out
 
     spans = [(int(a), int(b)) for a, b in sd.trials]
     orig = maps_of(sd)
     query = maps_of(mc.corrupt_session(sd, world.label_stats, spans[B - 1][1]))
-    for k, amap in orig.items():
-        if k == COLD:
-            continue
-        assert mc.map_delta(amap, query[k]) < 1e-5, k
     prefix = maps_of(mc.corrupt_session(sd, world.label_stats, spans[J - 1][1], seed=3))
-    for k, amap in orig.items():
-        if k in (COLD, INITIAL) or (isinstance(k, int) and k > J):
-            continue
-        assert mc.map_delta(amap, prefix[k]) < 1e-5, k
-    assert mc.map_delta(orig[B], prefix[B]) > 1e-5
+    for name in ("s1", "combo", "cca_s1"):
+        for k, amap in orig[name].items():
+            if k == COLD:
+                continue
+            assert mc.map_delta(amap, query[name][k]) < 1e-5, (name, k)
+        for k, amap in orig[name].items():
+            if k in (COLD, INITIAL) or (isinstance(k, int) and k > J):
+                continue
+            assert mc.map_delta(amap, prefix[name][k]) < 1e-5, (name, k)
+        assert mc.map_delta(orig[name][B], prefix[name][B]) > 1e-5, name

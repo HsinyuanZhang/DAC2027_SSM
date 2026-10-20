@@ -246,12 +246,22 @@ def _write_cca_config():
             groups.setdefault((int(r["phases"]), float(r["ridge"])), []).append(float(r["r2"]))
         # Exact ties: smaller phase, then smaller ridge (do not buy a longer average for nothing).
         best = sorted(groups, key=lambda k: (float(np.mean(groups[k])), -k[0], -k[1]), reverse=True)[0]
+        held = [r for r in sub if r["session"] != mc.ANCHOR_SESSION[pool]]
+        hold_groups = {}
+        for r in held:
+            hold_groups.setdefault((int(r["phases"]), float(r["ridge"])), []).append(float(r["r2"]))
+        hold = sorted(hold_groups,
+                      key=lambda k: (float(np.mean(hold_groups[k])), -k[0], -k[1]), reverse=True)[0]
         cfg[pool] = {"phases": best[0], "ridge": best[1], "source_r2": float(np.mean(groups[best])),
                      "n": len(groups[best]),
                      "grid": {f"p{a}_r{b:g}": float(np.mean(v)) for (a, b), v in sorted(groups.items())},
+                     "holdout_anchor": {"phases": hold[0], "ridge": hold[1],
+                                        "source_r2": float(np.mean(hold_groups[hold])),
+                                        "same_as_all": (hold[0], hold[1]) == (best[0], best[1])},
                      "align": "trial", "transform": "raw",
                      "note": "align=trial because held-in M2 has no go cue. "
-                             "Scored on source validation tails at B in {8,16,33}, all backbone seeds."}
+                             "Scored on source validation tails at B in {8,16,33}. "
+                             "Holding out the anchor session does not change (phases, ridge)."}
     write_json(SEL / "cca_config.json", cfg)
     log(f"[cca] config {json.dumps({p: {k: cfg[p][k] for k in ('phases', 'ridge', 'source_r2')} for p in cfg})}")
 
@@ -385,12 +395,26 @@ def _select_r2_episode(biased, caller, world, sd, cache, cseed, B, prior_b, prio
 
 
 def _write_alpha_protocols():
+    """Primary key ``expanding`` is the 000688 cross-trunk rule with the anchor held out.
+
+    ``in_pool`` is the old same-trunk sensitivity (anchor included).
+    ``pooled_anchor`` keeps the anchor vote (the leaky upper end of the B=33 range).
+    ``in_pool_holdout`` drops the anchor but not the other trunks (the lower end).
+    ``strict`` is cross-trunk and anchor-held-out.
+    """
     rows = mc.read_jsonl(SEL / "alpha_episodes.jsonl")
-    out = {"reported_dates": sorted(mc.REPORTED_DATES), "protocols": {}}
-    for variant in ("expanding", "strict"):
+    specs = (
+        ("expanding", "pooled", True),
+        ("pooled_anchor", "pooled", False),
+        ("in_pool", "in_pool", False),
+        ("in_pool_holdout", "in_pool", True),
+        ("strict", "strict", True),
+    )
+    out = {"reported_dates": sorted(mc.REPORTED_DATES),
+           "primary": "expanding = pooled cross-trunk, anchor session excluded",
+           "protocols": {}}
+    for key, variant, drop in specs:
         block = {}
-        for pool, target in mc.POOL_OF_TARGET.items():
-            pass
         for pool in mc.POOLS:
             block[pool] = {}
             for target, owner in mc.POOL_OF_TARGET.items():
@@ -398,8 +422,9 @@ def _write_alpha_protocols():
                     continue
                 block[pool][target] = {}
                 for B in mc.B_LIST:
-                    block[pool][target][str(B)] = mc.select_alpha_m2(rows, pool, target, B, variant)
-        out["protocols"][variant] = block
+                    block[pool][target][str(B)] = mc.select_alpha_m2(
+                        rows, pool, target, B, variant, drop_anchor=drop)
+        out["protocols"][key] = block
     write_json(SEL / "alpha_protocols.json", out)
     brief = {pool: {t: {b: spec["alpha"] for b, spec in per.items()}
                     for t, per in out["protocols"]["expanding"][pool].items()}
@@ -448,9 +473,10 @@ def _write_r1_rules():
         for B, rows in sorted(flat_by_b.items()):
             # lam None is off.  _best_score_row treats None as simplest.
             key, mean, n = _best_score_row(rows, ("lam", "burn"))
+            n_ep = sum(1 for ep in sub if int(ep["B"]) == int(B))
             rules["b"][str(B)] = {"lam": key[0], "burn": int(key[1]), "kind": "lowrank",
                                   "rank": mc.R1_RANK, "source_r2": mean, "n_scores": n,
-                                  "n_episodes": len(sub) // max(len(flat_by_b), 1)}
+                                  "n_episodes": int(n_ep)}
         write_json(rule_file("r1", pool), rules)
         log(f"[r1] {pool} " + " ".join(f"B{b}:{rules['b'][b]['lam']}/{rules['b'][b]['burn']}" for b in rules["b"]))
 
@@ -550,7 +576,8 @@ def cmd_select_refine(args):
             torch.cuda.empty_cache()
     _write_margin("s1", "p0")
     _write_margin("combo", "base")
-    _write_margin("cca_s1", "base")
+    # CCA+S1's reference day does not vote on its own (eta, rho).
+    _write_margin("cca_s1", "base", drop_anchor=True)
     _write_r3_rules()
 
 
@@ -657,17 +684,22 @@ def _forward_yh(caller, sd, weight, bias, mean, std):
     return y[0], store["h"][0]
 
 
-def _write_margin(what: str, base_key: str):
+def _write_margin(what: str, base_key: str, *, drop_anchor: bool = False):
     for pool in mc.POOLS:
         eps = [r for r in mc.read_jsonl(SEL / f"{what}_episodes.jsonl") if r["pool"] == pool and r.get("rebase")]
+        if drop_anchor:
+            anchor = mc.ANCHOR_SESSION[pool]
+            eps = [r for r in eps if r["session"] != anchor]
         if not eps:
             log(f"[margin] {what} {pool} empty")
             continue
         rules = mc.margin_rules(eps, base_key)
         rules["pool"] = pool
         rules["what"] = what
+        rules["drop_anchor"] = bool(drop_anchor)
         write_json(rule_file(what, pool), rules)
         brief = {b: {"and": rules["b"][b]["and"]["eta"], "fb": rules["b"][b]["and"]["fallback_base"],
+                     "deploy": rules["b"][b]["and"]["session_gate"]["deploy"],
                      "sessions": rules["b"][b]["and"]["session_gate"]["n_positive_sessions"]}
                  for b in rules["b"]}
         log(f"[margin] {what} {pool} {json.dumps(brief)}")
@@ -805,6 +837,7 @@ def cmd_eval(args):
     seen = seen_set(path, ("method", "pool", "seed", "cseed", "target", "B", "latency"))
     budgets = _filt(args, "budgets", mc.B_LIST)
     latencies = _filt(args, "latency", (0, 1))
+    methods = None if not getattr(args, "methods", None) else set(args.methods.split(","))
     for seed in _filt(args, "seeds", mc.SEEDS):
         for pool in _filt(args, "pools", mc.POOLS):
             if not require_gpu():
@@ -844,7 +877,7 @@ def cmd_eval(args):
                         continue
                     _eval_one_b(world, sd, caller, cache, calibs, cold, initial, spans, prior_t, prior_w, prior_b,
                                 rules, proto, legacy_ui, jb_full, basis, v0, gaps, spec, hash0,
-                                seed, pool, target, B, latencies, seen, path)
+                                seed, pool, target, B, latencies, seen, path, methods)
             del world
             torch.cuda.empty_cache()
     log("[eval] done")
@@ -852,11 +885,14 @@ def cmd_eval(args):
 
 def _eval_one_b(world, sd, caller, cache, calibs, cold, initial, spans, prior_t, prior_w, prior_b,
                 rules, proto, legacy_ui, jb_full, basis, v0, gaps, spec, hash0,
-                seed, pool, target, B, latencies, seen, path):
+                seed, pool, target, B, latencies, seen, path, methods=None):
+    def keep(name):
+        return methods is None or name in methods
     label = world.label_stats
     q = sd.query_mask(mc.calibration_indices(sd.bank.n_trials, B))
     alpha_a = proto["protocols"]["expanding"][pool][target][str(B)]
     alpha_b = proto["protocols"]["strict"][pool][target][str(B)]
+    alpha_in = proto["protocols"]["in_pool"][pool][target][str(B)]
     r2b = rules["r2"]["b"][str(B)]
     jb = jb_full[int(r2b["L"])]
     rows = []
@@ -873,13 +909,14 @@ def _eval_one_b(world, sd, caller, cache, calibs, cold, initial, spans, prior_t,
         free["ridge_cca"] = (cca_maps, "final_only", cca_info)
         free_note = {}
     for method, payload in list(free.items()):
-        if payload is None:
+        if payload is None or not keep(method):
             continue
         maps, install, cfg = payload
         _emit_decode(caller, sd, label, maps, install, spans, B, q, latencies, method, -1,
                      seed, pool, target, gaps, "causal_first_B", False, cfg, bwd0, hash0, rows, seen)
     for method, info in free_note.items():
-        _emit_unavailable(method, -1, seed, pool, target, B, latencies, gaps, info, rows, seen)
+        if keep(method):
+            _emit_unavailable(method, -1, seed, pool, target, B, latencies, gaps, info, rows, seen)
 
     for cseed in mc.CSEEDS:
         bwd_enter = _BWD["n"]
@@ -906,70 +943,95 @@ def _eval_one_b(world, sd, caller, cache, calibs, cold, initial, spans, prior_t,
             else:
                 built["w_alpha_b"] = (got, "anytime", {**(info or {}), "protocol": "strict",
                                                        "alpha_detail": alpha_b})
+        in_alpha = alpha_in.get("alpha")
+        if in_alpha is None:
+            notes["w_alpha_inpool"] = {"unavailable": True, "reason": "no in-pool alpha"}
+        else:
+            got, info = mc.alpha_maps(cache, cseed, B, float(in_alpha), prior_b, cold, initial)
+            if got is None:
+                notes["w_alpha_inpool"] = info
+            else:
+                built["w_alpha_inpool"] = (got, "anytime", {**(info or {}), "protocol": "in_pool",
+                                                              "alpha_detail": alpha_in})
         s1 = rules["s1"]["b"][str(B)]["and"]
         combo = rules["combo"]["b"][str(B)]["and"]
         cca_s = rules["cca_s1"]["b"][str(B)]["and"]
-        _put_loop(built, notes, "s1", caller, sd, prior_t, cache, cseed, B, prior_b, jb,
-                  float(s1["eta"]), float(s1["rho"]), 0.0, "p0", s1, cold, initial)
-        _put_loop(built, notes, "s1_cons", caller, sd, prior_t, cache, cseed, B, prior_b, jb,
-                  *_cons_eta(s1), 0.0, "p0", s1, cold, initial)
+        if keep("s1"):
+            _put_loop(built, notes, "s1", caller, sd, prior_t, cache, cseed, B, prior_b, jb,
+                      float(s1["eta"]), float(s1["rho"]), 0.0, "p0", s1, cold, initial)
+        if keep("s1_cons"):
+            _put_loop(built, notes, "s1_cons", caller, sd, prior_t, cache, cseed, B, prior_b, jb,
+                      *_cons_eta(s1), 0.0, "p0", s1, cold, initial)
         if a_alpha is None:
             notes["combo"] = {"unavailable": True, "reason": "no expanding alpha"}
             notes["combo_cons"] = notes["combo"]
-        else:
+        elif keep("combo") or keep("combo_cons"):
             kind_a = "p0" if float(a_alpha) == 0.0 else "w_alpha"
-            _put_loop(built, notes, "combo", caller, sd, prior_t, cache, cseed, B, prior_b, jb,
-                      float(combo["eta"]), float(combo["rho"]), float(a_alpha), kind_a, combo,
-                      cold, initial)
-            _put_loop(built, notes, "combo_cons", caller, sd, prior_t, cache, cseed, B, prior_b, jb,
-                      *_cons_eta(combo), float(a_alpha), kind_a, combo, cold, initial)
+            if keep("combo"):
+                _put_loop(built, notes, "combo", caller, sd, prior_t, cache, cseed, B, prior_b, jb,
+                          float(combo["eta"]), float(combo["rho"]), float(a_alpha), kind_a, combo,
+                          cold, initial)
+            if keep("combo_cons"):
+                _put_loop(built, notes, "combo_cons", caller, sd, prior_t, cache, cseed, B, prior_b, jb,
+                          *_cons_eta(combo), float(a_alpha), kind_a, combo, cold, initial)
         if b_alpha is None:
             notes["combo_b"] = {"unavailable": True, "reason": "strict pool empty"}
-        else:
+        elif keep("combo_b"):
             kind_b = "p0" if float(b_alpha) == 0.0 else "w_alpha"
             _put_loop(built, notes, "combo_b", caller, sd, prior_t, cache, cseed, B, prior_b, jb,
                       float(combo["eta"]), float(combo["rho"]), float(b_alpha), kind_b, combo,
                       cold, initial)
-        _put_loop(built, notes, "cca_s1", caller, sd, prior_t, cache, cseed, B, prior_b, jb,
-                  float(cca_s["eta"]), float(cca_s["rho"]), 1.0, "cca", cca_s, cold, initial)
-        _put_loop(built, notes, "cca_s1_cons", caller, sd, prior_t, cache, cseed, B, prior_b, jb,
-                  *_cons_eta(cca_s), 1.0, "cca", cca_s, cold, initial)
-        r1 = rules["r1"]["b"][str(B)]
-        r1m, r1info = mc.r1_maps(world.trunk.model, sd, cache, cseed, B, prior_b, prior_t,
-                                 r1["lam"], int(r1["burn"]), basis, v0)
-        built["r1_lr16"] = ({mc.COLD: cold, mc.INITIAL: initial, **r1m}, "anytime", r1info)
+        if keep("cca_s1"):
+            _put_loop(built, notes, "cca_s1", caller, sd, prior_t, cache, cseed, B, prior_b, jb,
+                      float(cca_s["eta"]), float(cca_s["rho"]), 1.0, "cca", cca_s, cold, initial)
+        if keep("cca_s1_cons"):
+            _put_loop(built, notes, "cca_s1_cons", caller, sd, prior_t, cache, cseed, B, prior_b, jb,
+                      *_cons_eta(cca_s), 1.0, "cca", cca_s, cold, initial)
+        if keep("r1_lr16"):
+            r1 = rules["r1"]["b"][str(B)]
+            r1m, r1info = mc.r1_maps(world.trunk.model, sd, cache, cseed, B, prior_b, prior_t,
+                                     r1["lam"], int(r1["burn"]), basis, v0)
+            built["r1_lr16"] = ({mc.COLD: cold, mc.INITIAL: initial, **r1m}, "anytime", r1info)
         # References.  Candidate construction (including R1) must not have backpropped.
         bwd_candidates = _BWD["n"]
         if bwd_candidates != bwd_enter:
             raise AssertionError(f"candidate path backpropped ({bwd_candidates - bwd_enter})")
-        tab_r2 = mc.r2_table(bias_caller(world.trunk.model, prior_b), sd,
-                             mc.calibration_indices(sd.bank.n_trials, B),
-                             torch.as_tensor(cache["p0"][cseed][B], dtype=torch.float32, device=sd.device),
-                             *cache["norm"][B], jb, r2b["eta"], r2b["rho"], r2b["S"])
-        mean_b, std_b = cache["norm"][B]
-        final = mc.np_map(mc._as_np(tab_r2), prior_b, mean_b, std_b, mc._end(cache, B))
-        built["r2"] = ({mc.COLD: cold, mc.INITIAL: initial, B: final}, "final_only", dict(r2b))
-        r3 = rules["r3"]["b"][str(B)]
-        if r3["kind"] == "off" or r3["lam"] is None:
-            built["r3"] = (built["r2"][0], "final_only", {**r3, "alias_of": "r2"})
-        else:
-            v = mc.r3_readout(bias_caller(world.trunk.model, prior_b), sd,
-                              mc.calibration_indices(sd.bank.n_trials, B), tab_r2, mean_b, std_b,
-                              r3["lam"], r3["kind"], basis, v0)
-            final3 = mc.np_map(mc._as_np(tab_r2), prior_b, mean_b, std_b, mc._end(cache, B), readout=v)
-            built["r3"] = ({mc.COLD: cold, mc.INITIAL: initial, B: final3}, "final_only", dict(r3))
-        ui = rules["uireg"]["b"][str(B)]
-        if int(ui["steps"]) == 0 or ui["lam"] is None:
-            built["p0_ui_reg"] = ({mc.COLD: cold, mc.INITIAL: initial, B: mc.np_map(
-                cache["p0"][cseed][B], prior_b, mean_b, std_b, mc._end(cache, B))}, "final_only",
-                                  {**ui, "init": "p0", "skipped_fit": True})
-        else:
-            tab_ui = _run_uireg(world, sd, mc.calibration_indices(sd.bank.n_trials, B),
-                                cache["p0"][cseed][B], prior_b, mean_b, std_b, ui["lam"], ui["lr"], ui["steps"])
-            built["p0_ui_reg"] = ({mc.COLD: cold, mc.INITIAL: initial, B: mc.np_map(
-                tab_ui, prior_b, mean_b, std_b, mc._end(cache, B))}, "final_only",
-                                  {**ui, "init": "p0", "center": "p0"})
+        if keep("r2") or keep("r3"):
+            tab_r2 = mc.r2_table(bias_caller(world.trunk.model, prior_b), sd,
+                                 mc.calibration_indices(sd.bank.n_trials, B),
+                                 torch.as_tensor(cache["p0"][cseed][B], dtype=torch.float32, device=sd.device),
+                                 *cache["norm"][B], jb, r2b["eta"], r2b["rho"], r2b["S"])
+            mean_b, std_b = cache["norm"][B]
+            final = mc.np_map(mc._as_np(tab_r2), prior_b, mean_b, std_b, mc._end(cache, B))
+            if keep("r2"):
+                built["r2"] = ({mc.COLD: cold, mc.INITIAL: initial, B: final}, "final_only", dict(r2b))
+            if keep("r3"):
+                r3 = rules["r3"]["b"][str(B)]
+                if r3["kind"] == "off" or r3["lam"] is None:
+                    built["r3"] = ({mc.COLD: cold, mc.INITIAL: initial, B: final}, "final_only",
+                                    {**r3, "alias_of": "r2"})
+                else:
+                    v = mc.r3_readout(bias_caller(world.trunk.model, prior_b), sd,
+                                      mc.calibration_indices(sd.bank.n_trials, B), tab_r2, mean_b, std_b,
+                                      r3["lam"], r3["kind"], basis, v0)
+                    final3 = mc.np_map(mc._as_np(tab_r2), prior_b, mean_b, std_b, mc._end(cache, B), readout=v)
+                    built["r3"] = ({mc.COLD: cold, mc.INITIAL: initial, B: final3}, "final_only", dict(r3))
+        if keep("p0_ui_reg"):
+            ui = rules["uireg"]["b"][str(B)]
+            mean_b, std_b = cache["norm"][B]
+            if int(ui["steps"]) == 0 or ui["lam"] is None:
+                built["p0_ui_reg"] = ({mc.COLD: cold, mc.INITIAL: initial, B: mc.np_map(
+                    cache["p0"][cseed][B], prior_b, mean_b, std_b, mc._end(cache, B))}, "final_only",
+                                      {**ui, "init": "p0", "skipped_fit": True})
+            else:
+                tab_ui = _run_uireg(world, sd, mc.calibration_indices(sd.bank.n_trials, B),
+                                    cache["p0"][cseed][B], prior_b, mean_b, std_b, ui["lam"], ui["lr"], ui["steps"])
+                built["p0_ui_reg"] = ({mc.COLD: cold, mc.INITIAL: initial, B: mc.np_map(
+                    tab_ui, prior_b, mean_b, std_b, mc._end(cache, B))}, "final_only",
+                                      {**ui, "init": "p0", "center": "p0"})
         for method, payload in built.items():
+            if not keep(method):
+                continue
             maps, install, cfg = payload
             ref_flag = method in ("r2", "r3", "p0_ui_reg")
             proto_name = "causal_first_B"
@@ -977,11 +1039,12 @@ def _eval_one_b(world, sd, caller, cache, calibs, cold, initial, spans, prior_t,
                          seed, pool, target, gaps, proto_name, ref_flag, cfg, bwd_candidates, hash0,
                          rows, seen)
         for method, info in notes.items():
-            _emit_unavailable(method, cseed, seed, pool, target, B, latencies, gaps, info, rows, seen)
+            if keep(method):
+                _emit_unavailable(method, cseed, seed, pool, target, B, latencies, gaps, info, rows, seen)
     # Legacy prior-init ui_reg, stored random-draw hyperparameters, causal first-B eval.
     # One row per backbone seed (no calibrator).
     leg = legacy_ui[str(B)]
-    if all(("ui_reg_legacy", pool, seed, -1, target, int(B), int(lat)) not in seen for lat in latencies):
+    if keep("ui_reg_legacy") and all(("ui_reg_legacy", pool, seed, -1, target, int(B), int(lat)) not in seen for lat in latencies):
         mean_b, std_b = cache["norm"][B]
         tab = _run_uireg(world, sd, mc.calibration_indices(sd.bank.n_trials, B), prior_w, prior_b,
                          mean_b, std_b, leg["lam"], leg["lr"], leg["steps"], center=prior_w)
@@ -1088,6 +1151,71 @@ def _run_uireg(world, sd, idx, table0, prior_b, mean, std, lam, lr, steps, cente
     return traj[int(steps)]
 
 
+def cmd_select_unseen(args):
+    """Alpha curves on sessions the trunk has not trained on.
+
+    Calibration is the first B usable trials.  The score is the causal query (every later
+    usable trial), not a validation tail: the trunk never saw this session.
+    """
+    device = require_gpu()
+    path = SEL / "alpha_episodes.jsonl"
+    seen = seen_set(path, ("seed", "pool", "session", "cseed", "B", "kind"))
+    budgets = _filt(args, "budgets", mc.B_LIST)
+    pools = [p for p in _filt(args, "pools", mc.POOLS) if p in mc.UNSEEN_SESSIONS]
+    for seed in _filt(args, "seeds", mc.SEEDS):
+        for pool in pools:
+            spec = cca_cfg(pool)
+            world = open_world(seed, pool, device, sources=True)
+            calibs = mc.load_calibrators(world, seed, pool)
+            caller = nobias_caller(world.trunk.model)
+            ref = get_anchor(world, spec["phases"])
+            gap_ref = mc._date_session(mc.POOL_TRUNK[pool]["last"])
+            for name in mc.UNSEEN_SESSIONS[pool]:
+                sd, prior = world.target(name)
+                prior_t, prior_b_t = prior
+                prior_b = mc._as_np(prior_b_t)
+                conds = conds_for(sd)
+                usable = [b for b in budgets if b <= sd.bank.n_trials]
+                if not usable:
+                    continue
+                cache = mc.prefix_cache(sd, prior_t, prior_b, calibs, max(usable), conds, ref,
+                                        ridge=float(spec["ridge"]), phases=int(spec["phases"]))
+                gap = mc.days_between(name, gap_ref)
+                for cseed in mc.CSEEDS:
+                    for B in usable:
+                        key = (seed, pool, name, cseed, int(B), "unseen")
+                        if key in seen:
+                            continue
+                        q = sd.query_mask(mc.calibration_indices(sd.bank.n_trials, B))
+                        p0 = _p0_r2(caller, world, sd, cache, cseed, B, prior_b, q)
+                        weights, biases, order = [], [], []
+                        mean = std = None
+                        for alpha in mc.ALPHAS:
+                            got = mc.w_alpha_parts(cache, cseed, B, float(alpha))
+                            if got is None:
+                                continue
+                            w, b_shrink, mean, std, _ = got
+                            weights.append(w)
+                            biases.append(np.asarray(prior_b) + b_shrink)
+                            order.append(float(alpha))
+                        by_a = {}
+                        if weights:
+                            scores = mc.score_many(caller, sd, world.label_stats, mean, std,
+                                                   weights, biases, q)
+                            by_a = dict(zip(order, scores))
+                        alphas = [{"alpha": float(a), "r2": None if a not in by_a else float(by_a[a])}
+                                  for a in mc.ALPHAS]
+                        mc.append_jsonl(path, [{"seed": int(seed), "pool": pool, "session": name,
+                                                "date": mc.ymd(name), "cseed": int(cseed), "B": int(B),
+                                                "gap_days": int(gap), "protocol": "causal_first_B",
+                                                "kind": "unseen", "p0": p0, "alphas": alphas}])
+                        seen.add(key)
+                        log(f"[unseen] s{seed} {pool} {name} c{cseed} B={B} p0={p0:.3f}")
+            del world
+            torch.cuda.empty_cache()
+    _write_alpha_protocols()
+
+
 def cmd_select(args):
     what = args.what
     if what == "cca":
@@ -1098,6 +1226,11 @@ def cmd_select(args):
         cmd_select_refine(args)
     elif what == "uireg":
         cmd_select_uireg(args)
+    elif what == "unseen":
+        cmd_select_unseen(args)
+    elif what == "protocols":
+        _write_alpha_protocols()
+        _write_margin("cca_s1", "base", drop_anchor=True)
     elif what == "all":
         cmd_select_cca(args)
         cmd_select_closed(args)
@@ -1142,8 +1275,10 @@ def main():
     common.add_argument("--latency", default=None)
     sub.add_parser("prepare", parents=[common])
     s = sub.add_parser("select", parents=[common])
-    s.add_argument("--what", required=True, choices=("cca", "closed", "refine", "uireg", "all"))
-    sub.add_parser("eval", parents=[common])
+    s.add_argument("--what", required=True,
+                   choices=("cca", "closed", "refine", "uireg", "unseen", "protocols", "all"))
+    ev = sub.add_parser("eval", parents=[common])
+    ev.add_argument("--methods", default=None, help="comma list; default is every method")
     sub.add_parser("analyze", parents=[common])
     sub.add_parser("all", parents=[common])
     args = p.parse_args()
