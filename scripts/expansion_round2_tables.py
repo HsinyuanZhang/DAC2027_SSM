@@ -63,7 +63,7 @@ def main():
     out = []
     mem = pd.read_csv(S / "target_membership.csv")
     mem = mem[mem.bid != "sm_0307"]
-    out.append("### T1. 每个 gap tier 的构成（不含 IS backbone sm_0307）\n")
+    out.append("### T1. 每个 gap tier 的构成（不含 target 20140307）\n")
     rows = []
     for t in TIERS:
         m = mem[mem.tier == t]
@@ -122,37 +122,30 @@ def main():
             rows.append(row)
         out.append(md(pd.DataFrame(rows)))
 
-    isc = pd.read_csv(S / "cells_is_backbone.csv")
-    isc = isc[isc.latency == 0]
-    out.append("\n### T7. IS backbone sm_0307 → 20140307（单独报告，不进任何 tier；latency 0；1 个 session，没有 CI）\n")
-    p0 = isc[isc.method == "p0"].set_index("B")["r2"]
-    rows = []
-    for m in ORDER:
-        row = {"method": LABEL[m]}
-        for B in [1, 4, 8, 16, 33]:
-            x = isc[(isc.method == m) & (isc.B == B)]
-            v = x["r2"].iloc[0] if len(x) else np.nan
-            row[f"R2 B={B}"] = f"{v:.3f}" if np.isfinite(v) else "n/a"
-        rows.append(row)
-    out.append(md(pd.DataFrame(rows)))
+    out.append("\n### T7. 20140307 不作为 target 报告\n")
+    out.append("sm_0307 → 20140307 不进入任何表（包括本表和 T9）。可报告的是 34 个 (backbone, target) pair、"
+               "26 个不同 session。20140307 作为更晚 target 的 legacy selection / source session 仍然允许。\n")
 
     comp = pd.read_csv(S / "selection_composition.csv")
     comp = comp[comp.bid != "sm_0307"]
-    out.append("\n### T8. 每个 target 的 distinct selection sessions（protocol (a) expanding window / (b) strict；按 B）\n")
+    out.append("\n### T8. 实际投票的 selection sessions（不是整个 allowed pool）\n")
+    out.append("alpha 列是 target 自己的 gap bin（空箱 fallback 之后）里投票的 distinct sessions。"
+               "S1 列是 S1 pool 的 sessions；其中 days-trunk sessions 单独标出（days trunk 在晚 target 上占多数）。"
+               "protocol (b) 对全部 34 个 target、全部 B 都只有 sc_0309:20131220 这一个 session。\n")
     rows = []
     for (bid, date), g in comp.groupby(["bid", "date"]):
         g = g.set_index("B")
         rows.append({"backbone": bid, "target": date,
-                     "(a) n_sel B=1/4/8/16/33": "/".join(str(int(g.loc[b, "n_sel_a"])) for b in (1, 4, 8, 16, 33)),
-                     "(b) n_sel B=1/4/8/16/33": "/".join(str(int(g.loc[b, "n_sel_b"])) for b in (1, 4, 8, 16, 33)),
+                     "(a) alpha-bin n B=1/4/8/16/33": "/".join(str(int(g.loc[b, "n_alpha_vote_a"])) for b in (1, 4, 8, 16, 33)),
+                     "(a) bin B=8": f"{g.loc[8, 'alpha_bin_a']}->{g.loc[8, 'alpha_bin_used_a']}",
+                     "(b) alpha-bin n B=1/4/8/16/33": "/".join(str(int(g.loc[b, "n_alpha_vote_b"])) for b in (1, 4, 8, 16, 33)),
                      "alpha (a) B=1/4/8/16/33": "/".join(f"{g.loc[b, 'alpha_a']:.2f}" for b in (1, 4, 8, 16, 33)),
                      "alpha (b) B=1/4/8/16/33": "/".join(f"{g.loc[b, 'alpha_b']:.2f}" for b in (1, 4, 8, 16, 33)),
-                     "S1 / COMBO / CCA+S1 n_sel (a), B=8": f"{int(g.loc[8, 'n_s1_a'])} / {int(g.loc[8, 'n_combo_a'])} / {int(g.loc[8, 'n_cca_a'])}"})
+                     "S1 n / days-trunk n (a), B=8": f"{int(g.loc[8, 'n_s1_a'])} / {int(g.loc[8, 'n_s1_days_a'])}",
+                     "COMBO n at alpha (a), B=8": int(g.loc[8, "n_combo_a"])})
     out.append(md(pd.DataFrame(rows).sort_values(["backbone", "target"])))
 
-    av = pd.read_csv(S / "availability.csv")
-    av = av[(av.latency == 0)]
-    c = pd.read_csv(S / "cells_all.csv")
+    c = pd.read_csv(S / "cells.csv")
     c = c[c.latency == 0]
     rows = []
     for m in ORDER:
@@ -162,7 +155,27 @@ def main():
             xb = x[x.B == B]
             row[f"avail B={B}"] = f"{int(xb.r2.notna().sum())}/{len(xb)}"
         rows.append(row)
-    out.append("\n### T9. 方法可用性（latency 0，含 sm_0307）\n")
+    out.append("\n### T9. 方法可用性（latency 0，不含 20140307）\n")
+    out.append(md(pd.DataFrame(rows)))
+
+    sens = pd.read_csv(S / "gt180_sensitivity_lat0.csv")
+    out.append("\n### T10. >180 d 的敏感性（latency 0，B4-33，相对 P0；sc_0309 与 sm_0512 都未收敛）\n")
+    out.append("gt180_all 的 7 个 session 里 6 个来自 sc_0309（同一个 trunk、同一份 selection）。"
+               "session bootstrap 把它们当成独立样本，CI 偏窄。去掉 sc_0309 之后这一层只剩 sm_0512 的 1 个 session，没有 CI。\n")
+    show = ["p0", "w_alpha_a", "w_alpha_b", "s1_causal", "combo_a", "combo_b", "cca_s1", "ridge_cca", "r2"]
+    rows = []
+    for sl in ("gt180_all", "gt180_without_sc_0309", "sc_0309_only", "sm_0512_only"):
+        sub = sens[(sens["slice"] == sl) & (sens.B.astype(str) == "B4-33")]
+        row = {"slice": sl}
+        for m in show:
+            x = sub[sub.method == m]
+            if not len(x):
+                row[LABEL[m]] = "n/a"
+            elif m == "p0":
+                row[LABEL[m]] = f"{x.iloc[0]['mean']:.3f} (n={int(x.iloc[0]['n_sessions'])})"
+            else:
+                row[LABEL[m]] = cell_delta(x.iloc[0])
+        rows.append(row)
     out.append(md(pd.DataFrame(rows)))
     (S.parent / "round2_tables.md").write_text("\n".join(out))
     print("wrote", S.parent / "round2_tables.md")

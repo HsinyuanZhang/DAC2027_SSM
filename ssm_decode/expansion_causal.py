@@ -122,13 +122,29 @@ def _prefer(new: dict, old: dict) -> bool:
     return False
 
 
+def row_alpha_key(ep_row: dict):
+    """Scalar alpha for families that store one episode per alpha (COMBO).
+
+    The alpha grid keeps every alpha on one episode (``alphas``), so it stays unkeyed.
+    S1 and CCA+S1 carry a single fixed alpha (0 and 1); keying it does not split a unit.
+    A missing scalar alpha stays on the trunk/date/seed/B key.
+    """
+    if "alphas" in ep_row or ep_row.get("alpha") is None:
+        return None
+    return round(float(ep_row["alpha"]), 6)
+
+
 def dedupe_same_trunk(episodes: list[dict]) -> list[dict]:
-    """Drop same-trunk copies. Key is (canonical trunk, session date, seed, B)."""
+    """Drop same-trunk copies. Key is (canonical trunk, session date, seed, B, alpha).
+
+    Alpha is part of the key for alpha-indexed families. Without it, COMBO keeps only the
+    first-loaded alpha of each unit and ``combo_at_alpha`` then misses the selected alpha.
+    """
     best: dict = {}
     order: list = []
     for ep_row in episodes:
         key = (canonical_trunk(ep_row["tag"]), str(ep_row["session"])[-8:],
-               int(ep_row["seed"]), int(ep_row["B"]))
+               int(ep_row["seed"]), int(ep_row["B"]), row_alpha_key(ep_row))
         prev = best.get(key)
         if prev is None:
             best[key] = ep_row
@@ -372,7 +388,9 @@ def sync_tree_to_tar(src, dest) -> Path:
     if not src.is_dir():
         raise FileNotFoundError(src)
     dest.parent.mkdir(parents=True, exist_ok=True)
-    tmp = dest.with_name(dest.name + ".partial")
+    # Unique partial name so two syncs (or a killed sleeper that still holds a flock fd)
+    # cannot truncate each other's temp file.
+    tmp = dest.with_name(dest.name + f".partial.{os.getpid()}")
     if tmp.exists():
         tmp.unlink()
     name = dest.name

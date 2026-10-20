@@ -404,7 +404,9 @@ TRUNK_LAST = {
 TRUNK_TRAIN = {
     "days": {"20150511", "20150512", "20150610", "20150611", "20150612", "20150615"},
     "month": set(), "year": set(),
-    "sc_0629": set(),
+    # sc_0629 trunk sources (held-out is 20150319). 20150309 and 20150312 are also
+    # sc_0309 targets, so the strict protocol refuses this trunk once those dates are reported.
+    "sc_0629": {"20131220", "20150309", "20150311", "20150312", "20150313"},
     "sc_0708": {"20150629", "20150630", "20150701", "20150703", "20150706"},
 }
 

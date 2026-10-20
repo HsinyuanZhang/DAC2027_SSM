@@ -69,6 +69,15 @@ def _jsonable_choice(choice):
     return {k: choice.get(k) for k in keep if k in choice or True}
 
 
+def _alpha_vote(alpha: dict) -> dict:
+    """Sessions that actually vote in the gap bin used for alpha, not the whole allowed pool."""
+    return {"n_sessions": int(alpha.get("n_sessions") or 0),
+            "sessions": list(alpha.get("sessions") or []),
+            "tags": list(alpha.get("tags") or []),
+            "bin": alpha.get("bin"), "bin_used": alpha.get("bin_used"),
+            "fallback_from": alpha.get("fallback_from")}
+
+
 def cmd_causal_source(args):
     """Score held-out pool[-1] episodes. Idempotent: a unit already on disk is not redone."""
     import torch
@@ -429,10 +438,14 @@ def _eval_one_target(bb, t, ctx, st, sel, basis, grids, bundles, reported, missi
                             "by_B": {str(B): {"a": rules_by_b[B]["a"]["composition"],
                                              "b": rules_by_b[B]["b"]["composition"],
                                              "s1_a": rules_by_b[B]["a"]["s1_composition"],
+                                             "s1_b": rules_by_b[B]["b"]["s1_composition"],
                                              "combo_a": rules_by_b[B]["a"]["combo_composition"],
+                                             "combo_b": rules_by_b[B]["b"]["combo_composition"],
                                              "cca_a": rules_by_b[B]["a"]["cca_composition"],
                                              "alpha_a": rules_by_b[B]["a"]["alpha"].get("alpha"),
                                              "alpha_b": rules_by_b[B]["b"]["alpha"].get("alpha"),
+                                             "alpha_vote_a": _alpha_vote(rules_by_b[B]["a"]["alpha"]),
+                                             "alpha_vote_b": _alpha_vote(rules_by_b[B]["b"]["alpha"]),
                                              "n_sessions_a": rules_by_b[B]["a"]["composition"]["n_sessions"],
                                              "n_sessions_b": rules_by_b[B]["b"]["composition"]["n_sessions"]}
                                     for B in Bs},
@@ -442,6 +455,8 @@ def _eval_one_target(bb, t, ctx, st, sel, basis, grids, bundles, reported, missi
           + ", ".join(f"B{B}:a={rules_by_b[B]['a']['composition']['n_sessions']}/"
                        f"b={rules_by_b[B]['b']['composition']['n_sessions']}" for B in Bs), flush=True)
     k_max = max(Bs)
+    # Month CCA_CFG for every backbone, including days. Causal-main days used CCA_CFG["days"].
+    # Not re-selected here; the short-gap ridge-CCA gap is reported with that disclosure.
     cache = rcm.prefix_cache(sd, prior, ctx.p0, k_max, ctx.world, "month")
     base = ctx.world.adapter.model.base
     behavior = sd.record.behavior

@@ -1,0 +1,25 @@
+{
+ "protocol_b_sessions": [
+  "20131220"
+ ],
+ "protocol_b_pairs": [
+  "sc_0309:20131220"
+ ],
+ "protocol_b_is_one_session": true,
+ "s1_days_share_B8_after_20150615": {
+  "n_targets": 26,
+  "days_sessions_min": 10,
+  "days_sessions_max": 10,
+  "s1_sessions_min": 15,
+  "s1_sessions_max": 17
+ },
+ "alpha_vote_lt_pool_B8": 34,
+ "n_targets_B8": 34,
+ "le14_includes_20131220": [
+  "sc_0708",
+  "sc_0713"
+ ],
+ "sc_0309_targets_in_gt180": 6,
+ "sm_0512_targets_in_gt180": 1,
+ "clustering_note": "The six sc_0309 sessions in >180 d share one trunk and one selection pool. The session bootstrap treats them as independent, so that tier's CI is too narrow."
+}

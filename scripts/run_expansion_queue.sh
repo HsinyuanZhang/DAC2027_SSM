@@ -120,7 +120,9 @@ export -f sync_out
 export OUT WORK STAGES CHAIN_STAGES DEADLINE COMMON RX CAUSAL_ARGS PY SYNC_TAR
 SYNC_PID=""
 if [ -n "$SYNC_TAR" ] && [ "$SYNC_EVERY" != 0 ]; then
-  ( while true; do sleep $((SYNC_EVERY * 60)); sync_out || true; done ) &
+  # A foreground sleep ignores SIGTERM to this subshell and keeps inherited flock fds
+  # until the sleep ends. Background the sleep so the trap can kill it.
+  ( trap 'kill "$sp" 2>/dev/null; exit 0' TERM; sp=; while true; do sleep $((SYNC_EVERY * 60)) & sp=$!; wait "$sp"; sync_out || true; done ) &
   SYNC_PID=$!
 fi
 for b in $BID_LIST; do rm -f "$OUT/logs/.rc_$b"; done
@@ -151,7 +153,10 @@ if [ "$FINAL" = 0 ] && [ "$POST" = 1 ]; then
     fi
   done
 fi
-if [ -n "$SYNC_PID" ]; then kill "$SYNC_PID" 2>/dev/null || true; wait "$SYNC_PID" 2>/dev/null || true; fi
+if [ -n "$SYNC_PID" ]; then
+  kill "$SYNC_PID" 2>/dev/null || true
+  wait "$SYNC_PID" 2>/dev/null || true
+fi
 sync_out
 echo "[queue] $(date '+%T') finished (exit $FINAL); status:"
 $RX status $COMMON --bid "$BIDS" 2>&1 | grep -v -i warn

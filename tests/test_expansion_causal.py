@@ -113,6 +113,69 @@ def test_protocol_pools_drop_disallowed_sessions_and_same_trunk_duplicates():
     assert ec.composition(late_a)["n_sessions"] == len({r["session"][-8:] for r in late_a})
 
 
+def test_combo_dedupe_keeps_every_alpha_and_still_collapses_the_same_trunk():
+    """COMBO is one episode per alpha. The key must not keep only the first-loaded alpha."""
+    reported = ec.reported_target_dates()
+    rows = []
+    for alpha in (0.0, 0.25, 0.5, 0.75, 1.0):
+        rows.append(_row("month", "20140307", seed=0, B=8, alpha=alpha, gap=1,
+                         rebase=[{"eta": 1.0, "rho": 0.0, "r2": 0.3 + alpha}]))
+        rows.append(_row("year", "20140307", seed=0, B=8, alpha=alpha, gap=1,
+                         rebase=[{"eta": 1.0, "rho": 0.0, "r2": 0.9}]))
+    rows.append(_row("month", "20140307", seed=0, B=8, gap=1, alpha_r2=[(0.0, 0.1), (0.5, 0.2)]))
+    rows.append(_row("year", "20140307", seed=0, B=8, gap=1, alpha_r2=[(0.0, 0.9), (0.5, 0.9)]))
+    pool = ec.selection_pool(rows, "20150716", "expanding", reported, B=8)
+    combo = [r for r in pool if "alphas" not in r]
+    alpha_rows = [r for r in pool if "alphas" in r]
+    assert len(combo) == 5 and {r["tag"] for r in combo} == {"month"}
+    assert {float(r["alpha"]) for r in combo} == {0.0, 0.25, 0.5, 0.75, 1.0}
+    assert len(alpha_rows) == 1 and alpha_rows[0]["tag"] == "month"
+    assert len(ec.combo_at_alpha(combo, 0.5)) == 1
+    # The pre-fix key (no alpha) would have left a single COMBO row, so alpha 0.5 could miss.
+    assert len(ec.dedupe_same_trunk(rows)) == 6
+
+
+def test_real_combo_pool_keeps_518_of_530_episodes():
+    legacy = ROOT / "results/causal_main_20261019/select"
+    out = ROOT / "results/expansion_round2/x/expansion_out"
+    if not (legacy / "combo_month_episodes.jsonl").exists() or not (out / "causal_select").is_dir():
+        pytest.skip("round-2 combo episodes are not on this machine")
+    bundles = ec.load_episodes(out, legacy)
+
+    def old_len(episodes):
+        best = {}
+        for r in episodes:
+            key = (ec.canonical_trunk(r["tag"]), str(r["session"])[-8:], int(r["seed"]), int(r["B"]))
+            prev = best.get(key)
+            if prev is None or ec._prefer(r, prev):
+                best[key] = r
+        return len(best)
+
+    assert len(bundles["combo"]) == 530
+    assert old_len(bundles["combo"]) == 238
+    assert len(ec.dedupe_same_trunk(bundles["combo"])) == 518
+    for fam in ("alpha", "s1", "cca_s1"):
+        assert len(ec.dedupe_same_trunk(bundles[fam])) == old_len(bundles[fam])
+
+
+def test_sc_0629_trunk_train_matches_the_backbone_and_does_not_open_protocol_b():
+    from ssm_decode.causal_protocol import TRUNK_LAST, TRUNK_TRAIN
+    bb = next(b for b in ep.build_backbones() if b.bid == "sc_0629")
+    train = {ep.date_of(s) for s in bb.trunk_sources}
+    assert TRUNK_TRAIN["sc_0629"] == train
+    assert TRUNK_LAST["sc_0629"] == max(train)
+    assert {"20150309", "20150312"} <= train
+    reported = ec.reported_target_dates()
+    assert train & reported == {"20150309", "20150312"}
+    held = ep.date_of(bb.val_session)
+    assert held in reported                       # 20150319 is an sc_0309 target
+    row = _row("sc_0629", held, gap=1)
+    # Strict already drops the held-out because the date itself is reported, so filling
+    # TRUNK_TRAIN does not change which episodes vote. Expanding does not read TRUNK_TRAIN.
+    assert ec.episode_allowed(row, "20150716", "strict", reported) is False
+    assert ec.episode_allowed(row, "20150716", "expanding", reported) is True
+
+
 def test_sc_0713_heldout_is_allowed_only_when_the_trunk_is_before_the_target():
     reported = ec.reported_target_dates()
     row = _row("sc_0713", "20150710", gap=1)
@@ -182,7 +245,7 @@ def test_sync_tree_to_tar_replaces_atomically(tmp_path):
     (src / "causal_rows" / "a.jsonl").write_text('{"method": "p0"}\n')
     dest = tmp_path / "drive" / "expansion_out_round2.tgz"
     ec.sync_tree_to_tar(src, dest)
-    assert dest.is_file() and not dest.with_name(dest.name + ".partial").exists()
+    assert dest.is_file() and not list(dest.parent.glob(dest.name + ".partial*"))
     import tarfile
     with tarfile.open(dest, "r:gz") as tar:
         names = tar.getnames()
@@ -213,7 +276,7 @@ def test_queue_runs_causal_eval_after_every_chain_and_syncs_on_dry_run(tmp_path)
                           "--sync-tar", str(tar_path), "--stages", "backbone,causal-eval"],
                          capture_output=True, text=True, env=env, timeout=120)
     assert res.returncode == 0, res.stdout + res.stderr
-    assert tar_path.is_file() and not tar_path.with_name(tar_path.name + ".partial").exists()
+    assert tar_path.is_file() and not list(tar_path.parent.glob(tar_path.name + ".partial*"))
     res = subprocess.run([str(script), "--out", str(tmp_path / "o2"), "--bids", "a,b", "--jobs", "2",
                           "--stages", "backbone,causal-eval", "--deadline-hours", "5"],
                          capture_output=True, text=True, env=env, timeout=120)
@@ -224,6 +287,27 @@ def test_queue_runs_causal_eval_after_every_chain_and_syncs_on_dry_run(tmp_path)
     # Default stages are unchanged: a dry status line still lists the five original stages when not overridden.
     text = script.read_text()
     assert "STAGES=backbone,p0,jacobian,select,eval\n" in text
+
+
+def test_sync_loop_kill_does_not_orphan_sleep(tmp_path):
+    """SIGTERM to the periodic sync subshell must reap its sleep, or an inherited flock stays held."""
+    script = (ROOT / "scripts/run_expansion_queue.sh").read_text()
+    assert "trap 'kill \"$sp\" 2>/dev/null; exit 0' TERM" in script
+    kill_at = script.index('kill "$SYNC_PID"')
+    wait_at = script.index('wait "$SYNC_PID"', kill_at)
+    sync_at = script.index("\nsync_out\n", wait_at)
+    assert kill_at < wait_at < sync_at
+    probe = tmp_path / "probe.sh"
+    probe.write_text(
+        "#!/bin/bash\nset -u\n"
+        "( trap 'kill \"$sp\" 2>/dev/null; exit 0' TERM; sp=; "
+        "while true; do sleep 41 & sp=$!; wait \"$sp\"; done ) &\n"
+        "P=$!\nsleep 0.3\nkill \"$P\"\nwait \"$P\" 2>/dev/null || true\nsleep 0.2\n"
+        "if pgrep -f '[s]leep 41' >/dev/null; then echo ORPHAN; pgrep -af sleep; exit 1; fi\n"
+        "echo clean\n")
+    res = subprocess.run(["bash", str(probe)], capture_output=True, text=True, timeout=15)
+    assert res.returncode == 0, res.stdout + res.stderr
+    assert "clean" in res.stdout
 
 
 def test_round2_cost_fits_under_the_cu_cap_and_the_session_limit():

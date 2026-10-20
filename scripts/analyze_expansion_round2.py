@@ -13,6 +13,7 @@ Rules
 * gap tier primary = days from the latest TRUNK-TRAINING session to the target (trunk_gap_days);
   the gap from the latest selection / source session (gap_days) is reported as a second column.
 * unavailable rows (r2 is null) are kept out of the means and counted.
+* 20140307 (sm_0307's only target) is not reportable. It stays a legal legacy selection session.
 """
 from __future__ import annotations
 
@@ -35,6 +36,7 @@ REFS = ("r2", "r3")
 ALL_METHODS = MAIN + CONS + REFS
 B_ORDER = (1, 2, 4, 8, 16, 33)
 N_BOOT = 10000
+EXCLUDED_TARGET_DATES = frozenset({"20140307"})
 
 
 def tier_of(days) -> str:
@@ -137,6 +139,76 @@ def summarize(c: pd.DataFrame, methods, base: str | None, by: str = "tier", late
     return pd.DataFrame(out)
 
 
+def selection_frame(out: Path) -> pd.DataFrame:
+    """Who actually votes: the alpha gap bin, and the S1 pool, not the whole allowed alpha pool."""
+    from ssm_decode import expansion_causal as ec
+    from ssm_decode import expansion_protocol as ep
+
+    legacy = ROOT / "results/causal_main_20261019/select"
+    bundles = ec.load_episodes(out, legacy if legacy.is_dir() else None)
+    reported = ec.reported_target_dates()
+    rows = []
+    for bb in ep.build_backbones():
+        if bb.bid == "sm_0307":
+            continue
+        sel_path = out / f"select/{bb.bid}.json"
+        if not sel_path.exists():
+            continue
+        sel = json.loads(sel_path.read_text())
+        for t in bb.targets:
+            date = ep.date_of(t.session)
+            if str(date).startswith("2016") or date in EXCLUDED_TARGET_DATES:
+                continue
+            for B in (1, 4, 8, 16, 33):
+                if str(B) not in sel.get("b", {}):
+                    continue
+                eta = float(sel["b"][str(B)]["r2"]["eta"])
+                rules = ec.target_rules(bundles, date, bb.trunk_gap_days(t.session), B, reported, eta)
+                s1a = rules["a"]["s1_composition"]
+                days_sessions = sorted({p.split(":", 1)[1] for p in s1a["pairs"] if p.startswith("days:")})
+                va, vb = rules["a"]["alpha"], rules["b"]["alpha"]
+                rows.append({
+                    "bid": bb.bid, "date": date, "B": int(B),
+                    "n_pool_a": rules["a"]["composition"]["n_sessions"],
+                    "n_pool_b": rules["b"]["composition"]["n_sessions"],
+                    "sessions_b": ",".join(rules["b"]["composition"]["sessions"]),
+                    "pairs_b": ",".join(rules["b"]["composition"]["pairs"]),
+                    "n_alpha_vote_a": int(va.get("n_sessions") or 0),
+                    "n_alpha_vote_b": int(vb.get("n_sessions") or 0),
+                    "alpha_bin_a": va.get("bin"), "alpha_bin_used_a": va.get("bin_used"),
+                    "alpha_sessions_a": ",".join(va.get("sessions") or []),
+                    "alpha_tags_a": ",".join(va.get("tags") or []),
+                    "alpha_a": va.get("alpha"), "alpha_b": vb.get("alpha"),
+                    "n_s1_a": s1a["n_sessions"], "n_s1_days_a": len(days_sessions),
+                    "n_s1_trunk_sessions_a": s1a["n_trunk_sessions"],
+                    "s1_trunks_a": ",".join(s1a["trunks"]),
+                    "n_combo_a": rules["a"]["combo_composition"]["n_sessions"],
+                    "n_combo_b": rules["b"]["combo_composition"]["n_sessions"],
+                    "n_cca_a": rules["a"]["cca_composition"]["n_sessions"],
+                })
+    return pd.DataFrame(rows)
+
+
+def slice_summaries(c: pd.DataFrame, latency: int) -> pd.DataFrame:
+    """``>180 d`` with and without the non-converged sc_0309 trunk, plus sm_0512 alone."""
+    specs = (
+        ("gt180_all", c[c.tier == ">180 d"]),
+        ("gt180_without_sc_0309", c[(c.tier == ">180 d") & (c.bid != "sc_0309")]),
+        ("sc_0309_only", c[c.bid == "sc_0309"]),
+        ("sm_0512_only", c[c.bid == "sm_0512"]),
+    )
+    frames = []
+    methods = [m for m in ALL_METHODS if m != "p0"]
+    for name, sub in specs:
+        if sub.empty:
+            continue
+        sub = sub.copy()
+        sub["slice"] = name
+        frames.append(summarize(sub, ["p0"], None, "slice", latency))
+        frames.append(summarize(sub, methods, "p0", "slice", latency))
+    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+
+
 def fmt(r) -> str:
     if not np.isfinite(r["mean"]):
         return "n/a"
@@ -160,17 +232,21 @@ def main():
     a = ap.parse_args()
     out, dest = Path(a.out), Path(a.dest)
     dest.mkdir(parents=True, exist_ok=True)
-    df = load(out)
+    df_raw = load(out)
+    # 20140307 is sm_0307's target and a legacy selection session. It is not a reportable target.
+    df = df_raw[~df_raw["date"].isin(EXCLUDED_TARGET_DATES)].copy()
     au = audit(df)
+    au["excluded_target_dates"] = sorted(EXCLUDED_TARGET_DATES)
+    au["n_rows_including_excluded"] = int(len(df_raw))
+    au["n_pairs_reportable"] = au["n_targets"]
+    au["n_distinct_sessions_reportable"] = au["n_distinct_target_sessions"]
     (dest / "audit.json").write_text(json.dumps(au, indent=1))
-    c_all = cells(df)
-    c_all.to_csv(dest / "cells_all.csv", index=False)
-    # sm_0307 is the IS backbone (its selection session was a trunk training session) and its only target is
-    # 20140307: it is kept out of every main table and reported on its own.
-    is_bids = sorted(set(df.loc[df["selection_oos_backbone"].astype(str) == "False", "bid"]))
-    c = c_all[~c_all.bid.isin(is_bids)].copy()
+    c = cells(df)
     c.to_csv(dest / "cells.csv", index=False)
-    c_all[c_all.bid.isin(is_bids)].to_csv(dest / "cells_is_backbone.csv", index=False)
+    c.to_csv(dest / "cells_all.csv", index=False)
+    stale = dest / "cells_is_backbone.csv"
+    if stale.exists():
+        stale.unlink()
 
     # availability
     av = c.groupby(["method", "latency"]).agg(cells=("r2", "size"), available=("r2", "count")).reset_index()
@@ -182,19 +258,39 @@ def main():
                .sort_values(["tier", "bid", "date"]))
     members.to_csv(dest / "target_membership.csv", index=False)
 
-    # selection sessions per target (composition files)
-    comp = []
+    # Voting sessions are recomputed with the alpha-aware dedupe, not read from a stale composition log.
+    comp = selection_frame(out)
+    done = {}
     for p in sorted((out / "causal_select/composition").glob("*.json")):
         j = json.loads(p.read_text())
-        for B, v in j["by_B"].items():
-            comp.append({"bid": j["bid"], "date": j["date"], "B": int(B), "pool_complete": j["pool_complete"],
-                         "n_sel_a": v["n_sessions_a"], "n_sel_b": v["n_sessions_b"],
-                         "alpha_a": v["alpha_a"], "alpha_b": v["alpha_b"],
-                         "n_s1_a": v["s1_a"]["n_sessions"], "n_combo_a": v["combo_a"]["n_sessions"],
-                         "n_cca_a": v["cca_a"]["n_sessions"],
-                         "sessions_a": ",".join(v["a"].get("sessions", []))})
-    comp = pd.DataFrame(comp)
+        if j["date"] in EXCLUDED_TARGET_DATES:
+            continue
+        done[(j["bid"], j["date"])] = bool(j.get("pool_complete"))
+    comp["pool_complete"] = [done.get((r.bid, r.date), False) for r in comp.itertuples(index=False)]
     comp.to_csv(dest / "selection_composition.csv", index=False)
+    b8 = comp[comp.B == 8]
+    late = b8[b8.date.astype(str) >= "20150616"]
+    notes = {
+        "protocol_b_sessions": sorted(set(comp.sessions_b)),
+        "protocol_b_pairs": sorted(set(comp.pairs_b)),
+        "protocol_b_is_one_session": bool(comp.sessions_b.nunique() == 1),
+        "s1_days_share_B8_after_20150615": {
+            "n_targets": int(len(late)),
+            "days_sessions_min": int(late.n_s1_days_a.min()) if len(late) else None,
+            "days_sessions_max": int(late.n_s1_days_a.max()) if len(late) else None,
+            "s1_sessions_min": int(late.n_s1_a.min()) if len(late) else None,
+            "s1_sessions_max": int(late.n_s1_a.max()) if len(late) else None,
+        },
+        "alpha_vote_lt_pool_B8": int((b8.n_alpha_vote_a < b8.n_pool_a).sum()),
+        "n_targets_B8": int(len(b8)),
+        "le14_includes_20131220": sorted(
+            b8.loc[(b8.alpha_bin_used_a == "le14") & b8.alpha_sessions_a.str.contains("20131220"), "bid"].unique()),
+        "sc_0309_targets_in_gt180": int(((members.bid == "sc_0309") & (members.tier == ">180 d")).sum()),
+        "sm_0512_targets_in_gt180": int(((members.bid == "sm_0512") & (members.tier == ">180 d")).sum()),
+        "clustering_note": "The six sc_0309 sessions in >180 d share one trunk and one selection pool. "
+                           "The session bootstrap treats them as independent, so that tier's CI is too narrow.",
+    }
+    (dest / "selection_notes.json").write_text(json.dumps(notes, indent=1))
 
     for lat in (0, 1):
         # absolute R2 per tier
@@ -202,6 +298,9 @@ def main():
         absr.to_csv(dest / f"abs_by_tier_lat{lat}.csv", index=False)
         d0 = summarize(c, [m for m in ALL_METHODS if m != "p0"], "p0", "tier", lat)
         d0.to_csv(dest / f"delta_vs_p0_by_tier_lat{lat}.csv", index=False)
+        dr = summarize(c, [m for m in ALL_METHODS if m != "ridge_cca"], "ridge_cca", "tier", lat)
+        dr.to_csv(dest / f"delta_vs_ridge_by_tier_lat{lat}.csv", index=False)
+        slice_summaries(c, lat).to_csv(dest / f"gt180_sensitivity_lat{lat}.csv", index=False)
         dsel = summarize(c, [m for m in ALL_METHODS if m != "p0"], "p0", "sel_tier", lat)
         dsel.to_csv(dest / f"delta_vs_p0_by_seltier_lat{lat}.csv", index=False)
         absel = summarize(c, ALL_METHODS, None, "sel_tier", lat)

@@ -1,6 +1,6 @@
 {
- "n_rows": 13300,
- "n_unavailable": 1288,
+ "n_rows": 12920,
+ "n_unavailable": 0,
  "max_h2_backward_calls": 0,
  "all_trunk_unchanged": true,
  "all_query_disjoint": true,
@@ -12,11 +12,16 @@
  "protocols": [
   "causal_first_B"
  ],
- "n_bids": 8,
- "n_targets": 35,
- "n_distinct_target_sessions": 27,
+ "n_bids": 7,
+ "n_targets": 34,
+ "n_distinct_target_sessions": 26,
  "selection_oos_backbone": [
-  "False",
   "True"
- ]
+ ],
+ "excluded_target_dates": [
+  "20140307"
+ ],
+ "n_rows_including_excluded": 13300,
+ "n_pairs_reportable": 34,
+ "n_distinct_sessions_reportable": 26
 }
