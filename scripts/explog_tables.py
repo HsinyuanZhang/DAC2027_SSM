@@ -260,7 +260,88 @@ def dump_m2() -> None:
         )
 
 
+ROUND2 = ROOT / "results/analysis/expansion_20261016/round2_summary"
+# Reviewed README (round2_README.md, correction block): COMBO (a) - P0, B4-33.
+ROUND2_COMBO_ANCHORS = {
+    "<=30 d": (0.006, 0.001, 0.012, 7, 8),
+    "31-180 d": (0.039, 0.027, 0.051, 16, 17),
+    ">180 d": (0.207, 0.111, 0.315, 7, 7),
+}
+
+
+def _fmt_ci(row) -> str:
+    return (
+        f"{row['mean']:+.3f} [{row.ci_lo:+.3f}, {row.ci_hi:+.3f}] "
+        f"({int(row.n_pos)}/{int(row.n_sessions)})"
+    )
+
+
+def dump_round2() -> None:
+    """Print round-2 tier tables from the reviewed summary CSVs.
+
+    Absolute R2 and differences versus P0 are checked against
+    round2_README.md. Differences versus ridge-CCA are read from
+    delta_vs_ridge_by_tier_lat0.csv (same aggregation, not reprinted as a
+    README table).
+    """
+    vs_p0 = pd.read_csv(ROUND2 / "delta_vs_p0_by_tier_lat0.csv")
+    vs_ridge = pd.read_csv(ROUND2 / "delta_vs_ridge_by_tier_lat0.csv")
+    absolute = pd.read_csv(ROUND2 / "abs_by_tier_lat0.csv")
+    membership = pd.read_csv(ROUND2 / "target_membership.csv")
+    selection = pd.read_csv(ROUND2 / "selection_composition.csv")
+    print("\n==== round 2 (reviewed summary CSVs, latency 0)")
+    for tier, (mean, lo, hi, npos, n) in ROUND2_COMBO_ANCHORS.items():
+        row = vs_p0[(vs_p0.tier == tier) & (vs_p0.method == "combo_a") & (vs_p0.B == "B4-33")]
+        if len(row) != 1:
+            raise SystemExit(f"missing COMBO anchor for {tier}")
+        got = row.iloc[0]
+        ok = (
+            abs(got["mean"] - mean) < 0.0015
+            and abs(got.ci_lo - lo) < 0.0015
+            and abs(got.ci_hi - hi) < 0.0015
+            and int(got.n_pos) == npos
+            and int(got.n_sessions) == n
+        )
+        print(f"  COMBO(a)-P0 B4-33 {tier}: {_fmt_ci(got)} {'OK' if ok else 'MISMATCH'}")
+        if not ok:
+            raise SystemExit("round-2 COMBO anchor mismatch")
+    sel8 = selection[selection.B == 8]
+    joined = membership.merge(sel8, on=["bid", "date"])
+    for tier, group in joined.groupby("tier"):
+        sessions = sorted(set(group.date.astype(str)))
+        backs = sorted(set(group.bid.astype(str)))
+        print(
+            f"  {tier}: pairs {len(group)} sessions {len(sessions)} "
+            f"alpha-bin n {int(group.n_alpha_vote_a.min())}-{int(group.n_alpha_vote_a.max())} "
+            f"S1 n {int(group.n_s1_a.min())}-{int(group.n_s1_a.max())} "
+            f"(b) alpha n {sorted(set(group.n_alpha_vote_b.astype(int)))}"
+        )
+        print(f"    backbones: {', '.join(backs)}")
+        print(f"    sessions: {', '.join(sessions)}")
+    methods = ["p0", "w_alpha_a", "s1_causal", "combo_a", "cca_s1", "ridge_cca"]
+    for tier in ["<=30 d", "31-180 d", ">180 d"]:
+        print(f"  -- {tier}")
+        for method in ["p_prior", "p0", "ridge_cca", "w_alpha_a", "s1_causal", "combo_a", "cca_s1", "r2"]:
+            cells = []
+            for budget in ["1", "4", "8", "16", "33"]:
+                row = absolute[(absolute.tier == tier) & (absolute.method == method) & (absolute.B == budget)]
+                cells.append("NA" if row.empty else f"{row.iloc[0]['mean']:.3f}")
+            print(f"    abs {method:12} " + " ".join(cells))
+        for label, frame in (("vs P0", vs_p0), ("vs ridge", vs_ridge)):
+            for method in methods:
+                if label == "vs P0" and method == "p0":
+                    continue
+                if label == "vs ridge" and method == "ridge_cca":
+                    continue
+                bits = []
+                for budget in ["8", "33", "B4-33"]:
+                    row = frame[(frame.tier == tier) & (frame.method == method) & (frame.B == budget)]
+                    bits.append("NA" if row.empty else _fmt_ci(row.iloc[0]))
+                print(f"    {label:8} {method:12} " + " | ".join(bits))
+
+
 def main() -> None:
+    dump_round2()
     means, gaps = load_rows()
     check_per_target(means)
     check_readme(means)
