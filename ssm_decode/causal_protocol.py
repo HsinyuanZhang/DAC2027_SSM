@@ -265,7 +265,15 @@ def margin_pick(episodes, score_key: str, eta_r2: float, *, margin: float = MARG
         raise ValueError(mode)
     if not episodes:
         raise ValueError("no source episodes")
-    keys = [(float(s["eta"]), float(s["rho"])) for s in episodes[0][score_key]]
+    # Episodes from different sources can carry different (eta, rho) grids (the legacy S1 episodes have no
+    # eta = 0 point, the local ones do). Only a point scored in EVERY episode can be compared; eta = 0 has gain
+    # 0 against its own base and is never viable, so dropping a point missing somewhere cannot change a pick.
+    common = None
+    for ep in episodes:
+        ks = {(float(s["eta"]), float(s["rho"])) for s in ep[score_key]}
+        common = ks if common is None else common & ks
+    keys = [k for k in dict.fromkeys((float(s["eta"]), float(s["rho"])) for s in episodes[0][score_key])
+            if k in common]
     stats = {}
     for key in keys:
         diffs = []

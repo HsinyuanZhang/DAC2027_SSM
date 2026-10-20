@@ -274,3 +274,19 @@ def test_calibration_index_is_the_first_b_trials():
     assert list(calibration_index(20, 8)) == list(range(8))
     with pytest.raises(ValueError):
         calibration_index(4, 8)
+
+
+def test_margin_pick_handles_episodes_with_different_eta_grids():
+    """Legacy S1 episodes have no eta = 0 point, local ones do: the pick uses the common grid (no StopIteration)."""
+    from ssm_decode.causal_protocol import margin_pick
+
+    def ep(rows, p0=0.5):
+        return {"p0": p0, "rebase": [{"eta": e, "rho": r, "r2": v} for e, r, v in rows]}
+
+    local = [ep([(0.0, 0.0, 0.5), (1.0, 0.0, 0.52), (3.0, 0.0, 0.5)]) for _ in range(4)]
+    legacy = [ep([(1.0, 0.0, 0.52), (3.0, 0.0, 0.5)]) for _ in range(4)]
+    mixed = margin_pick(local + legacy, "rebase", 3.0, mode="and")
+    only_legacy = margin_pick(legacy, "rebase", 3.0, mode="and")
+    assert mixed["eta"] == 1.0 and mixed["fallback_base"] is False
+    assert (mixed["eta"], mixed["rho"]) == (only_legacy["eta"], only_legacy["rho"])
+    assert margin_pick(legacy + local, "rebase", 3.0, mode="and")["eta"] == 1.0

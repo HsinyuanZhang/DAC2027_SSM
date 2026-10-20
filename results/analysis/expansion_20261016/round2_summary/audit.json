@@ -1,0 +1,22 @@
+{
+ "n_rows": 13300,
+ "n_unavailable": 1288,
+ "max_h2_backward_calls": 0,
+ "all_trunk_unchanged": true,
+ "all_query_disjoint": true,
+ "forbidden_dates_present": [],
+ "year_2016_present": [],
+ "rule_versions": [
+  "expansion_causal_v1"
+ ],
+ "protocols": [
+  "causal_first_B"
+ ],
+ "n_bids": 8,
+ "n_targets": 35,
+ "n_distinct_target_sessions": 27,
+ "selection_oos_backbone": [
+  "False",
+  "True"
+ ]
+}
