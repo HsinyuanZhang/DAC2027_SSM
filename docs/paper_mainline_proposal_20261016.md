@@ -60,3 +60,13 @@
 - **可部署的对照方法**：P-prior、P0、ridge-CCA、W_α、S1-causal；参照：R2/R3（重放）、P0 + ui_reg（不可部署）。
 - 证据：`results/analysis/causal_main_20261019/README.md`（两轮审查）。
 - 后续三条线并行：第 2 轮 Colab（增加 backbone 和选参 session）、硬件架构分析（`docs/arch_analysis_20261019.md`）、论文初稿与 exp-log。
+
+## 7. 主方法改为 P0 + S1（MZ 决定，2026-10-21；取代 §6 的主方法）
+
+- **主方法**：P0 + S1（S1-causal re-based 固定反馈精修，η/ρ 按 B 在 source 上选，AND 门；门不过时 η=0，退回 P0）。**COMBO（W_α + S1）和 CCA+S1 降为对照**；ridge-CCA、W_α 仍是可部署对照，R2/R3、P0+ui_reg 仍是参照。
+- **原因**：
+  1. 证据：round 2（审查后，34 pair / 26 session，`results/analysis/expansion_20261016/round2_README.md`）B4–33 相对 P0，S1 (a) 在 ≤30 d +0.003（不伤 P0）、31–180 d **+0.055 [+0.034, +0.076]，16/17**（COMBO +0.039，R2 replay 参照 +0.050）、>180 d +0.071（压力测试）。
+  2. 硬件统一（MZ 要求：不按日期/条件换硬件）：P0 + S1 在所有间隔和 B 下是同一条数据通路；不同条件只改寄存器里的 (η, ρ)。S1 的 (η, ρ) 只按 B 选，不按 gap 分箱（`ssm_decode/expansion_causal.py` `target_rules`：S1 pool 不分 gap bin；只有 α 分箱），设备不需要知道距上次校准的天数。
+  3. 去掉 CCA 求解单元（eig/SVD）和 77.5 KiB 工作区；峰值 SRAM 从 158.5 KiB 降到约 81 KiB 常驻（`docs/arch_analysis_20261019.md` §3），进入 128 KiB 预算。
+- **不把“可重构”作为创新点**；硬件叙事是“校准复用推理硬件”：S1 的前向就是 CiM trunk 的推理前向，读入表在 SRAM，校准只多流式累加器与小的更新单元。
+- **前提（H4，必须验证）**：S1 评估目前对每个校准 trial 从零状态单独前向，部署推理是整段连续、状态跨 trial 携带（`docs/arch_analysis_20261019.md` G1）。若 live 残差下 S1 的增益保持，上述叙事成立；否则校准期需 shadow forward（trunk MAC ×2，约 50 KiB 额外状态）。
