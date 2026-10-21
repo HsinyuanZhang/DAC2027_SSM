@@ -33,6 +33,7 @@ from __future__ import annotations
 import torch
 
 from ssm_decode import stream_f7 as sf
+from ssm_decode.causal_protocol import COLD, INITIAL, commit_segments
 
 # Documented for the README / hardware note. Not a second algorithm.
 GAP_RING = (
@@ -174,20 +175,48 @@ def _shift_batch(delta, bias, mean_old, std_old, mean_new, std_new):
     return torch.stack(rows_d, 0), torch.stack(rows_b, 0)
 
 
+def trial_install_ids(spans, B: int, n_bins: int, latency: int = 0) -> list[int]:
+    """Commit id installed at the start of each calibration trial.
+
+    Taken from ``commit_segments`` (staged trial 0, anytime). ``0`` is INITIAL.
+    Latency 0 installs commit k at usable trial k. Latency L installs it L usable
+    trials later, so trial k is decoded under commit ``max(k - L, 0)``.
+    """
+    spans = [(int(a), int(b)) for a, b in spans]
+    segs = commit_segments(spans, int(B), int(n_bins), latency=int(latency),
+                           staged_trial0=True, install="anytime")
+    ids = []
+    for k in range(int(B)):
+        start = spans[k][0]
+        cid = None
+        for a, b, c in segs:
+            if a <= start < b:
+                cid = int(c)
+                break
+        if cid is None or cid == COLD:
+            raise AssertionError(f"trial {k} at bin {start} has no installed commit")
+        ids.append(cid)
+    return ids
+
+
 def live_rebased_many(base, x, y, valid, spans, prior, configs, prepare, jbar, B, *,
                       ring_mode: str = "carry", base_bias=None, forward_fn=None,
-                      keep_yhat: bool = False, max_chunk: int = 4096, eps: float = sf.EPS_Q):
-    """Batched L1/L2 rebased S1. ``configs`` is a list of ``(eta, rho)``.
+                      keep_yhat: bool = False, max_chunk: int = 4096, eps: float = sf.EPS_Q,
+                      latency: int = 0, drop_trial0: bool = False):
+    """Batched live-residual S1. ``configs`` is a list of ``(eta, rho)``.
 
-    ``ring_mode='carry'`` is L1. ``ring_mode='reset'`` is L2 (ring cleared at each
-    calibration-trial start; trunk state still carried). ``forward_fn`` is a test
-    hook ``(z [M,T,K], state) -> (y [M,T,D], state)``; the default is the Mamba-3
-    carry, which starts from the zero state when ``state`` is None.
+    ``ring_mode='carry'`` keeps the FIR ring across trials (L1). ``ring_mode='reset'``
+    clears it at each calibration-trial start (L2). ``latency`` is the commit delay
+    in usable trials: the residual at trial k is the live trunk output under the
+    commit ``commit_segments`` has installed there, not under a hard-coded latency-0
+    schedule. ``drop_trial0`` (L1-dev) decodes trial 0 for state and ring continuity
+    but does not take an S1 step from its residual; P0 of that trial is still what
+    gets committed. The default (latency 0, drop_trial0 False) is L1-staged, which
+    needs a one-trial replay to realise trial 0's own normalisation in real time.
 
-    Returns one dict per config (same keys as ``rebased_feedback_loop``, plus
-    ``eta`` / ``rho``). ``history`` on each dict is the per-trial snapshot list.
-    With ``keep_yhat``, each dict also has ``yhat`` [T_prefix, D] for the bins
-    that were forwarded (through the end of the last calibration trial).
+    ``forward_fn`` is a test hook ``(z [M,T,K], state) -> (y [M,T,D], state)``; the
+    default is the Mamba-3 carry, which starts from the zero state when ``state``
+    is None.
     """
     if ring_mode not in ("carry", "reset"):
         raise ValueError(ring_mode)
@@ -197,8 +226,12 @@ def live_rebased_many(base, x, y, valid, spans, prior, configs, prepare, jbar, B
         raise ValueError("jbar is required")
     spans = [(int(a), int(b)) for a, b in spans]
     B = int(B)
+    latency = int(latency)
+    if latency < 0:
+        raise ValueError("latency must be >= 0")
     pieces_ok = calibration_pieces(spans, B, int(x.shape[0]))
     del pieces_ok
+    install_ids = trial_install_ids(spans, B, int(x.shape[0]), latency)
     device = x.device
     jbar = jbar.to(device=device, dtype=x.dtype)
     prior = prior.to(device=device, dtype=x.dtype)
@@ -237,6 +270,10 @@ def live_rebased_many(base, x, y, valid, spans, prior, configs, prepare, jbar, B
             ring = roll_ring(xz, ring)
         return None
 
+    # Snapshots already in the coordinates they are installed in. Key 0 is the
+    # INITIAL map (prior, trial-0 norm, zero correction) and is never overwritten.
+    # Key m >= 1 is the commit formed after trial m-1.
+    installed_at = {}
     with torch.no_grad():
         cursor = 0
         first = spans[0][0]
@@ -244,36 +281,39 @@ def live_rebased_many(base, x, y, valid, spans, prior, configs, prepare, jbar, B
             # Cold map: electrode prior, mean 0, std 1. No label, no commit.
             cold_mean = x.new_zeros(x.shape[1])
             cold_std = x.new_ones(x.shape[1])
-            cold_table = prior.unsqueeze(0).expand(m, -1, -1)
+            cold_table = prior.unsqueeze(0).expand(m, -1, -1).contiguous()
             cold_bias = bias.new_zeros(bias.shape)
             _decode(0, first, cold_mean, cold_std, cold_table, cold_bias, residual=False)
             cursor = first
+        mean0, std0, _ = prepare(0, False)
+        mean0 = mean0.to(device=device, dtype=x.dtype)
+        std0 = std0.to(device=device, dtype=x.dtype)
+        installed_at[INITIAL] = (
+            prior.unsqueeze(0).expand(m, -1, -1).contiguous(),
+            bias.new_zeros(bias.shape),
+            mean0, std0,
+        )
         for k in range(B):
             a, b = spans[k]
             if a < cursor:
                 raise AssertionError(f"trial {k} starts at {a}, before cursor {cursor}")
             if ring_mode == "reset":
                 ring = x.new_zeros(ring.shape)
-            if k == 0:
-                mean, std, _p0 = prepare(0, False)
-                base_table = prior
-            else:
-                mean, std, base_table = prepare(k, False)
-            mean = mean.to(device=device, dtype=x.dtype)
-            std = std.to(device=device, dtype=x.dtype)
-            base_table = base_table.to(device=device, dtype=x.dtype)
-            if coord is None:
-                d_use, b_use = delta, bias
-            else:
-                d_use, b_use = _shift_batch(delta, bias, coord[0], coord[1], mean, std)
+            cid = install_ids[k]
+            if cid not in installed_at:
+                raise AssertionError(f"trial {k} needs commit {cid}, which has not been formed")
+            table, b_corr, mean, std = installed_at[cid]
             extra = None
             if base_bias is not None:
                 extra = base_bias(k, False)
-            table, b_forward = _maps(mean, std, base_table, d_use, b_use, extra)
+            b_forward = b_corr if extra is None else b_corr + extra.to(
+                dtype=b_corr.dtype, device=b_corr.device)
             got = _decode(a, b, mean, std, table, b_forward, residual=True)
             xz, y_hat = got
             y_t = y[a:b].to(dtype=y_hat.dtype)
             mask = valid[a:b].to(dtype=y_hat.dtype)
+            if drop_trial0 and k == 0:
+                mask = torch.zeros_like(mask)
             r = (y_t.unsqueeze(0) - y_hat) * mask.view(1, -1, 1)
             n_bins, sum_x2 = sf.valid_sum_x2(xz, mask)
             u_all, ring = fir_increment(xz, r, jbar, ring)
@@ -283,21 +323,29 @@ def live_rebased_many(base, x, y, valid, spans, prior, configs, prepare, jbar, B
             mean_a = mean_a.to(device=device, dtype=x.dtype)
             std_a = std_a.to(device=device, dtype=x.dtype)
             p0_a = p0_a.to(device=device, dtype=x.dtype)
+            # Running Delta stays in ``coord`` and moves into the prefix that
+            # includes this trial. The step is in the coordinates of the map that
+            # was actually installed (which, at latency > 0, can be an older commit).
+            if coord is None:
+                d_carry, b_carry = delta, bias
+            else:
+                d_carry, b_carry = _shift_batch(delta, bias, coord[0], coord[1], mean_a, std_a)
             new_delta, new_bias = [], []
             for i in range(m):
                 if float(n_bins) > 0:
                     step = sf.feedback_step(u_all[i], sum_x2, n_bins, eps)
                 else:
-                    step = torch.zeros_like(d_use[i])
-                d_c, b_c = sf.shift_correction(d_use[i], b_use[i], mean, std, mean_a, std_a)
-                s_c, b_s = sf.shift_correction(step, torch.zeros_like(bias[i]), mean, std, mean_a, std_a)
-                new_delta.append((1.0 - rhos[i]) * d_c + etas[i] * s_c)
-                new_bias.append((1.0 - rhos[i]) * b_c + etas[i] * b_s)
+                    step = torch.zeros_like(delta[i])
+                _s_c, b_s = sf.shift_correction(step, torch.zeros_like(bias[i]), mean, std, mean_a, std_a)
+                s_c = _s_c
+                new_delta.append((1.0 - rhos[i]) * d_carry[i] + etas[i] * s_c)
+                new_bias.append((1.0 - rhos[i]) * b_carry[i] + etas[i] * b_s)
             delta = torch.stack(new_delta, 0)
             bias = torch.stack(new_bias, 0)
             coord = (mean_a, std_a)
             p0_final = p0_a
             installed = p0_a.unsqueeze(0) + delta
+            installed_at[k + 1] = (installed, bias, mean_a, std_a)
             for i in range(m):
                 history[i].append({
                     "k": int(k),
@@ -307,10 +355,11 @@ def live_rebased_many(base, x, y, valid, spans, prior, configs, prepare, jbar, B
                     "std": std_a.detach().clone(),
                     "delta": delta[i].detach().clone(),
                     "base": p0_a.detach().clone(),
+                    "install_id": int(cid),
                 })
-            # Gap until the next calibration trial: same installed table as this
-            # trial (the commit we just formed waits for the next trial start).
-            # Residual stays 0. L1 keeps the ring; L2 will clear it at the next start.
+            # Gap until the next usable trial stays on the map this trial was
+            # decoded under. A commit switches only at a usable-trial start.
+            # Residual stays 0. L1 keeps the ring; L2 clears it at the next start.
             if k + 1 < B:
                 g1 = spans[k + 1][0]
                 if g1 > b:

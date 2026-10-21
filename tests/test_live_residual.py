@@ -3,11 +3,13 @@ import torch
 from torch import nn
 
 from ssm_decode import stream_f7 as sf
+from ssm_decode.causal_protocol import COLD, INITIAL, commit_segments
 from ssm_decode.live_residual import (
     calibration_pieces,
     fir_increment,
     live_rebased,
     roll_ring,
+    trial_install_ids,
 )
 
 
@@ -199,6 +201,59 @@ def test_l1_causality_at_b8_with_positive_eta():
     assert not torch.allclose(base["history"][-1]["table"], pert["history"][-1]["table"], atol=1e-5)
 
 
+def test_install_ids_follow_commit_segments_at_latency_0_and_1():
+    spans = [(4, 8), (10, 14), (14, 18), (20, 24), (24, 28)]
+    assert trial_install_ids(spans, 4, 40, latency=0) == [INITIAL, 1, 2, 3]
+    assert trial_install_ids(spans, 4, 40, latency=1) == [INITIAL, INITIAL, 1, 2]
+    segs = commit_segments(spans, 4, 40, latency=1, staged_trial0=True)
+    # Trial 0, the gap, and trial 1 share INITIAL. Commit 1 starts at trial 2.
+    assert any(a <= spans[0][0] and b >= spans[1][1] and c == INITIAL for a, b, c in segs)
+    assert any(a == spans[2][0] and c == 1 for a, b, c in segs)
+    assert all(c != COLD or b <= spans[0][0] for a, b, c in segs)
+
+
+def test_latency1_residual_uses_the_commit_installed_during_the_trial():
+    x, y, valid, spans, prior, jbar = _pack(b=4, cold=3, gaps=True)
+    prepare = _prepare_factory(x, spans, prior)
+    staged = live_rebased(_Id(), x, y, valid, spans, prior, 1.0, 0.0, prepare, jbar, 4,
+                          ring_mode="carry", forward_fn=_memoryless, keep_yhat=True, latency=0)
+    late = live_rebased(_Id(), x, y, valid, spans, prior, 1.0, 0.0, prepare, jbar, 4,
+                        ring_mode="carry", forward_fn=_memoryless, keep_yhat=True, latency=1)
+    assert [h["install_id"] for h in late["history"]] == [INITIAL, INITIAL, 1, 2]
+    # Trial 1 is still on the INITIAL map (prior, trial-0 norm), not on commit 1.
+    a, b = spans[1]
+    mean, std, _ = prepare(0, False)
+    y_init = (x[a:b] - mean) / std @ prior.T
+    assert torch.allclose(late["yhat"][a:b], y_init, atol=1e-5)
+    # Trial 2 is under the commit formed after trial 0.
+    a, b = spans[2]
+    item = late["history"][0]
+    xz = (x[a:b] - item["mean"]) / item["std"]
+    y_c = xz @ item["table"].T + item["bias"]
+    assert torch.allclose(late["yhat"][a:b], y_c, atol=1e-5)
+    # Latency 0 would already be on a newer commit there, so the residual changes.
+    assert not torch.allclose(late["yhat"][a:b], staged["yhat"][a:b], atol=1e-4)
+
+
+def test_l1_dev_uses_no_trial0_residual():
+    x, y, valid, spans, prior, jbar = _pack(b=4, cold=2)
+    prepare = _prepare_factory(x, spans, prior)
+    kwargs = dict(ring_mode="carry", forward_fn=_memoryless, eta=1.0, rho=0.0)
+    staged = live_rebased(_Id(), x, y, valid, spans, prior, prepare=prepare, jbar=jbar, B=4, **kwargs)
+    dev = live_rebased(_Id(), x, y, valid, spans, prior, prepare=prepare, jbar=jbar, B=4,
+                       drop_trial0=True, **kwargs)
+    assert torch.allclose(dev["history"][0]["delta"], torch.zeros_like(dev["history"][0]["delta"]), atol=1e-6)
+    assert not torch.allclose(staged["history"][0]["delta"], torch.zeros_like(staged["delta"]), atol=1e-5)
+    y2 = y.clone()
+    a, b = spans[0]
+    y2[a:b] = y2[a:b] + 2.5
+    dev2 = live_rebased(_Id(), x, y2, valid, spans, prior, prepare=prepare, jbar=jbar, B=4,
+                        drop_trial0=True, **kwargs)
+    staged2 = live_rebased(_Id(), x, y2, valid, spans, prior, prepare=prepare, jbar=jbar, B=4, **kwargs)
+    assert torch.allclose(dev["table"], dev2["table"], atol=1e-5)
+    assert not torch.allclose(staged["table"], staged2["table"], atol=1e-4)
+
+
 def test_gpu_mamba_eta0_matches_oneshot_and_state_is_carried():
     """Real carry path: eta=0 table is P0, yhat matches a one-shot forward, state is not reset."""
     if not torch.cuda.is_available():
@@ -260,3 +315,68 @@ def test_gpu_mamba_eta0_matches_oneshot_and_state_is_carried():
     with torch.no_grad():
         reset, _ = forward_with_states(decoder, z1, None)
     assert float((ans["yhat"][a:b] - reset[0]).abs().max()) > 1e-2
+
+
+def test_gpu_eta_positive_live_yhat_matches_scored_decode_on_calibration_bins():
+    """Chunked carry vs the oneshot scored decode.
+
+    The kernel materialises the scan in bf16, so a carried chunk and one
+    ``base(z)`` of the same latent differ. On this width the mean absolute
+    gap on calibration bins is about 2e-3; a schedule bug is orders larger
+    (a zero-state trial is ~1e-1). Gate: mean < 5e-3, max < 2e-2.
+    """
+    if not torch.cuda.is_available():
+        return
+    from ssm_decode.mamba3_official import build_mamba3_official
+
+    torch.manual_seed(4)
+    kdim, dout, n = 8, 2, 4
+    decoder = build_mamba3_official(kdim, dout, width=64, layers=1, state_size=16).cuda().eval()
+    spans = [(8, 40), (48, 80), (80, 120), (130, 170)]
+    x = torch.randn(170, n, device="cuda")
+    y = torch.randn(170, dout, device="cuda")
+    valid = torch.ones(170, device="cuda")
+    prior = torch.randn(kdim, n, device="cuda") * 0.1
+    jbar = torch.randn(5, dout, kdim, device="cuda") * 0.05
+
+    def prepare(k_idx, closed):
+        nprefix = 1 if (not closed and k_idx == 0) else (k_idx + 1 if closed else k_idx)
+        chunk = torch.cat([x[a:b] for a, b in spans[:nprefix]], 0)
+        mean = chunk.mean(0)
+        std = torch.ones_like(mean)
+        scale = torch.linspace(0.3, 1.0, kdim, device=x.device).unsqueeze(1)
+        table = mean.unsqueeze(0).expand(kdim, -1).contiguous() * scale
+        return mean, std, table
+
+    ans = live_rebased(decoder, x, y, valid, spans, prior, 1.0, 0.1, prepare, jbar, 4,
+                       ring_mode="carry", keep_yhat=True, latency=0)
+    end = ans["prefix_end"]
+    hist = {int(item["k"]) + 1: item for item in ans["history"]}
+    z = x.new_zeros(end, kdim)
+    for a, b, cid in commit_segments(spans, 4, x.shape[0], latency=0, staged_trial0=True):
+        if a >= end:
+            break
+        b2 = min(b, end)
+        if cid == COLD:
+            mean, std = x.new_zeros(n), x.new_ones(n)
+            table, bias = prior, x.new_zeros(kdim)
+        elif cid == INITIAL:
+            mean, std, _ = prepare(0, False)
+            table, bias = prior, x.new_zeros(kdim)
+        else:
+            item = hist[int(cid)]
+            mean, std, table, bias = item["mean"], item["std"], item["table"], item["bias"]
+        xz = (x[a:b2] - mean) / std.clamp_min(1e-8)
+        z[a:b2] = xz @ table.T + bias
+    with torch.no_grad():
+        scored = decoder(z.unsqueeze(0))[0]
+    mask = torch.zeros(end, dtype=torch.bool, device=x.device)
+    for a, b in spans:
+        if a >= end:
+            break
+        mask[a:min(b, end)] = True
+    gap = (ans["yhat"][:end] - scored).abs()
+    mean = float(gap[mask].mean())
+    mx = float(gap[mask].max())
+    assert mean < 5e-3, mean
+    assert mx < 2e-2, mx

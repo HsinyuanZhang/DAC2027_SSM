@@ -236,7 +236,8 @@ def _score_configs(world, sd, cache, seed, B, tables, biases):
     return score_tables(world, sd, mean, std, tables, biases, q, rcm.SIM_MAX)
 
 
-def _live_group(trunk, sd, prior, cache, seed, jbar, B_max, Bs, ring_mode: str):
+def _live_group(trunk, sd, prior, cache, seed, jbar, B_max, Bs, ring_mode: str,
+                latency: int = 0, drop_trial0: bool = False):
     """One live pass at the longest B of this kernel. Snapshots cover every B in ``Bs``."""
     device = sd.x32.device
     prepare = rcm._prepare_from(cache, seed, "p0", 0.0, device)
@@ -246,7 +247,8 @@ def _live_group(trunk, sd, prior, cache, seed, jbar, B_max, Bs, ring_mode: str):
         try:
             return live_rebased_many(
                 trunk.base, sd.x32, sd.y_norm, sd.valid.to(dtype=sd.x32.dtype), spans,
-                prior.float(), configs, prepare, jbar, int(B_max), ring_mode=ring_mode)
+                prior.float(), configs, prepare, jbar, int(B_max), ring_mode=ring_mode,
+                latency=int(latency), drop_trial0=bool(drop_trial0))
         except RuntimeError as exc:
             if "out of memory" not in str(exc).lower() or len(configs) == 1:
                 raise
@@ -269,12 +271,14 @@ def _live_group(trunk, sd, prior, cache, seed, jbar, B_max, Bs, ring_mode: str):
     return by_b
 
 
-def _select_path(variant: str) -> Path:
+def _select_path(variant: str, latency: int = 0) -> Path:
+    if variant == "l1dev":
+        return OUT / f"select_l1dev_lat{int(latency)}.jsonl"
     return OUT / f"select_{variant}.jsonl"
 
 
-def _done_select(variant: str) -> set:
-    path = _select_path(variant)
+def _done_select(variant: str, latency: int = 0) -> set:
+    path = _select_path(variant, latency)
     if not path.exists():
         return set()
     return {(r["tag"], r["session"], int(r["seed"]), int(r["B"])) for r in read_jsonl(path)}
@@ -309,7 +313,13 @@ def cmd_select(args):
     _log(f"GPU-time estimate before measurement: {len(units)} units x 2 variants. "
          f"A unit is one live grid pass per kernel length plus query scores. "
          f"Printed again after the first pass.")
-    variants = ("l1", "l2") if args.variant == "both" else (args.variant,)
+    # l1dev is simulated at both install latencies; the table depends on latency.
+    if args.variant == "both":
+        jobs = (("l1", 0), ("l2", 0))
+    elif args.variant == "l1dev":
+        jobs = (("l1dev", 0), ("l1dev", 1))
+    else:
+        jobs = ((args.variant, 0),)
     measured = []
     for tag, group in by_tag.items():
         _log(f"load trunk {tag} ({len(group)} units)")
@@ -347,8 +357,8 @@ def cmd_select(args):
             by_L = defaultdict(list)
             for B in Bs:
                 by_L[int(trunk.L[B])].append(int(B))
-            for variant in variants:
-                done = _done_select(variant)
+            for variant, lat in jobs:
+                done = _done_select(variant, lat)
                 pending_L = {}
                 for L, lbs in by_L.items():
                     need = [b for b in lbs if (tag, unit["session"], unit["seed"], b) not in done]
@@ -356,12 +366,14 @@ def cmd_select(args):
                         pending_L[L] = need
                 if not pending_L:
                     continue
-                ring = "carry" if variant == "l1" else "reset"
+                ring = "reset" if variant == "l2" else "carry"
+                drop0 = variant == "l1dev"
                 rows = []
                 t1 = time.perf_counter()
                 for L, lbs in pending_L.items():
                     jb = trunk.jbar(L)
-                    scored = _live_group(trunk, sd, prior, cache, unit["seed"], jb, max(lbs), lbs, ring)
+                    scored = _live_group(trunk, sd, prior, cache, unit["seed"], jb, max(lbs), lbs, ring,
+                                         latency=lat, drop_trial0=drop0)
                     for B, scores in scored.items():
                         if scores is None:
                             _log(f"skip {variant} {tag} {unit['session'][-8:]} B={B} query<50")
@@ -384,24 +396,19 @@ def cmd_select(args):
                             "rebase": rebase, "eta_r2": float(unit["eta_r2"]),
                             "gap_days": unit["gap_days"], "L": int(L),
                             "n_bins": int(sd.n_bins), "n_trials": int(sd.bank.n_trials),
+                            "latency": int(lat), "drop_trial0": bool(drop0),
                         })
                 if rows:
-                    append_jsonl(_select_path(variant), rows)
+                    append_jsonl(_select_path(variant, lat), rows)
                     dt = time.perf_counter() - t1
                     measured.append(dt)
-                    _log(f"select {variant} {tag} {unit['session'][-8:]} s{unit['seed']} "
+                    _log(f"select {variant} lat{lat} {tag} {unit['session'][-8:]} s{unit['seed']} "
                          f"B={sorted(b for b in Bs)} {dt:.1f}s")
                     if len(measured) == 1:
-                        # One pass just finished one variant. Remaining work ~ units * variants.
-                        remain_units = 0
-                        for u2 in units:
-                            for v2 in variants:
-                                # upper bound: every unit still to do
-                                remain_units += 1
                         per = measured[0]
                         _log(f"GPU-time estimate: first select pass {per:.0f}s. "
-                             f"Upper bound {len(units)} units x {len(variants)} variants "
-                             f"x {per:.0f}s = {len(units) * len(variants) * per / 3600:.2f} h "
+                             f"Upper bound {len(units)} units x {len(jobs)} passes "
+                             f"x {per:.0f}s = {len(units) * len(jobs) * per / 3600:.2f} h "
                              f"(passes already on disk are skipped; kernel groups share a pass).")
         del loaded, trunk
         torch.cuda.empty_cache()
@@ -439,24 +446,27 @@ def _picks(bid: str, date: str, B: int):
     return out
 
 
-def _maps_for(base, sd, prior, cache, seed, spans, B, eta, rho, jbar, ring_mode):
+def _maps_for(base, sd, prior, cache, seed, spans, B, eta, rho, jbar, ring_mode,
+              latency: int = 0, drop_trial0: bool = False):
     cold, initial = rcm.cold_and_initial(rcm.to_cpu(prior), cache, spans)
     if float(eta) == 0.0 and float(rho) == 0.0:
         maps, reads = rcm.p0_commits(cache, seed, spans, B, cold, initial)
         return maps, reads, {"eta": 0.0, "rho": 0.0, "fallback_base": True, "n_commits": 0,
-                             "ring_mode": ring_mode}
+                             "ring_mode": ring_mode, "latency": int(latency),
+                             "drop_trial0": bool(drop_trial0)}
     if ring_mode == "l0":
         body, reads, info = rcm.loop_commits(
             base, sd, prior, cache, seed, spans, B, eta=float(eta), rho=float(rho),
             jbar=jbar, alpha=0.0, kind="p0")
         maps, reads = rcm.install_maps(body, cold, initial, B)
         return maps, reads, {**info, "ring_mode": "l0"}
-    mode = "carry" if ring_mode == "l1" else "reset"
+    mode = "reset" if ring_mode == "l2" else "carry"
     device = sd.x32.device
     prepare = rcm._prepare_from(cache, seed, "p0", 0.0, device)
     ans = live_rebased_many(
         base, sd.x32, sd.y_norm, sd.valid.to(dtype=sd.x32.dtype), spans, prior.float(),
-        [(float(eta), float(rho))], prepare, jbar, int(B), ring_mode=mode)[0]
+        [(float(eta), float(rho))], prepare, jbar, int(B), ring_mode=mode,
+        latency=int(latency), drop_trial0=bool(drop_trial0))[0]
     hist = ans["history"]
     if len(hist) != int(B):
         raise AssertionError(f"expected {B} commits, got {len(hist)}")
@@ -467,7 +477,8 @@ def _maps_for(base, sd, prior, cache, seed, spans, B, eta, rho, jbar, ring_mode)
                              rcm.to_cpu(item["mean"]), rcm.to_cpu(item["std"]), rcm._end(cache, k))
     maps, reads = rcm.install_maps(body, cold, initial, B)
     return maps, reads, {"eta": float(eta), "rho": float(rho), "fallback_base": False,
-                         "n_commits": int(B), "ring_mode": ring_mode}
+                         "n_commits": int(B), "ring_mode": ring_mode, "latency": int(latency),
+                         "drop_trial0": bool(drop_trial0)}
 
 
 def _stored_l0_pick(bid: str, date: str, B: int, seed: int):
@@ -659,7 +670,8 @@ def cmd_aggregate(args):
         flat.append({"group": group, "method": method, "target": target, "B": B,
                      "latency": lat, "r2": float(np.mean(vals))})
     rng = np.random.default_rng(0)
-    methods = ("p0", "s1_l0", "s1_l1", "s1_l2", "s1_l1_transfer", "s1_l1_cons", "s1_l2_cons")
+    methods = ("p0", "s1_l0", "s1_l1", "s1_l2", "s1_l1_transfer", "s1_l1_cons", "s1_l2_cons",
+               "s1_l1_dev", "s1_l1_dev_transfer", "s1_l1_dev_cons")
     summary = []
     for group in sorted({r["group"] for r in flat}):
         for lat in (0, 1):
@@ -688,7 +700,9 @@ def cmd_aggregate(args):
             # paired
             for base_m, other in (("s1_l0", "s1_l1"), ("p0", "s1_l1"), ("p0", "s1_l0"),
                                   ("p0", "s1_l2"), ("s1_l0", "s1_l2"), ("s1_l0", "s1_l1_transfer"),
-                                  ("p0", "s1_l1_cons")):
+                                  ("p0", "s1_l1_cons"), ("p0", "s1_l1_dev"), ("s1_l0", "s1_l1_dev"),
+                                  ("p0", "s1_l1_dev_transfer"), ("s1_l0", "s1_l1_dev_transfer"),
+                                  ("p0", "s1_l1_dev_cons")):
                 for B in list(BS) + ["B4-33"]:
                     def _vec(method, B=B, group=group, lat=lat):
                         out = {}
@@ -772,8 +786,75 @@ def cmd_aggregate(args):
             e2, r2 = pair("s1_l2")
             changed = int((e0, r0) != (e1, r1)) if e0 != "" and e1 != "" else ""
             f.write(f"{group},{bid},{date},{B},{e0},{r0},{e1},{r1},{e2},{r2},{changed}\n")
+    _write_cluster_tables(bid_mean)
     _log(f"aggregate wrote {dest} pick changes {dict(n_change)} / {dict(n_pick)}")
     _log("GAP_RING " + GAP_RING)
+
+
+def _mean_over(records, method, lat, bs, key):
+    """Mean of ``method`` at one latency. ``key`` is target (session cluster) or bid (backbone)."""
+    buckets = defaultdict(lambda: defaultdict(list))
+    for r in records:
+        if r["method"] != method or int(r["latency"]) != int(lat) or int(r["B"]) not in bs:
+            continue
+        buckets[r[key]][int(r["B"])].append(float(r["r2"]))
+    out = {}
+    for k, byb in buckets.items():
+        if any(b not in byb for b in bs):
+            continue
+        out[k] = float(np.mean([np.mean(byb[b]) for b in bs]))
+    return out
+
+
+def _write_cluster_tables(bid_mean):
+    """Session-clustered and backbone-clustered paired diffs, plus subject and per-backbone rows."""
+    rng = np.random.default_rng(0)
+    methods = ("p0", "s1_l0", "s1_l1", "s1_l1_dev", "s1_l1_dev_transfer")
+    pairs = (("p0", "s1_l0"), ("p0", "s1_l1"), ("p0", "s1_l1_dev"), ("s1_l0", "s1_l1_dev"),
+             ("p0", "s1_l1_dev_transfer"), ("s1_l0", "s1_l1_dev_transfer"), ("s1_l1", "s1_l1_dev"))
+    subsets = []
+    groups = sorted({r["group"] for r in bid_mean})
+    for g in groups:
+        subsets.append((g, [r for r in bid_mean if r["group"] == g]))
+    mid = [r for r in bid_mean if r["group"] == "mid"]
+    if mid:
+        subsets.append(("mid_subM", [r for r in mid if str(r["target"]).startswith("sub-M")]))
+        subsets.append(("mid_subC", [r for r in mid if str(r["target"]).startswith("sub-C")]))
+        for bid in sorted({r["bid"] for r in mid}):
+            subsets.append((f"mid:{bid}", [r for r in mid if r["bid"] == bid]))
+    rows = []
+    for name, recs in subsets:
+        if not recs:
+            continue
+        for cluster, key in (("session", "target"), ("backbone", "bid")):
+            for lat in (0, 1):
+                for label, bs in (("B4-33", (4, 8, 16, 33)),) + tuple((str(b), (b,)) for b in BS):
+                    for method in methods:
+                        vals = list(_mean_over(recs, method, lat, bs, key).values())
+                        mean, lo, hi, npos = _boot(vals, rng)
+                        rows.append({"group": name, "cluster": cluster, "latency": lat, "B": label,
+                                     "method": method, "n": len(vals), "mean": mean, "ci_lo": lo,
+                                     "ci_hi": hi, "n_pos": npos})
+                    for base_m, other in pairs:
+                        a = _mean_over(recs, other, lat, bs, key)
+                        b = _mean_over(recs, base_m, lat, bs, key)
+                        common = sorted(set(a) & set(b))
+                        diff = [a[k] - b[k] for k in common]
+                        mean, lo, hi, npos = _boot(diff, rng)
+                        rows.append({"group": name, "cluster": cluster, "latency": lat, "B": label,
+                                     "method": f"{other}-minus-{base_m}", "n": len(diff),
+                                     "mean": mean, "ci_lo": lo, "ci_hi": hi, "n_pos": npos})
+    dest = ANAL / "summary_clusters.csv"
+    with dest.open("w") as f:
+        f.write("group,cluster,latency,B,method,n,mean,ci_lo,ci_hi,n_pos\n")
+        for r in rows:
+            def fmt(v):
+                return "" if v != v else f"{v:.6f}"
+            f.write(",".join([
+                r["group"], r["cluster"], str(r["latency"]), str(r["B"]), r["method"], str(r["n"]),
+                fmt(r["mean"]), fmt(r["ci_lo"]), fmt(r["ci_hi"]), str(r["n_pos"]),
+            ]) + "\n")
+    _log(f"clusters wrote {dest} ({len(rows)} rows)")
 
 
 DRIFT_DATES = ("20140626", "20140627", "20140929", "20141203", "20150511", "20150512",
@@ -930,12 +1011,162 @@ def cmd_eval_frozen(args):
     _log("eval frozen done")
 
 
+def _choice_eta(choice):
+    if not choice:
+        return 0.0, 0.0
+    return float(choice.get("eta", 0.0)), float(choice.get("rho", 0.0))
+
+
+def _picks_l1dev(bid: str, date: str, B: int, latency: int, frozen_tag: str | None):
+    reported = ec.reported_target_dates()
+    if frozen_tag:
+        sim = {"days": "oos", "month": "oosc", "year": "oos"}[frozen_tag]
+        blob = json.loads(pc.selection_file(frozen_tag, sim).read_text())
+        eta_r2 = float(blob["r2"][str(int(B))]["cfg"]["eta"])
+    else:
+        eta_r2 = _eta_r2_target(bid, B)
+    episodes = read_jsonl(_select_path("l1dev", latency)) if _select_path("l1dev", latency).exists() else []
+    pool = ec.selection_pool(episodes, date, "expanding", reported, B=B)
+    if not pool:
+        empty = {"eta": 0.0, "rho": 0.0, "fallback_base": True, "source_gain": 0.0, "empty_pool": True}
+        return {"and": empty, "conservative": dict(empty), "eta_r2": eta_r2, "n_pool": 0}
+    choice = ec.gate_choices(pool, eta_r2, "p0")
+    choice["eta_r2"] = eta_r2
+    choice["n_pool"] = len(pool)
+    return choice
+
+
+def cmd_eval_dev(args):
+    """L1-dev (no trial-0 S1 step, commit schedule at this latency) for every target group.
+
+    P0 / L0 / L1-staged rows already on disk are not recomputed. L0's (eta, rho) is the
+    stored pick: round-2 causal rows, or causal-main ``s1_causal_and`` on days/drift.
+    """
+    if not torch.cuda.is_available():
+        raise SystemExit("cuda:0 is not available")
+    which = args.group
+    plan = []
+    if which in ("mid", "short", "long", "round2"):
+        groups = ("mid", "short", "long") if which == "round2" else (which,)
+        for g in groups:
+            by = defaultdict(list)
+            for t in _targets(g):
+                by[t["bid"]].append(t)
+            plan.append((g, None, by))
+    if which in ("days", "drift", "frozen"):
+        if which in ("days", "frozen"):
+            plan.append(("days", "days", {"days": [
+                {"bid": "days", "date": d, "target": "sub-M_ses-CO-" + d, "trunk_gap_days": None,
+                 "gap_days": None, "stratum": "days"} for d in ("20150616", "20150617")] }))
+        if which in ("drift", "frozen"):
+            plan.append(("drift", "month", {"month": [
+                {"bid": "month", "date": d, "target": "sub-M_ses-CO-" + d, "trunk_gap_days": None,
+                 "gap_days": None, "stratum": "drift"} for d in DRIFT_DATES] }))
+    _log(f"eval L1-dev {which}: " + ", ".join(g for g, _t, _b in plan))
+    dev_methods = ("s1_l1_dev", "s1_l1_dev_transfer", "s1_l1_dev_cons")
+    for group, frozen_tag, by_bid in plan:
+        path = OUT / f"eval_{group}_dev.jsonl"
+        done = {_eval_key(r) for r in read_jsonl(path)} if path.exists() else set()
+        for bid, targets in by_bid.items():
+            trunk = _open_trunk(bid if frozen_tag is None else frozen_tag)
+            for t in targets:
+                sd, prior = trunk.session(t["target"])
+                spans = [(int(a), int(b)) for a, b in sd.trials]
+                Bs = tuple(b for b in BS if b <= len(spans))
+                if not Bs:
+                    del sd, prior
+                    continue
+                cache = p0_cache(sd, prior, {s: trunk.p0[s] for s in SEEDS}, max(Bs))
+                behavior = sd.record.behavior
+                label_stats = trunk.world.label_stats
+                dev = sd.x32.device
+                if frozen_tag:
+                    import datetime as dt
+                    from ssm_decode.causal_protocol import TRUNK_LAST
+                    last = dt.datetime.strptime(TRUNK_LAST[frozen_tag], "%Y%m%d").date()
+                    cur = dt.datetime.strptime(t["date"], "%Y%m%d").date()
+                    trunk_gap = (cur - last).days
+                else:
+                    trunk_gap = int(t["trunk_gap_days"])
+                for B in Bs:
+                    for seed in SEEDS:
+                        if frozen_tag:
+                            stored = _stored_frozen("days" if frozen_tag == "days" else "drift",
+                                                    t["date"], B, seed, 0, "s1_causal_and")
+                            if stored is None:
+                                _log(f"no stored AND {group} {t['date']} B={B}")
+                                continue
+                            cfg = stored.get("cfg") or {}
+                            l0_eta, l0_rho = float(cfg.get("eta", 0.0)), float(cfg.get("rho", 0.0))
+                        else:
+                            l0 = _stored_l0_pick(bid, t["date"], B, seed)
+                            if l0 is None:
+                                _log(f"no stored L0 {bid} {t['date']} B={B}")
+                                continue
+                            l0_eta, l0_rho = l0["eta"], l0["rho"]
+                        for lat in LATENCIES:
+                            if all((m, bid, t["date"], B, seed, lat) in done for m in dev_methods):
+                                continue
+                            picks = _picks_l1dev(bid, t["date"], B, lat, frozen_tag)
+                            e_and, r_and = _choice_eta(picks.get("and"))
+                            e_cons, r_cons = _choice_eta(picks.get("conservative"))
+                            specs = {
+                                "s1_l1_dev": (e_and, r_and),
+                                "s1_l1_dev_transfer": (l0_eta, l0_rho),
+                                "s1_l1_dev_cons": (e_cons, r_cons),
+                            }
+                            built = {}
+                            t1 = time.perf_counter()
+                            jb = trunk.jbar(int(trunk.L[B]))
+                            for method, (eta, rho) in specs.items():
+                                key = (float(eta), float(rho))
+                                if key not in built:
+                                    built[key] = _maps_for(
+                                        trunk.base, sd, prior, cache, seed, spans, B, eta, rho, jb,
+                                        "l1", latency=lat, drop_trial0=True)
+                            q = sd.query_mask(calibration_indices(sd.bank.n_trials, B)).detach().cpu().numpy()
+                            jobs, meta = [], []
+                            for method, (eta, rho) in specs.items():
+                                if (method, bid, t["date"], B, seed, lat) in done:
+                                    continue
+                                maps, reads, info = built[(float(eta), float(rho))]
+                                segs = rcm.segments_for(spans, B, sd.n_bins, lat, "anytime")
+                                rcm.assert_segment_causal(segs, spans, reads, staged_trial0=True)
+                                packed = {k: rcm._pack(maps[k], dev) for _a, _b, k in segs}
+                                jobs.append({"segments": segs, "packed": packed, "qmask": q, "want_h": False})
+                                meta.append((method, info))
+                            scores = rcm.decode_many(trunk.base, sd.x32, jobs, label_stats, behavior) if jobs else []
+                            rows = []
+                            for (method, info), r2 in zip(meta, scores):
+                                rows.append({
+                                    "method": method, "bid": bid, "target": t["target"], "date": t["date"],
+                                    "B": int(B), "seed": int(seed), "latency": int(lat), "r2": float(r2),
+                                    "trunk_gap_days": int(trunk_gap),
+                                    "gap_days": t.get("gap_days") if t.get("gap_days") is not None else int(trunk_gap),
+                                    "stratum": t.get("stratum"), "eta": info.get("eta"), "rho": info.get("rho"),
+                                    "fallback_base": info.get("fallback_base"), "ring_mode": "l1dev",
+                                    "l0_eta": l0_eta, "l0_rho": l0_rho,
+                                    "n_pool": picks.get("n_pool"), "group": group,
+                                    "drop_trial0": True,
+                                })
+                            if rows:
+                                append_jsonl(path, rows)
+                                done.update(_eval_key(r) for r in rows)
+                            _log(f"dev {group} {bid} {t['date']} B={B} s{seed} lat={lat} "
+                                 f"pool={picks.get('n_pool')} {time.perf_counter() - t1:.1f}s")
+                del sd, prior, cache
+                torch.cuda.empty_cache()
+            del trunk
+            torch.cuda.empty_cache()
+    _log(f"eval L1-dev {which} done")
+
+
 def main():
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("select")
     s.add_argument("--group", required=True, choices=("mid", "short", "long"))
-    s.add_argument("--variant", default="both", choices=("both", "l1", "l2"))
+    s.add_argument("--variant", default="both", choices=("both", "l1", "l2", "l1dev"))
     s.set_defaults(fn=cmd_select)
     e = sub.add_parser("eval")
     e.add_argument("--group", required=True, choices=("mid", "short", "long"))
@@ -943,6 +1174,10 @@ def main():
     f = sub.add_parser("eval-frozen")
     f.add_argument("--which", default="both", choices=("days", "drift", "both"))
     f.set_defaults(fn=cmd_eval_frozen)
+    d = sub.add_parser("eval-dev")
+    d.add_argument("--group", required=True,
+                   choices=("mid", "short", "long", "round2", "days", "drift", "frozen"))
+    d.set_defaults(fn=cmd_eval_dev)
     a = sub.add_parser("aggregate")
     a.set_defaults(fn=cmd_aggregate)
     args = p.parse_args()
