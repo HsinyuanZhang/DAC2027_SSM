@@ -70,3 +70,4 @@
   3. 去掉 CCA 求解单元（eig/SVD）和 77.5 KiB 工作区；峰值 SRAM 从 158.5 KiB 降到约 81 KiB 常驻（`docs/arch_analysis_20261019.md` §3），进入 128 KiB 预算。
 - **不把“可重构”作为创新点**；硬件叙事是“校准复用推理硬件”：S1 的前向就是 CiM trunk 的推理前向，读入表在 SRAM，校准只多流式累加器与小的更新单元。
 - **前提（H4，必须验证）**：S1 评估目前对每个校准 trial 从零状态单独前向，部署推理是整段连续、状态跨 trial 携带（`docs/arch_analysis_20261019.md` G1）。若 live 残差下 S1 的增益保持，上述叙事成立；否则校准期需 shadow forward（trunk MAC ×2，约 50 KiB 额外状态）。
+- **H4 结果（2026-10-21，两轮 Opus 审查，`results/analysis/h4_live_20261021/README.md`）**：设备一致的 live S1（L1-dev：残差来自推理前向，状态跨 trial 携带，不用 trial 0 残差，残差在当时安装的表下取得）31–180 d B4–33 相对 P0 +0.052 [+0.032, +0.073]（14/17，latency 0；latency 1 +0.047），≤30 d +0.009；无 shadow forward、无第二份 state。**主方法的部署形式定为 P0 + S1（L1-dev）。** 注意：31–180 d 增益主要来自 sub-C（+0.071，12/12），sub-M 只有 +0.007（2/5）；backbone 聚类（4 个）区间 [+0.004, +0.071]。
